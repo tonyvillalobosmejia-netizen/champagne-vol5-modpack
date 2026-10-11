@@ -6,6 +6,8 @@ on:
       - "tools/resolver_modrinth.py"
       - "inventario/fuentes_46.csv"
       - ".github/workflows/resolver-modrinth.yml"
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
