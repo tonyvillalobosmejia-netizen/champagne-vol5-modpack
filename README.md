@@ -10,7 +10,7 @@ El perfil se administra en CurseForge; los jugadores utilizarán **Champagne Vol
 - `tools/validar_y_generar.py`: comprueba el inventario. Requiere **46 enlaces** y verifica cada descarga SHA-256 antes de generar `manifest.VERIFICADO.json`.
 - `.github/workflows/verificar-inventario.yml`: valida la estructura del inventario **sin descargar ni publicar mods**.
 
-**Estado:** 32 URLs identificadas anteriormente en Modrinth; 14 faltantes. Las 32 aún requieren nueva verificación en red. El manifiesto para Champagne Launcher **NO está listo**.
+**Estado:** 32 URLs identificadas anteriormente en Modrinth; 14 faltantes. Las 32 aún requieren nueva verificación en red. En el Paso 98 se consultaron los 14 hashes originales a la API de Modrinth y se obtuvieron **0 coincidencias exactas**. Consulta [docs/paso98_resultados.md](docs/paso98_resultados.md) para el informe de cliente/servidor. El manifiesto para Champagne Launcher **NO está listo**.
 
 ## Flujo de actualizaciones
 
