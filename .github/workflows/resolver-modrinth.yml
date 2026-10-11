@@ -4,6 +4,7 @@ on:
     branches: [preparacion-paso97]
     paths:
       - "tools/resolver_modrinth.py"
+      - "tools/test_resolver_modrinth.py"
       - "inventario/fuentes_46.csv"
       - ".github/workflows/resolver-modrinth.yml"
   pull_request:
@@ -22,6 +23,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Probar comprobación de hashes sin red
+        run: python -m unittest discover -s tools -p "test_resolver_modrinth.py" -v
       - name: Consultar Modrinth por hash original
         run: python tools/resolver_modrinth.py
       - name: Guardar informe de coincidencias y pendientes
