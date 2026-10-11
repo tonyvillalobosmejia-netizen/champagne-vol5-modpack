@@ -31,7 +31,7 @@ smoothboot(reloaded)-mc1.20.1-0.0.4.jar,5a0d2682493ffa7b140a7b81f0d1e70c7536c979
 sodiumoptionsapi-forge-1.0.10-1.20.1.jar,37ec0b6248f04e856e6e5ba2066c4ded9981ce128282a9b45cdb10b67b9c8415,https://cdn.modrinth.com/data/Es5v4eyq/versions/d0EFLitO/sodiumoptionsapi-forge-1.0.10-1.20.1.jar
 starlight-1.1.2+forge.1cda73c.jar,e90763c86d362c7cb427dbb70e89985c11a882fdd69ae7d04ac2e23a106eb500,https://cdn.modrinth.com/data/iRfIGC1s/versions/cNa0vkNj/starlight-1.1.2%2Bforge.1cda73c.jar
 vanillin-forge-1.20.1-1.1.3.jar,e2c5c712c6e41d71e2184b40914504914abb56826a4e8371bb1b929ee9482164,https://cdn.modrinth.com/data/6qTrsXCy/versions/szOuf0j1/vanillin-forge-1.20.1-1.1.3.jar
-Clumps-forge-1.20.1-12.0.0.4.jar,1d1cfcf386f182b1d0bdbe4bd4fc57b96234e8c7468e95e1575ad4dd6433243a,
+Clumps-forge-1.20.1-12.0.0.4.jar,1d1cfcf386f182b1d0bdbe4bd4fc57b96234e8c7468e95e1575ad4dd6433243a,https://maven.blamejared.com/com/blamejared/clumps/Clumps-forge-1.20.1/12.0.0.4/Clumps-forge-1.20.1-12.0.0.4.jar
 KryptonReforged-0.2.3.jar,9b281428d0e7560b7b6e74cdc808c0ffd7a8e662ba84d1a12a6616b49cedec10,
 alltheleaks-1.1.1+1.20.1-forge.jar,7b8e945da294b745e6aed9f88f28e232a767e032d7c2b8137a8ef36421d9fb33,
 betterchunkloading-1.20.1-5.4.jar,86ae160bdd974452e0198e27d473d43b25d6df8b0abebee95d6381ae90339caa,
@@ -45,3 +45,4 @@ limitedchunks-1.20.1-4.1.jar,5ff4d22551dcd74680f5da79c9055faae44dfc0c5348c273447
 modfixer-0.0.5.jar,91de051ad76d9f42afc00982c414e6be05dffdec57a4ef6f2a24173e5a877c9f,
 recipeessentials-1.20.1-4.0.jar,eb0ff236212f83cfb04b39c72678282a1b964a5cfcb0cecb314e953f03347f14,
 structureessentials-1.20.1-4.8.jar,fdc7cdf075d4d32bbc96760be0695aee88d0e635eeab5da3e2e7777cb08135c3,
+
