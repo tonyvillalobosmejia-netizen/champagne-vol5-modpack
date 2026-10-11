@@ -1,0 +1,28 @@
+name: Verificar inventario (sin publicar)
+on:
+  push:
+    branches: [preparacion-paso97]
+    paths:
+      - "inventario/**"
+      - "tools/validar_y_generar.py"
+      - ".github/workflows/verificar-inventario.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inventario:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validar estructura de los 46 mods
+        run: python tools/validar_y_generar.py --check
+      - name: Asegurar que el manifiesto público no exista
+        shell: bash
+        run: |
+          test ! -f manifest.json
+          test ! -f manifest.VERIFICADO.json
