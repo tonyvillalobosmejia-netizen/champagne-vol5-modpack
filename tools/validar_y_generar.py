@@ -19,7 +19,7 @@ from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 INVENTORY = ROOT / "inventario" / "fuentes_46.csv"
-ALLOWED_DOWNLOAD_HOSTS = {"cdn.modrinth.com"}
+ALLOWED_DOWNLOAD_HOSTS = {"cdn.modrinth.com", "maven.blamejared.com"}
 LIMIT_BYTES = 200 * 1024 * 1024
 
 def read_entries():
