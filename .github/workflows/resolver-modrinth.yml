@@ -1,0 +1,46 @@
+name: Paso 98 - buscar fuentes oficiales (solo auditoría)
+on:
+  push:
+    branches: [preparacion-paso97]
+    paths:
+      - "tools/resolver_modrinth.py"
+      - "inventario/fuentes_46.csv"
+      - ".github/workflows/resolver-modrinth.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  resolver:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Consultar Modrinth por hash original
+        run: python tools/resolver_modrinth.py
+      - name: Guardar informe de coincidencias y pendientes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: champagne-paso98-auditoria-modrinth
+          path: informes/*.csv
+          if-no-files-found: warn
+      - name: Mostrar resumen (no publica nada)
+        shell: python
+        run: |
+          import csv
+          from pathlib import Path
+          found=Path("informes/coincidencias_modrinth.csv")
+          pending=Path("informes/pendientes_modrinth.csv")
+          a=list(csv.DictReader(found.open())) if found.exists() else []
+          b=list(csv.DictReader(pending.open())) if pending.exists() else []
+          print(f"Coincidencias exactas por API: {len(a)}; pendientes: {len(b)}")
+          with open(__import__("os").environ["GITHUB_STEP_SUMMARY"],"a") as f:
+              f.write(f"## Paso 98 - Modrinth\n\n")
+              f.write(f"Coincidencias de metadatos por SHA-256: **{len(a)}** / 14.\n\n")
+              f.write(f"Pendientes: **{len(b)}** / 14.\n\n")
+              f.write("No se han descargado JAR ni publicado manifiestos.\n")
