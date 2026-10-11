@@ -8,9 +8,10 @@ El perfil se administra en CurseForge; los jugadores utilizarán **Champagne Vol
 
 - `inventario/fuentes_46.csv`: nombres, SHA-256 y enlaces directos de las fuentes exactas identificadas previamente.
 - `tools/validar_y_generar.py`: comprueba el inventario. Requiere **46 enlaces** y verifica cada descarga SHA-256 antes de generar `manifest.VERIFICADO.json`.
+- `python tools/validar_y_generar.py --verify-available`: verifica las URLs presentes, informa las pendientes y nunca genera manifiesto.
 - `.github/workflows/verificar-inventario.yml`: valida la estructura del inventario **sin descargar ni publicar mods**.
 
-**Estado:** 32 URLs identificadas anteriormente en Modrinth; 14 faltantes. Las 32 aún requieren nueva verificación en red. En el Paso 98 se consultaron los 14 hashes originales a la API de Modrinth y se obtuvieron **0 coincidencias exactas**. Consulta [docs/paso98_resultados.md](docs/paso98_resultados.md) para el informe de cliente/servidor. El manifiesto para Champagne Launcher **NO está listo**.
+**Estado:** 32 de las 32 fuentes Modrinth existentes ya se verificaron nuevamente: tamaño y SHA-256 coinciden. Quedan 14 fuentes sin resolver. No se usó la API de CurseForge ni se descargó desde su CDN. Consulta [docs/paso102_fuentes_sin_api.md](docs/paso102_fuentes_sin_api.md) y el [informe verificable](inventario/verificacion_modrinth_32_paso102.json). La API de Modrinth consultada en el Paso 98 tampoco encontró hashes para los 14 archivos pendientes. El manifiesto para Champagne Launcher **NO está listo**.
 
 ## Flujo de actualizaciones
 
@@ -28,3 +29,4 @@ El perfil se administra en CurseForge; los jugadores utilizarán **Champagne Vol
 - El `manifest.json` de CurseForge y el manifiesto de actualizaciones del launcher **son formatos distintos**.
 - La rama de preparación no modifica la instalación local ni habilita **ACTUALIZAR MODPACK**.
 - Encontrar una URL oficial no equivale a permiso para republicar el archivo en GitHub.
+
