@@ -71,12 +71,24 @@ def verify_download(item):
     if hasher.hexdigest() != item["sha256"]:
         raise ValueError(f"Hash distinto del JAR original: {item['file']}")
 
+def verify_available(entries):
+    """Verifica las fuentes presentes sin generar un manifiesto parcial."""
+    available = [item for item in entries if item["url"]]
+    pending = len(entries) - len(available)
+    for index, item in enumerate(available, start=1):
+        verify_download(item)
+        print(f"Verificado {index}/{len(available)}: {item['file']}")
+    return len(available), pending
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true", help="Comprobar la estructura sin acceder a internet")
     parser.add_argument("--verify-downloads", action="store_true", help="Descargar/verificar y preparar el manifiesto")
+    parser.add_argument("--verify-available", action="store_true", help="Verificar solo las URLs presentes; nunca crea un manifiesto")
     parser.add_argument("--version", default="0.1.0")
     args = parser.parse_args()
+    if args.verify_available and args.verify_downloads:
+        parser.error("--verify-available y --verify-downloads son modos excluyentes")
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?", args.version):
         parser.error("Versión inválida")
     entries = read_entries()
@@ -87,6 +99,11 @@ def main():
         for name in pending:
             print(" -", name)
     if not args.verify_downloads:
+        if args.verify_available:
+            verified, missing = verify_available(entries)
+            print(f"Fuentes presentes verificadas: {verified}; URLs pendientes: {missing}")
+            print("No se creó ni publicó ningún manifiesto.")
+            return 0
         print("No se creó ni publicó ningún manifiesto.")
         return 0
     if pending:
@@ -113,3 +130,4 @@ if __name__ == "__main__":
     except (ValueError, OSError) as error:
         print("ERROR:", error, file=sys.stderr)
         sys.exit(1)
+
