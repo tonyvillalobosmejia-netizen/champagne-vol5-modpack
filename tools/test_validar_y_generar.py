@@ -11,6 +11,11 @@ import validar_y_generar as validator
 
 
 class PartialVerificationTests(unittest.TestCase):
+    def test_only_approved_independent_hosts_are_accepted(self):
+        validator.check_url("https://maven.blamejared.com/com/blamejared/clumps/mod.jar")
+        with self.assertRaises(ValueError):
+            validator.check_url("https://example.invalid/mod.jar")
+
     def test_verify_available_checks_only_present_urls(self):
         rows = [
             {"file": "uno.jar", "sha256": "a" * 64, "url": "https://cdn.modrinth.com/uno.jar"},
