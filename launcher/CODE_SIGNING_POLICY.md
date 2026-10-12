@@ -8,6 +8,6 @@ Las construcciones para firma deben proceder del código y scripts revisados de 
 
 Solo si SignPath admite el proyecto se anunciará: «Free code signing provided by SignPath.io, certificate by SignPath Foundation», con enlaces a [SignPath.io](https://signpath.io) y [SignPath Foundation](https://signpath.org). Esta frase describe el programa solicitado, no un servicio concedido actualmente. El certificado identifica a SignPath Foundation como editor.
 
-Véase la [política de privacidad](PRIVACY.md) y los [avisos de terceros](THIRD_PARTY_NOTICES.md). Los permisos de los recursos gráficos y configuraciones se deben verificar antes de confirmar la elegibilidad completa.
+Véase la [política de privacidad](PRIVACY.md) y los [avisos de terceros](THIRD_PARTY_NOTICES.md). Los logos VillaWolf tienen autorización MIT del titular. Antes de confirmar la elegibilidad completa deben revisarse los materiales de configuración y la presentación de privacidad durante la instalación según las condiciones del programa.
 
 Antes de una publicación firmada: verificar Authenticode del ejecutable y del instalador; generar blockmap y latest.yml desde los archivos finales; probar la actualización conservando ajustes y contenido. No sobrescribir activos de versiones anteriores.
