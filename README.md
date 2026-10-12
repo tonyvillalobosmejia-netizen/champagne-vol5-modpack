@@ -30,3 +30,10 @@ El perfil se administra en CurseForge; los jugadores utilizarán **Champagne Vol
 - La rama de preparación no modifica la instalación local ni habilita **ACTUALIZAR MODPACK**.
 - Encontrar una URL oficial no equivale a permiso para republicar el archivo en GitHub.
 
+
+
+## VillaWolf Launcher
+
+El código propio del launcher se publica bajo MIT en [launcher/](launcher/README.md). La licencia del launcher no concede derechos de redistribución sobre Minecraft, Forge, mods ni recursos de terceros.
+
+[Code signing policy](launcher/CODE_SIGNING_POLICY.md) · [Privacidad](launcher/PRIVACY.md). La solicitud de firma gratuita está en preparación; SignPath no ha admitido todavía el proyecto. La versión instalada y publicada sigue siendo 0.1.8; 0.1.9 está en desarrollo.

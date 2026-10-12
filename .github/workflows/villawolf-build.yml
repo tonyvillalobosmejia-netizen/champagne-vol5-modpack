@@ -1,0 +1,37 @@
+# Construcción para revisión: no firma ni publica versiones.
+# Código propio publicado bajo MIT; ver avisos de terceros.
+name: Construir VillaWolf Launcher
+on:
+  workflow_dispatch:
+  push:
+    branches: [preparacion-paso97]
+    paths: ['launcher/**', '.github/workflows/villawolf-build.yml']
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: launcher
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: launcher/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run dist -- --publish never
+      - uses: actions/upload-artifact@v7
+        with:
+          name: villawolf-sin-firma-para-revision
+          path: |
+            launcher/dist/*.exe
+            launcher/dist/*.blockmap
+            launcher/dist/latest.yml
+          if-no-files-found: error
+

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VillaWolf Launcher</title>
+  <link rel="icon" href="./assets/villawolf-icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navegación principal">
+      <button id="accountBtn" class="rail-button sidebar-account" title="Tu cuenta" aria-label="Abrir cuenta" aria-haspopup="dialog" aria-expanded="false" aria-controls="accountOverlay"><img id="sidebarAvatar" class="profile-avatar" src="./assets/avatar-default.svg" alt="Avatar del jugador"><span id="sidebarUsername" class="sr-only">Cuenta</span><span id="sidebarAccountType" class="sr-only">SIN SESIÓN</span></button>
+      <nav class="rail-nav">
+        <button id="homeBtn" class="rail-button active" title="Inicio" aria-label="Inicio" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 3l9 8v10h-6v-7H9v7H3Z"/></svg></button>
+        <button id="settingsBtn" class="rail-button" title="Ajustes" aria-label="Ajustes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v4H4zm0 8h16v4H4z"/></svg></button>
+        <button id="discordBtn" class="rail-button" title="Discord del servidor" aria-label="Abrir Discord del servidor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5 9 4l1 2h4l1-2 3 1c3 4 4 8 3 12l-4 2-2-3H9l-2 3-4-2c-1-4 0-8 3-12Z"/><circle cx="8" cy="12" r="1.5" class="icon-cut"/><circle cx="16" cy="12" r="1.5" class="icon-cut"/></svg></button>
+        <button id="activityBtn" class="rail-button" title="Actividad y registros" aria-label="Actividad y registros"><svg viewBox="0 0 24 24" aria-hidden="true" class="stroke-icon"><path d="m4 5 6 6-6 6m9 1h7"/></svg></button>
+      </nav>
+      <div class="rail-bottom"><button id="bottomSettingsBtn" class="rail-button" title="Ajustes" aria-label="Ajustes"><svg viewBox="0 0 24 24" aria-hidden="true" class="stroke-icon"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg></button><button id="closeLauncherBtn" class="rail-button" title="Cerrar launcher" aria-label="Cerrar launcher">×</button></div>
+    </aside>
+    <main class="main">
+      <section id="homePage" class="page home-page" aria-label="Inicio">
+        <img class="launcher-logo" src="./assets/villawolf-logo-horizontal.png" alt="VillaWolf Launcher">
+        <div class="home-bottom">
+          <div class="launch-area"><p id="packSubtitle" class="subtitle">MODPACK OFICIAL</p><h1 id="packName">Champagne Vol.5</h1><button id="playBtn" class="primary" type="button">JUGAR</button><div id="operationProgress" class="operation-progress" hidden aria-live="polite"><b id="progressLabel"></b><progress id="progressBar" max="100"></progress><small id="progressDetail"></small></div></div>
+          <div class="news-grid"><article class="news-card"><span class="eyebrow">NOTICIAS</span><h2>Tu próxima aventura</h2><p>Las novedades de nuestra comunidad están en Discord.</p><button id="newsDiscordBtn" class="text-button">ABRIR COMUNIDAD →</button></article><article class="news-card updates-card"><span class="eyebrow">ACTUALIZACIONES</span><h2>Siempre al día</h2><p id="homeUpdateStatus">El modpack se verifica antes de jugar.</p><button id="updateBtn" class="text-button">REVISAR MODPACK →</button></article></div>
+        </div>
+        <div class="home-versions"><span id="mcVersion">Minecraft 1.20.1</span><span id="forgeVersion">Forge 47.4.10</span><span id="javaVersion">Java 17</span></div>
+      </section>
+      <div id="settingsPanel" class="page settings-page" hidden>
+  <div class="settings-box" role="region" aria-labelledby="settingsTitle">
+    <h2 id="settingsTitle"><img class="settings-brand-icon" src="./assets/villawolf-icon.png" alt="">Ajustes de VillaWolf</h2>
+    <div class="install-line">
+      <div class="install-text"><b>Actualización del launcher</b><small id="launcherUpdateStatus">Se comprueba al abrir. La nueva versión se instala cuando el juego y las descargas terminan.</small></div>
+      <button id="launcherUpdateBtn" class="outline" type="button">BUSCAR ACTUALIZACIÓN</button>
+    </div>
+
+    <label for="performanceProfile">Perfil de memoria</label>
+    <select id="performanceProfile"><option value="custom">Personalizado</option></select>
+    <p id="memoryAdvice">Los perfiles ajustan la RAM al equipo. No cambian tus gráficos, controles ni shaders.</p>
+    <label for="ramInput">Memoria RAM asignada (MB)</label>
+
+    <p>Introduce la cantidad de RAM que utilizará Minecraft.</p>
+
+    <input
+      type="number"
+      id="ramInput"
+      min="1024"
+      step="1"
+      value="6000"
+      placeholder="Ejemplo: 6000"
+    >
+
+    <p>Ejemplo: 6000 MB ≈ 6 GB de RAM.</p>
+
+    <button id="saveSettingsBtn" type="button">
+      GUARDAR CONFIGURACIÓN
+    </button>
+
+    <div class="install-line settings-folder">
+      <div class="install-text"><b>Archivos del modpack</b><small>Abre la carpeta del juego, mods y configuraciones.</small></div>
+      <button id="folderBtn" class="outline" type="button">ABRIR CARPETA</button>
+    </div>
+    <details class="settings-maintenance">
+      <summary>Instalación y reparación</summary>
+      <p>El juego se prepara automáticamente. Usa estas herramientas si necesitas revisar la instalación.</p>
+      <div id="settingsProgress" class="operation-progress" hidden aria-live="polite"><b id="settingsProgressLabel"></b><progress id="settingsProgressBar" max="100"></progress><small id="settingsProgressDetail"></small></div>
+      <div class="install-line"><div class="install-text"><b>Reparar instalación</b><small>Verifica Java, Minecraft, Forge, mods y contenido. Recupera archivos pendientes y conserva mundos y ajustes personales.</small></div><button id="repairBtn" class="outline" type="button">REPARAR INSTALACIÓN</button></div>
+      <div class="install-line"><div class="install-text"><b>Archivos de Minecraft</b><small>Verifica y descarga los archivos del juego.</small></div><button id="downloadGameBtn" class="outline" type="button">DESCARGAR ARCHIVOS</button></div>
+      <div class="install-line"><div class="install-text"><b>Metadatos de Minecraft</b><small>Revisa la información de la versión y sus recursos.</small></div><button id="prepareBtn" class="outline" type="button">PREPARAR</button></div>
+      <div class="install-line"><div class="install-text"><b>Forge para Minecraft 1.20.1</b><small>Instala Forge en la carpeta del launcher.</small></div><button id="forgeBtn" class="outline" type="button">INSTALAR FORGE</button></div>
+      <div class="install-line"><div class="install-text"><b>Componentes de Windows</b><small>Prepara las librerías nativas y revisa Forge.</small></div><button id="nativesBtn" class="outline" type="button">REVISAR COMPONENTES</button></div>
+    </details>
+
+    <button id="closeSettingsBtn" type="button">
+      VOLVER A INICIO
+    </button>
+  </div>
+</div>
+
+      <section id="activityPage" class="page content-page" hidden aria-labelledby="activityTitle"><header class="page-heading"><div><span class="eyebrow">REGISTROS</span><h1 id="activityTitle">Actividad</h1><p>Descargas, preparación del juego y mensajes del launcher.</p></div><button id="clearLog" class="outline">LIMPIAR ACTIVIDAD</button></header><div id="log" class="log" role="log" aria-label="Registro de actividad"><div class="log-entry"><span class="log-time">INFO</span><span>Launcher listo.</span></div></div><button id="activityOpenLogsBtn" class="outline">ABRIR CARPETA DE REGISTROS</button><p id="activityActionStatus" aria-live="polite"></p></section>
+      <footer class="app-footer"><span id="launcherVersion">LAUNCHER 0.1.7</span><span id="launcherBuild" hidden></span></footer>
+    </main>
+  </div>
+  <div id="accountOverlay" class="settings-overlay" hidden>
+      <section class="panel account-dialog" id="accountPanel" role="dialog" aria-modal="true" aria-labelledby="accountTitle" tabindex="-1">
+        <div class="panel-heading"><div><span class="eyebrow">CUENTA</span><h2 id="accountTitle">Tu cuenta</h2></div><button id="closeAccountBtn" class="account-close" type="button" aria-label="Cerrar cuenta">×</button></div>
+        <p id="authStatus" aria-live="polite">Comprobando el servicio de cuentas…</p>
+        <button id="discordLoginBtn" class="outline" type="button" hidden>INICIAR SESIÓN CON DISCORD</button>
+        <button id="cancelDiscordLoginBtn" class="text-button" type="button" hidden>CANCELAR INICIO DE SESIÓN</button>
+        <form id="authForm" hidden>
+          <div class="account-fields">
+            <div><label for="accountUsername">Nombre de usuario</label><input id="accountUsername" name="username" type="text" minlength="3" maxlength="16" pattern="[A-Za-z0-9_]{3,16}" autocomplete="username" required placeholder="TuNombreMinecraft"></div>
+            <div><label for="accountPassword">Contraseña</label><input id="accountPassword" name="password" type="password" maxlength="256" autocomplete="current-password" required placeholder="Tu contraseña"></div>
+          </div>
+          <div id="registrationFields" hidden><label for="confirmPassword">Repite la contraseña</label><input id="confirmPassword" type="password" maxlength="256" autocomplete="new-password"><p>Usa al menos 12 caracteres. El nombre quedará asociado a tu cuenta.</p></div>
+          <div class="account-actions"><button id="authSubmitBtn" class="outline" type="submit">INICIAR SESIÓN</button><button id="authModeBtn" class="text-button" type="button">CREAR UNA CUENTA</button></div>
+        </form>
+        <button id="logoutAccountBtn" class="outline" type="button" hidden>CERRAR SESIÓN</button>
+        <details id="localProfileDetails" class="local-profile">
+          <summary>Jugar en modo local</summary>
+          <p>Este perfil permite jugar mundos locales; no acredita una cuenta del servidor.</p>
+          <label for="offlineUsername">Nombre de jugador (3 a 16 caracteres)</label>
+          <input id="offlineUsername" type="text" maxlength="16" autocomplete="off" placeholder="TuNombreMinecraft">
+          <button id="saveProfileBtn" class="outline" type="button">GUARDAR PERFIL LOCAL</button>
+          <p id="profileStatus" aria-live="polite">Elige un nombre para tus mundos locales.</p>
+        </details>
+        <div class="avatar-settings">
+          <p id="avatarStatus" aria-live="polite">Personaliza el avatar con un archivo de skin PNG. Solo cambia la imagen del launcher.</p>
+          <div class="account-actions"><button id="chooseAvatarBtn" class="outline" type="button">ELEGIR SKIN PARA EL AVATAR</button><button id="resetAvatarBtn" class="text-button" type="button">USAR AVATAR PREDETERMINADO</button></div>
+        </div>
+      </section>
+  </div>
+  <div id="errorOverlay" class="settings-overlay error-overlay" hidden>
+    <section id="errorPanel" class="panel error-dialog" role="alertdialog" aria-modal="true" aria-labelledby="errorTitle" aria-describedby="errorHint" tabindex="-1">
+      <div class="panel-heading"><h2 id="errorTitle">No se pudo completar la operación</h2><button id="closeErrorBtn" class="account-close" type="button" aria-label="Cerrar error">×</button></div>
+      <p id="errorHint"></p><p id="errorMessage"></p>
+      <label for="errorLog">Registro para revisar o compartir</label><textarea id="errorLog" readonly spellcheck="false"></textarea>
+      <div class="account-actions"><button id="copyErrorBtn" class="outline" type="button">COPIAR REGISTRO</button><button id="openLogsBtn" class="outline" type="button">ABRIR REGISTROS</button></div>
+      <p id="errorActionStatus" aria-live="polite"></p>
+    </section>
+  </div>
+  <div id="downloadsOverlay" class="settings-overlay" hidden>
+    <section id="downloadsPanel" class="panel downloads-dialog" role="dialog" aria-modal="true" aria-labelledby="downloadsTitle" tabindex="-1">
+      <div class="panel-heading"><div><span class="eyebrow">MODPACK</span><h2 id="downloadsTitle">Actualizar Champagne</h2></div><button id="closeDownloadsBtn" class="account-close" type="button" aria-label="Cerrar descargas">×</button></div>
+      <p id="downloadsStatus" aria-live="polite">Revisando los archivos…</p>
+      <p>Pulsa DESCARGAR para abrir la versión exacta en su página oficial y guarda el JAR en Descargas. Lo verificaremos automáticamente y desaparecerá de esta lista. Cuando estén todos listos, se instalará el modpack. No necesitas instalar CurseForge.</p>
+      <ul id="downloadsList" class="downloads-list"></ul>
+      <div id="downloadsProgress" class="operation-progress" hidden aria-live="polite"><b id="downloadsProgressLabel"></b><progress id="downloadsProgressBar" max="100"></progress><small id="downloadsProgressDetail"></small></div>
+      <div class="account-actions">
+        <button id="importDownloadsBtn" class="outline" type="button">ELEGIR ARCHIVOS DE OTRA CARPETA</button>
+        <button id="refreshDownloadsBtn" class="text-button" type="button">REVISAR ARCHIVOS</button>
+        <button id="installDownloadsBtn" class="outline" type="button" disabled>INSTALAR VERSIÓN</button>
+      </div>
+      <p id="downloadsResult" aria-live="polite">La instalación comienza solo cuando estén listas todas las descargas manuales. Los demás mods se descargarán y verificarán antes de aplicar los cambios.</p>
+    </section>
+  </div>
+  <script src="renderer.js"></script> 
+</body>
+</html>

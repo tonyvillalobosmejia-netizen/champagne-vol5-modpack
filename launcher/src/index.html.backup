@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Launcher</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-mark">M</div>
+      <div class="brand">MI LAUNCHER<span>FORGE EDITION</span></div>
+      <div class="side-label">LAUNCHER</div>
+      <div class="nav active">◈ &nbsp; Inicio</div>
+      <div class="nav">⚙ &nbsp; Ajustes <span class="soon">PRONTO</span></div>
+      <div class="sidebar-bottom"><span class="dot"></span> Sistema listo para configurar</div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><span class="eyebrow">CENTRO DE JUEGO</span><span class="version-pill">PRE-ALPHA 0.1.0</span></header>
+      <section class="hero">
+        <div class="hero-content">
+          <div class="overline"><span class="live-dot"></span> TU AVENTURA COMIENZA AQUÍ</div>
+          <h1 id="packName">MI SERVIDOR</h1>
+          <p class="subtitle" id="packSubtitle">MODPACK OFICIAL</p>
+          <p class="description">Tu mundo. Tu comunidad. Siempre al día.</p>
+          <div class="game-tags"><span id="mcVersion">Minecraft 1.20.1</span><span id="forgeVersion">Forge 47.4.10</span><span>JAVA 17</span></div>
+        </div>
+        <div class="orb orb-one"></div><div class="orb orb-two"></div><div class="hero-grid"></div>
+      </section>
+      <section class="action-row">
+        <button id="playBtn" class="primary" disabled><span class="play-icon">▶</span><span><b>JUGAR</b><small>El inicio de sesión se integra en la siguiente fase</small></span></button>
+        <button id="updateBtn" class="secondary"><span>↻</span> ACTUALIZAR MODPACK</button>
+      </section>
+      <section class="panel">
+        <div class="panel-heading"><div><span class="eyebrow">CONFIGURACIÓN</span><h2>Instalación del juego</h2></div><span class="status-chip"><span class="dot"></span> LOCAL</span></div>
+        <div class="install-line"><div class="install-icon">⬡</div><div class="install-text"><b>Forge para Minecraft 1.20.1</b><small>Instala el perfil del cliente en la carpeta privada del launcher.</small></div><button id="forgeBtn" class="outline">INSTALAR FORGE</button></div>
+        <div class="install-line"><div class="install-icon">▤</div><div class="install-text"><b>Archivos del modpack</b><small>Carpeta de instalación aislada de tus otras instancias.</small></div><button id="folderBtn" class="outline">ABRIR CARPETA</button></div>
+      </section>
+      <section class="activity">
+        <div class="activity-title"><span class="eyebrow">ACTIVIDAD</span><button id="clearLog" class="text-button">LIMPIAR</button></div>
+        <div id="log" class="log"><div class="log-entry"><span class="log-time">INFO</span><span>Launcher listo. Configura la URL del manifiesto para habilitar actualizaciones.</span></div></div>
+      </section>
+      <footer><span>MI LAUNCHER <span class="muted">/ BUILD 0.1.0</span></span><span class="muted">No afiliado con Mojang ni Microsoft.</span></footer>
+    </main>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>
