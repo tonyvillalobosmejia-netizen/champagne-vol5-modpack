@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches: [preparacion-paso97]
-    paths: ['launcher/**', '.github/workflows/villawolf-build.yml']
+    paths: ['launcher/**', '.github/workflows/villawolf-build.yml', '.gitattributes']
 permissions:
   contents: read
 jobs:
@@ -34,4 +34,3 @@ jobs:
             launcher/dist/*.blockmap
             launcher/dist/latest.yml
           if-no-files-found: error
-
