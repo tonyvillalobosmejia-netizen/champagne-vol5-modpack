@@ -1,6 +1,6 @@
 # Code signing policy
 
-Estado: VillaWolf Launcher está preparando una solicitud al programa gratuito de SignPath Foundation. La solicitud no se ha enviado y no se dispone de su firma. La versión publicada 0.1.8 no está firmada.
+Estado: VillaWolf Launcher solicitó acceso al programa gratuito de SignPath Foundation. La solicitud fue enviada y está pendiente de revisión; no se dispone de su firma. La versión publicada 0.1.8 no está firmada.
 
 Mantenedor y revisor: [tonyvillalobosmejia-netizen](https://github.com/tonyvillalobosmejia-netizen). Aprobador propuesto de firmas: el mismo titular, quien deberá confirmar los roles y configurar la autenticación de dos factores exigida por el programa.
 
