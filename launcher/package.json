@@ -1,13 +1,15 @@
 {
   "name": "mi-launcher-forge",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "VillaWolf Launcher: Minecraft Forge y actualizaciones del modpack",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
+    "admin:modpack": "electron tools/admin-modpack/main.cjs",
+    "test:admin": "node --test tests/verificar-admin-modpack.cjs",
     "dist": "electron-builder --win nsis",
     "importar-curseforge": "node tools/importar-curseforge.js",
-    "test": "node --test src/tests/verificar-config.js src/tests/verificar-actualizador.js tests/verificar-empaquetador-curseforge.js tests/verificar-importar-curseforge.js tests/verificar-preparacion.js tests/verificar-cuentas.cjs tests/verificar-descargas-asistidas.cjs tests/verificar-versiones-launcher.cjs tests/verificar-soporte.cjs tests/verificar-discord.cjs tests/verificar-discord-worker.cjs tests/verificar-desinstalacion.cjs",
+    "test": "node --test src/tests/verificar-config.js src/tests/verificar-actualizador.js tests/verificar-empaquetador-curseforge.js tests/verificar-importar-curseforge.js tests/verificar-preparacion.js tests/verificar-cuentas.cjs tests/verificar-descargas-asistidas.cjs tests/verificar-versiones-launcher.cjs tests/verificar-soporte.cjs tests/verificar-discord.cjs tests/verificar-discord-worker.cjs tests/verificar-desinstalacion.cjs tests/verificar-admin-modpack.cjs",
     "cuentas:servidor": "node auth-server/server.cjs",
     "cuentas:probar": "node tools/probar-cuentas.cjs",
     "cuentas:discord": "node auth-server/discord-server.cjs"

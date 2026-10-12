@@ -42,6 +42,7 @@ function sandbox(t, document, options = {}) {
       if (name === "./champagne-support") return require("../champagne-support");
       if (name === "./champagne-remote-content") return require("../champagne-remote-content");
       if (name === "./champagne-game-profile") return require("../champagne-game-profile");
+      if (name === "./champagne-presentation") return require("../champagne-presentation");
       if (name === "./champagne-launcher-updates") return require("../champagne-launcher-updates");
       if (name === "node:fs") return disk;
       return require(name);

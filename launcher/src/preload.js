@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("launcher", {
+  refreshPresentation:()=>ipcRenderer.invoke('refresh-presentation'),
   openDiscord: () => ipcRenderer.invoke("open-discord"),
   closeLauncher: () => ipcRenderer.invoke("close-launcher"),
   uninstallLauncher: () => ipcRenderer.invoke("uninstall-launcher"),

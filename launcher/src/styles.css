@@ -247,3 +247,5 @@ body { overflow: hidden; background: #101521; }
 /* Portada Mundo Conejil: imagen proporcionada por el usuario. */
 .home-page { background-color:#080b11; background-size:cover; background-repeat:no-repeat; background-position:center; }
 .news-card { background-image:linear-gradient(0deg,#0c1024 8%,#15142eb0),url('./assets/mundo-conejil-fondo.jpg'); }
+
+#homeUpdateStatus{max-height:90px;overflow:auto;white-space:pre-wrap}

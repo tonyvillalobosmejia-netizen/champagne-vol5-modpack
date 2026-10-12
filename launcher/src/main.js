@@ -7,6 +7,13 @@ const https = require("node:https");
 const http = require("node:http");
 const crypto = require("node:crypto");
 const config = require("./config");
+const { validatePresentation, viewPresentation } = require('./champagne-presentation');
+let packPresentation=null;
+const presentationCache=path.join(app.getPath('userData'),'pack-presentation.json');
+try{if(!fs.lstatSync(presentationCache).isSymbolicLink()){
+  const saved=JSON.parse(fs.readFileSync(presentationCache,'utf8'));
+  if(typeof saved.packName==='string'&&saved.packName.length<=80)packPresentation={...saved,presentation:validatePresentation(saved.presentation)};
+}}catch{}
 const { validateGame, key: gameKey, pathsForGame, installerUrl, readCachedGame } = require("./champagne-game-profile");
 const { createLauncherUpdates } = require("./champagne-launcher-updates");
 const { checkedModTarget, validateModPathSets } = require("./champagne-update-paths");
@@ -1155,10 +1162,26 @@ app.whenReady().then(() => {
     catch (e) { sendStatus(e.message, "error"); return { ok: false, message: e.message }; }
   });
   ipcMain.handle("get-info", () => ({
-    packName: config.packName, subtitle: config.packSubtitle,
+    packName: packPresentation?.packName || config.packName, subtitle: config.packSubtitle,
+    presentation:viewPresentation(packPresentation?.presentation),packVersion:packPresentation?.version,
     minecraftVersion: config.minecraftVersion, forgeVersion: config.forgeVersion,
     javaMajor:config.javaMajor || 17, launcherVersion:config.launcherVersion, instanceDir, appRoot
   }));
+  ipcMain.handle('refresh-presentation',async()=>{
+    try{
+      const manifest=await assistedManifest();
+      const game=validateGame(manifest.game,defaultGame,config.launcherVersion);
+      const presentation=validatePresentation(manifest.presentation);
+      if(presentation?.background&&nativeImage.createFromDataURL(viewPresentation(presentation).background).isEmpty())throw Error('Imagen del modpack inválida.');
+      const next={packName:game.packName,version:manifest.version,presentation};
+      if(fs.existsSync(presentationCache)&&fs.lstatSync(presentationCache).isSymbolicLink())throw Error('Caché de presentación inválida.');
+      fs.mkdirSync(path.dirname(presentationCache),{recursive:true});
+      const temporary=presentationCache+'.'+crypto.randomUUID()+'.tmp';
+      try{fs.writeFileSync(temporary,JSON.stringify(next),{flag:'wx'});fs.renameSync(temporary,presentationCache);}
+      finally{if(fs.existsSync(temporary))fs.unlinkSync(temporary);}
+      packPresentation=next;return{ok:true};
+    }catch(error){return{ok:false,message:error.message};}
+  });
   ipcMain.handle("launcher-update-status",()=>launcherUpdates.getState());
   ipcMain.handle("check-launcher-update",()=>launcherUpdates.check());
   ipcMain.handle("install-forge", async () => {

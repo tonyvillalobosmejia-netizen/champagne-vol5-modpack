@@ -55,10 +55,19 @@ function refreshGameInfo() { return window.launcher.getInfo().then(info => {
   $("javaVersion").textContent = `JAVA ${info.javaMajor || 17}`;
   $("launcherVersion").textContent = `VILLAWOLF · LAUNCHER ${info.launcherVersion}`;
   $("launcherBuild").textContent = `/ BUILD ${info.launcherVersion}`; $("homeUpdateStatus").textContent = `Launcher ${info.launcherVersion}. El modpack se verifica antes de jugar.`;
+  const presentation=info.presentation;
+  for(const element of document.querySelectorAll('.home-page,.news-card')){
+    if(presentation?.background)element.style.backgroundImage=`linear-gradient(0deg,#070c19e6,#090e1b55),url("${presentation.background}")`;
+    else element.style.removeProperty('background-image');
+  }
+  const card=document.querySelector('.updates-card h2');
+  if(presentation?.notes){card.textContent=presentation.notes.title;$('homeUpdateStatus').textContent=presentation.notes.text;}
+  else card.textContent='Actualizaciones';
 
   addLog(`Carpeta de instancia: ${info.instanceDir}`);
 }); }
 refreshGameInfo();
+window.launcher.refreshPresentation().then(result=>{if(result.ok)return refreshGameInfo();}).catch(()=>{});
 async function refreshLauncherUpdateStatus() {
   const state=await window.launcher.getLauncherUpdateStatus();
   $('launcherUpdateStatus').textContent=state.message;
