@@ -1,8 +1,8 @@
 "use strict";
-function createLauncherUpdates({ app, feed, loadUpdater, isBusy, status, progress = () => {}, setIntervalFn = setInterval, clearIntervalFn = clearInterval }) {
+function createLauncherUpdates({ app, feed, loadUpdater, isBusy, status, onState = () => {}, progress = () => {}, setIntervalFn = setInterval, clearIntervalFn = clearInterval }) {
   let updater, checking = null, timer, polling, ready = false, applying = false;
   let state = { phase:'idle', message:'Las actualizaciones del launcher se comprueban al abrirlo.' };
-  function change(phase,message,extra={}) { state={phase,message,...extra}; status(message,phase==='error'?'info':'info'); }
+  function change(phase,message,extra={}) { state={phase,message,...extra}; status(message,'info'); onState({...state}); }
   function installWhenIdle() {
     if (!ready || applying || isBusy()) return false;
     applying = true;

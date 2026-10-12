@@ -1040,6 +1040,7 @@ const launcherUpdates = createLauncherUpdates({ app, feed:config.launcherUpdateU
   loadUpdater:()=>require("electron-updater").autoUpdater,
   isBusy:()=>!!minecraftProcess || !!repairController?.busy || launchBusy || !!gamePreparationPending || packUpdateBusy || automaticPreparation.busy || manualDialogBusy || forgeInstallBusy || nativePrepBusy || gameDownloadBusy,
   progress:sendProgress,
+  onState:state=>{ for (const win of BrowserWindow.getAllWindows()) win.webContents.send('launcher-update-state',state); },
   status:sendStatus });
 async function manualPreparation(action) {
   if (repairController?.busy) return { ok: false, message: "Espera a que termine la reparación." };
@@ -1055,6 +1056,24 @@ repairController = createRepair({
   status: sendStatus, progress: sendProgress
 });
 app.whenReady().then(() => {
+  ipcMain.handle('uninstall-launcher', async event => {
+    if (!app.isPackaged) return {ok:false,message:'La desinstalación está disponible en la aplicación instalada.'};
+    const busy=()=>minecraftProcess || accountLaunchBusy || launchBusy || gamePreparationPending || repairController?.busy || packUpdateBusy || automaticPreparation.busy || manualDialogBusy || forgeInstallBusy || nativePrepBusy || gameDownloadBusy || launcherUpdates.ready || ['checking','downloading','waiting','restarting'].includes(launcherUpdates.getState().phase);
+    if (busy()) return {ok:false,message:'Cierra Minecraft y espera a que terminen las descargas o actualizaciones antes de desinstalar.'};
+    const owner=BrowserWindow.fromWebContents(event.sender);
+    const choice=await dialog.showMessageBox(owner,{type:'warning',title:'Desinstalar VillaWolf',message:'¿Qué quieres eliminar?',detail:'Sólo aplicación: conserva Minecraft, mods, mundos y ajustes para una futura instalación.\n\nAplicación y datos: elimina también Java descargado por VillaWolf, Minecraft, mods, mundos, skins y configuraciones de VillaWolf. Tu carpeta de CurseForge y Java del sistema se conservan.',buttons:['Cancelar','Sólo aplicación','Aplicación y todos sus datos'],defaultId:0,cancelId:0,noLink:true});
+    if(choice.response===0)return {ok:true,message:'Desinstalación cancelada.'};
+    const removeData=choice.response===2;
+    if(removeData){const confirmation=await dialog.showMessageBox(owner,{type:'warning',title:'Eliminar mundos y datos',message:'Se eliminarán permanentemente los mundos y ajustes guardados en VillaWolf.',detail:'Haz una copia de tus mundos antes de continuar. Esta acción no se puede deshacer.',buttons:['Conservar todo','Eliminar y desinstalar'],defaultId:0,cancelId:0,noLink:true});if(confirmation.response!==1)return {ok:true,message:'Desinstalación cancelada. Tus datos se conservan.'};}
+    if (busy()) return {ok:false,message:'Comenzó otra operación; espera a que termine antes de desinstalar.'};
+    const exe=app.getPath('exe'),dir=path.dirname(exe),uninstaller=['Uninstall VillaWolf Launcher.exe','Uninstall Mi Launcher.exe'].map(name=>path.join(dir,name)).find(file=>fs.existsSync(file));
+    const plan=require('./champagne-uninstall').uninstallPlan({roaming:app.getPath('appData'),userData:app.getPath('userData'),gameRoot:appRoot,launcherExe:exe,uninstaller,removeData});
+    const temporary=fs.mkdtempSync(path.join(os.tmpdir(),'villawolf-uninstall-')),script=path.join(temporary,'uninstall-launcher.ps1'),planFile=path.join(temporary,'plan.json');
+    fs.copyFileSync(path.join(__dirname.replace('app.asar','app.asar.unpacked'),'uninstall-launcher.ps1'),script);fs.writeFileSync(planFile,JSON.stringify(plan));
+    const child=spawn('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',script,'-PlanFile',planFile,'-LauncherPid',String(process.pid)],{detached:true,windowsHide:true,stdio:'ignore'});
+    await new Promise((resolve,reject)=>{child.once('spawn',resolve);child.once('error',reject);});child.unref();setImmediate(()=>app.quit());
+    return {ok:true,message:'Desinstalando VillaWolf…'};
+  });
   ipcMain.handle("open-discord", async () => { await shell.openExternal("https://discord.gg/K2uWjjEJu"); return { ok: true, message: "Discord del servidor abierto." }; });
   ipcMain.handle("close-launcher", () => { setImmediate(() => app.quit()); return { ok: true }; });
   ipcMain.handle("memory-profiles", () => memoryProfiles(os.totalmem()));

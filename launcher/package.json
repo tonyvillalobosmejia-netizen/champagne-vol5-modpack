@@ -1,13 +1,13 @@
 {
   "name": "mi-launcher-forge",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "VillaWolf Launcher: Minecraft Forge y actualizaciones del modpack",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win nsis",
     "importar-curseforge": "node tools/importar-curseforge.js",
-    "test": "node --test src/tests/verificar-config.js src/tests/verificar-actualizador.js tests/verificar-empaquetador-curseforge.js tests/verificar-importar-curseforge.js tests/verificar-preparacion.js tests/verificar-cuentas.cjs tests/verificar-descargas-asistidas.cjs tests/verificar-versiones-launcher.cjs tests/verificar-soporte.cjs tests/verificar-discord.cjs tests/verificar-discord-worker.cjs",
+    "test": "node --test src/tests/verificar-config.js src/tests/verificar-actualizador.js tests/verificar-empaquetador-curseforge.js tests/verificar-importar-curseforge.js tests/verificar-preparacion.js tests/verificar-cuentas.cjs tests/verificar-descargas-asistidas.cjs tests/verificar-versiones-launcher.cjs tests/verificar-soporte.cjs tests/verificar-discord.cjs tests/verificar-discord-worker.cjs tests/verificar-desinstalacion.cjs",
     "cuentas:servidor": "node auth-server/server.cjs",
     "cuentas:probar": "node tools/probar-cuentas.cjs",
     "cuentas:discord": "node auth-server/discord-server.cjs"
@@ -24,7 +24,15 @@
     },
     "files": [
       "src/**/*",
-      "package.json"
+      "!src/**/*.backup",
+      "!src/tests/**/*",
+      "!src/assets/villawolf-banner.png",
+      "!src/assets/villawolf-logo.png",
+      "package.json",
+      "LICENSE",
+      "THIRD_PARTY_NOTICES.md",
+      "PRIVACY.md",
+      "CODE_SIGNING_POLICY.md"
     ],
     "asarUnpack": [
       "src/*.ps1"

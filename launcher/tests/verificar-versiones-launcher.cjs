@@ -20,12 +20,12 @@ test('perfil incompatible o con ruta inyectada se bloquea antes de preparar el j
  }
  assert.equal(atLeast('0.1.10','0.1.4'),true);assert.equal(atLeast('0.1.4','0.2.0'),false);
 });
-function updaterFixture(){
+function updaterFixture(onState){
  const app=new EventEmitter();app.isPackaged=true;
  const updater=new EventEmitter();let installs=0,checks=0,busy=true;
  updater.setFeedURL=()=>{};updater.checkForUpdates=async()=>{checks++;updater.emit('checking-for-update');};
  updater.quitAndInstall=(silent,reopen)=>{assert.equal(silent,true);assert.equal(reopen,true);installs++;};
- const manager=createLauncherUpdates({app,feed:'https://example.invalid',loadUpdater:()=>updater,isBusy:()=>busy,status:()=>{},setIntervalFn:()=>({unref(){}}),clearIntervalFn:()=>{}});
+ const manager=createLauncherUpdates({app,feed:'https://example.invalid',loadUpdater:()=>updater,isBusy:()=>busy,status:()=>{},onState,setIntervalFn:()=>({unref(){}}),clearIntervalFn:()=>{}});
  return {manager,updater,app,installs:()=>installs,checks:()=>checks,idle:()=>{busy=false;}};
 }
 test('launcher descarga solo y espera al cierre del juego antes de instalar; nunca degrada',async()=>{
@@ -35,6 +35,12 @@ test('launcher descarga solo y espera al cierre del juego antes de instalar; nun
  assert.equal(f.manager.ready,true);assert.equal(f.manager.installWhenIdle(),false);assert.equal(f.installs(),0);
  f.idle();assert.equal(f.manager.installWhenIdle(),true);assert.equal(f.installs(),1);
  assert.equal(f.manager.installWhenIdle(),false);assert.equal(f.installs(),1);
+});
+test('estado por eventos refleja descarga, errores y reintentos sin permitir que la vista lo modifique',async()=>{
+ const phases=[];const f=updaterFixture(state=>{phases.push(state.phase);state.phase='alterado';});
+ await f.manager.check();f.updater.emit('update-available',{version:'0.1.10'});assert.equal(f.manager.getState().phase,'downloading');
+ f.updater.emit('error',new Error('red'));await f.manager.check();f.updater.emit('update-not-available',{version:'0.1.10'});
+ assert.deepEqual(phases,['checking','downloading','error','checking','current']);assert.equal(f.manager.getState().phase,'current');
 });
 test('un fallo de descarga no ejecuta el instalador y permite reintentar',async()=>{
  const f=updaterFixture();await f.manager.check();f.updater.emit('error',new Error('SHA-512 incorrecto'));

@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("launcher", {
   openDiscord: () => ipcRenderer.invoke("open-discord"),
   closeLauncher: () => ipcRenderer.invoke("close-launcher"),
+  uninstallLauncher: () => ipcRenderer.invoke("uninstall-launcher"),
   getMemoryProfiles: () => ipcRenderer.invoke("memory-profiles"),
   repairInstallation: () => ipcRenderer.invoke("repair-installation"),
   getDiagnostics: message => ipcRenderer.invoke("diagnostics", message),
@@ -9,6 +10,7 @@ contextBridge.exposeInMainWorld("launcher", {
   openLogs: () => ipcRenderer.invoke("open-logs"),
   onProgress: callback => ipcRenderer.on("progress", (_event, data) => callback(data)),
   getLauncherUpdateStatus:()=>ipcRenderer.invoke("launcher-update-status"),
+  onLauncherUpdateStatus:callback=>ipcRenderer.on("launcher-update-state",(_event,state)=>callback(state)),
   checkLauncherUpdate:()=>ipcRenderer.invoke("check-launcher-update"),
   getAssistedStatus: () => ipcRenderer.invoke("assisted-status"),
   openAssistedPage: (relative) => ipcRenderer.invoke("assisted-open-page", relative),

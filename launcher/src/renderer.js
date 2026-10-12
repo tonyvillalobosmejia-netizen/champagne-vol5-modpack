@@ -21,6 +21,7 @@ function addLog(message, kind = "info", time = new Date().toLocaleTimeString()) 
 
   row.append(stamp, text);
   $("log").prepend(row);
+  while ($("log").childElementCount > 300) $("log").lastElementChild.remove();
 }
 
 async function runButton(button, action, label) {
@@ -65,7 +66,9 @@ async function refreshLauncherUpdateStatus() {
 $('launcherUpdateBtn').addEventListener('click',()=>runButton($('launcherUpdateBtn'),async()=>{
   const result=await window.launcher.checkLauncherUpdate();await refreshLauncherUpdateStatus();return result;
 },'BUSCANDO…'));
-setInterval(()=>refreshLauncherUpdateStatus().catch(()=>{}),5000);
+$('uninstallBtn').addEventListener('click',()=>runButton($('uninstallBtn'),()=>window.launcher.uninstallLauncher(),'PREPARANDO…'));
+window.launcher.onLauncherUpdateStatus(state=>{ $('launcherUpdateStatus').textContent=state.message; });
+refreshLauncherUpdateStatus().catch(()=>{});
 
 // INSTALAR FORGE
 $("forgeBtn").addEventListener("click", () =>
