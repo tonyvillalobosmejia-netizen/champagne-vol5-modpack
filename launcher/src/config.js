@@ -3,7 +3,7 @@ module.exports = {
   launcherUpdateUrl: "https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/latest/download",
   serverId: "champagne-vol5",
   javaMajor: 17,
-  packName: "CHAMPAGNE VOL:5",
+  packName: "Mundo Conejil",
   packSubtitle: "MODPACK OFICIAL",
   minecraftVersion: "1.20.1",
   forgeVersion: "47.4.10",

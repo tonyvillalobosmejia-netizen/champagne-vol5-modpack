@@ -210,14 +210,14 @@ body { overflow: hidden; background: #101521; }
 .launcher-logo { position: absolute; top: 18px; right: 24px; width: clamp(180px, 24vw, 280px); height: auto; object-fit: contain; mix-blend-mode: screen; pointer-events: none; }
 .settings-brand-icon { width: 42px; height: 42px; object-fit: contain; }
 .settings-box h2 { display: flex; gap: 14px; align-items: center; }
-.home-page { position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding: 38px 28px 52px; background-image: linear-gradient(0deg,#070c19 0%,#090e1bd9 12%,#0b10243b 70%,#0b10240d), url('./assets/villawolf-banner.png'); background-size: cover; background-position: center; }
+.home-page { position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding: 38px 28px 52px; background-image: linear-gradient(0deg,#070c19 0%,#090e1bd9 12%,#0b10243b 70%,#0b10240d), url('./assets/mundo-conejil-fondo.jpg'); background-size: cover; background-position: center; }
 .home-bottom { display: grid; grid-template-columns: minmax(230px,1fr) minmax(300px,1fr); gap: 24px; align-items: end; }
 .launch-area h1 { font-size: clamp(28px,3.6vw,44px); letter-spacing: -1.5px; line-height: 1.08; margin: 10px 0 22px; text-shadow: 0 2px 12px #0008; }
 .subtitle { color: #ddd4f2; font-size: 10px; letter-spacing: 2px; }
 .primary { display: block; min-width: 200px; padding: 16px 30px; border-radius: 28px; text-align: center; font-size: 13px; letter-spacing: 1px; background: #f5f4f8; color: #19212f; box-shadow: 0 5px 24px #0004; }
 .primary:disabled { opacity: .6; }
 .news-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.news-card { position: relative; min-height: 176px; border: 1px solid #5e536a; border-radius: 15px; padding: 54px 14px 14px; background: linear-gradient(0deg,#0c1024 8%,#15142eb0), url('./assets/villawolf-banner.png') center/cover; box-shadow: 0 8px 24px #0004; }
+.news-card { position: relative; min-height: 176px; border: 1px solid #5e536a; border-radius: 15px; padding: 54px 14px 14px; background: linear-gradient(0deg,#0c1024 8%,#15142eb0), url('./assets/mundo-conejil-fondo.jpg') center/cover; box-shadow: 0 8px 24px #0004; }
 .updates-card { background-position: right; }
 .news-card .eyebrow { color: #caadf3; font-size: 8px; letter-spacing: 1.5px; }
 .news-card h2 { font-size: 14px; margin: 8px 0; }
@@ -244,6 +244,6 @@ body { overflow: hidden; background: #101521; }
 @media(max-width:900px) { .home-page { padding: 26px 20px 50px; } .home-bottom { gap: 16px; grid-template-columns: minmax(210px,1fr) minmax(290px,1fr); } .news-card { padding: 35px 12px 12px; } .settings-page,.content-page { padding: 26px 24px 52px; } }
 @media(max-height:650px) { .news-card { min-height: 155px; padding-top: 30px; } .home-bottom { gap: 16px; } .launch-area h1 { font-size: 32px; } }
 
-/* Portada VillaWolf: preservar el banner completo y mantener legible JUGAR. */
-.home-page { background-color:#080b11; background-size:cover,contain; background-repeat:no-repeat; background-position:center,center 18%; }
-.news-card { background-image:linear-gradient(0deg,#0c1024 8%,#15142eb0),url('./assets/villawolf-banner.png'); }
+/* Portada Mundo Conejil: imagen proporcionada por el usuario. */
+.home-page { background-color:#080b11; background-size:cover; background-repeat:no-repeat; background-position:center; }
+.news-card { background-image:linear-gradient(0deg,#0c1024 8%,#15142eb0),url('./assets/mundo-conejil-fondo.jpg'); }

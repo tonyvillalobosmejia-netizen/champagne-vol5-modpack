@@ -274,7 +274,7 @@ function showAccountState(state) {
   if (state.user) $("authStatus").textContent = "Sesión iniciada como " + state.user.username + ".";
   else if (state.configured) $("authStatus").textContent = state.localDevelopment
     ? "Cuentas en prueba local. La conexión con el servidor de Minecraft todavía está pendiente."
-    : "Inicia sesión o crea tu cuenta de Champagne.";
+    : "Inicia sesión o crea tu cuenta de VillaWolf.";
   else {
     $("authStatus").textContent = "Las cuentas estarán disponibles cuando se configure el servicio. Puedes jugar en modo local.";
     $("localProfileDetails").open = true;
@@ -345,7 +345,7 @@ function refreshSidebarAccount() {
   const username = accountState.user?.username || localUsername;
   $("sidebarUsername").textContent = username || "Cuenta";
   $("sidebarUsername").title = username || "Cuenta"; $("accountBtn").title = username ? "Cuenta de " + username : "Tu cuenta";
-  $("sidebarAccountType").textContent = accountState.user ? accountState.provider === 'discord' ? 'CUENTA DISCORD' : "CUENTA CHAMPAGNE" : username ? "PERFIL LOCAL" : "SIN SESIÓN";
+  $("sidebarAccountType").textContent = accountState.user ? accountState.provider === 'discord' ? 'CUENTA DISCORD' : "CUENTA VILLAWOLF" : username ? "PERFIL LOCAL" : "SIN SESIÓN";
   $("accountBtn").setAttribute("aria-label", username ? "Gestionar cuenta de " + username : "Abrir cuenta");
   $("chooseAvatarBtn").disabled = !username;
   $("resetAvatarBtn").disabled = !username;
