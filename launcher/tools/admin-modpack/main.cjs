@@ -29,6 +29,7 @@ handle('admin-analyze',async()=>{
   plan=prepared=null;output=null;
   plan=await engine.analyze(source,progress);background=plan.design.background;return {report:engine.report(plan)};
 });
+handle('admin-design',async()=>{prepared=null;output=null;plan=await engine.presentationPlan(progress);background=plan.design.background;return{report:engine.report(plan)};});
 handle('admin-history',async()=>({history:await engine.history()}));
 handle('admin-restore',async version=>{prepared=null;output=null;plan=await engine.restore(version,progress);background=plan.design.background;return{report:engine.report(plan)};});
 handle('admin-image',async()=>{
@@ -45,18 +46,18 @@ handle('admin-image',async()=>{
   return{preview:'data:image/jpeg;base64,'+background.base64};
 });
 handle('admin-clear-image',async()=>{background=null;prepared=null;return{};});
-handle('admin-prepare',async({version,selected,packName,notes})=>{
+handle('admin-prepare',async({version,selected,packName,notes,news,updates})=>{
   if(!plan)throw new Error('Primero analiza la carpeta.');
   prepared=null; engine.assertSourceUnchanged(plan);
-  plan.design={packName,background,...(typeof notes==='string'&&notes.trim()?{notes:{title:'Actualización '+version,text:notes.trim(),publishedAt:new Date().toISOString()}}:{})};
+  plan.design={packName,background,news,updates,...(typeof notes==='string'&&notes.trim()?{notes:{title:'Actualización '+version,text:notes.trim(),publishedAt:new Date().toISOString()}}:{})};
   const manifest=engine.buildManifest(plan,version,selected);
   await engine.validatePackage(manifest,progress);
   const out=path.join(adminRoot,'preparados',version+'-'+crypto.randomUUID());
   fs.mkdirSync(out,{recursive:true});
   fs.writeFileSync(path.join(out,'modpack-'+version+'.json'),JSON.stringify(manifest,null,2)+'\n',{flag:'wx'});
-  fs.writeFileSync(path.join(out,'revision.json'),JSON.stringify({version,game:manifest.game,presentation:{notes:manifest.presentation?.notes||null,background:manifest.presentation?.background?{mime:manifest.presentation.background.mime,sha256:manifest.presentation.background.sha256}:null},restoredFrom:manifest.restoredFrom||null,mods:manifest.files.length,content:manifest.content.files.map(e=>e.path),changes:plan.modChanges,excluded:plan.current.excluded,baseCommit:plan.base.head},null,2)+'\n',{flag:'wx'});
+  fs.writeFileSync(path.join(out,'revision.json'),JSON.stringify({version,game:manifest.game,presentation:{news:manifest.presentation?.news||null,updates:manifest.presentation?.updates||null,notes:manifest.presentation?.notes||null,background:manifest.presentation?.background?{mime:manifest.presentation.background.mime,sha256:manifest.presentation.background.sha256}:null},restoredFrom:manifest.restoredFrom||null,mods:manifest.files.length,content:manifest.content.files.map(e=>e.path),changes:plan.modChanges,excluded:plan.current.excluded,baseCommit:plan.base.head},null,2)+'\n',{flag:'wx'});
   prepared=manifest; output=out;
-  return {output:out,version,content:manifest.content.files.length,removedContent:plan.base.manifest.content.files.filter(e=>!selected.includes(e.path)).map(e=>e.path)};
+  return {review:{version,packName:manifest.game.packName,minecraft:manifest.game.minecraftVersion,forge:manifest.game.forgeVersion,mods:manifest.files.length,changes:plan.modChanges,contentChanges:{added:manifest.content.files.filter(e=>!plan.base.manifest.content.files.some(p=>p.path===e.path)).map(e=>e.path),changed:manifest.content.files.filter(e=>plan.base.manifest.content.files.some(p=>p.path===e.path&&p.sha256!==e.sha256)).map(e=>e.path),removed:plan.base.manifest.content.files.filter(e=>!manifest.content.files.some(p=>p.path===e.path)).map(e=>e.path)},content:manifest.content.files.length,news:manifest.presentation?.news,updates:manifest.presentation?.updates,backgroundChanged:manifest.presentation?.background?.sha256!==plan.base.manifest.presentation?.background?.sha256},output:out,version,content:manifest.content.files.length,removedContent:plan.base.manifest.content.files.filter(e=>!selected.includes(e.path)).map(e=>e.path)};
 });
 handle('admin-output',async()=>{if(!output)throw new Error('No hay paquete preparado.');await shell.openPath(output);return{};});
 handle('admin-publish',async({token,tested,reviewed})=>{

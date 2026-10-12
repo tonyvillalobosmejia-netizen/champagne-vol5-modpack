@@ -9,7 +9,7 @@ const { prepareContent } = require('../../src/champagne-remote-content');
 const { syncBundledConfigs, checkedTarget } = require('../../src/champagne-config-sync');
 const { checkedModTarget } = require('../../src/champagne-update-paths');
 const { validatePresentation } = require('../../src/champagne-presentation');
-const SUPPORTED='0.1.11';
+const SUPPORTED='0.1.12';
 const REPO = 'tonyvillalobosmejia-netizen/champagne-vol5-modpack';
 const BRANCH = 'preparacion-paso97';
 const API = `https://api.github.com/repos/${REPO}`;
@@ -146,7 +146,7 @@ async function analyze(source,onProgress=()=>{},fetcher=fetch) {
   }
   validateGame(game,{},SUPPORTED);
   return {base,current,files,unresolved,contentCandidates,game,
-    modChanges:difference(current.mods,base.manifest.files), suggestedVersion:nextVersion(base.manifest.version), design:{packName:game.packName,background:base.manifest.presentation?.background||null}};
+    modChanges:difference(current.mods,base.manifest.files), suggestedVersion:nextVersion(base.manifest.version), design:{packName:game.packName,...base.manifest.presentation,background:base.manifest.presentation?.background||null}};
 }
 function report(plan) {
   return { currentVersion:plan.base.manifest.version,nextVersion:plan.suggestedVersion,game:plan.game,mods:plan.current.mods.length,
@@ -160,6 +160,7 @@ function buildManifest(plan,version,selected) {
   if(plan.unresolved.length) throw new Error('Hay mods sin fuente exacta. Resuélvelos antes de publicar.');
   if(!Array.isArray(selected) || new Set(selected).size!==selected.length) throw new Error('Selección inválida.');
   const chosen=new Set(selected);
+  if(plan.mode==='presentation'&&(selected.length!==plan.base.manifest.content.files.length||plan.base.manifest.content.files.some(e=>!chosen.has(e.path))))throw Error('Para cambiar archivos debes analizar CurseForge en Actualizar modpack.');
   if(selected.some(p=>!plan.contentCandidates.some(e=>e.path===p&&e.entry))) throw new Error('Hay contenido sin fuente oficial.');
   const contentFiles=plan.contentCandidates.filter(e=>chosen.has(e.path)).map(e=>clone(e.entry));
   if(!contentFiles.length) throw new Error('Selecciona al menos un archivo de contenido.');
@@ -172,14 +173,14 @@ function buildManifest(plan,version,selected) {
     if(typeof name!=='string'||!name.trim()||name.length>80)throw Error('Escribe un nombre de modpack de hasta 80 caracteres.');
     manifest.game.packName=name.trim();
     const presentation={...(plan.design.background?{background:plan.design.background}:{}),
-      ...(plan.design.notes?{notes:plan.design.notes}:{})};
-    if(Object.keys(presentation).length){manifest.presentation=validatePresentation(presentation);manifest.game.minLauncherVersion=SUPPORTED;}
+      ...(plan.design.notes?{notes:plan.design.notes}:{}),...(plan.design.news?{news:plan.design.news}:{}),...(plan.design.updates?{updates:plan.design.updates}:{})};
+    if(Object.keys(presentation).length){manifest.presentation=validatePresentation(presentation);manifest.game.minLauncherVersion=(presentation.news||presentation.updates)?SUPPORTED:'0.1.11';}
   }
   if(plan.restoredFrom)manifest.restoredFrom=plan.restoredFrom;
   validateAssistedManifest(manifest); validateGame(manifest.game,{},SUPPORTED); return manifest;
 }
 function assertSourceUnchanged(plan) {
-  if(plan.mode==='restore')return;
+  if(plan.mode==='restore'||plan.mode==='presentation')return;
   const current=scan(plan.current.source);
   const signature=s=>JSON.stringify({mc:s.mc,forge:s.forge,mods:s.mods,content:s.content.map(e=>({path:e.path,sha256:e.sha256}))});
   if(signature(current)!==signature(plan.current)) throw new Error('La carpeta cambió después del análisis. Analízala de nuevo.');
@@ -219,7 +220,7 @@ async function publish(plan,manifest,{token,tested,reviewed,onProgress=()=>{},fe
   if(manifest.presentation){
     const release=await json(API+'/releases/latest',options);
     const installed=String(release.tag_name||'').replace(/^v/,'');
-    if(!/^\d+\.\d+\.\d+$/.test(installed)||greater(SUPPORTED,installed))throw Error('El fondo y las notas requieren publicar primero VillaWolf Launcher '+SUPPORTED+'. El canal del modpack no cambió.');
+    if(!/^\d+\.\d+\.\d+$/.test(installed)||greater(manifest.game.minLauncherVersion,installed))throw Error('El fondo y las notas requieren publicar primero VillaWolf Launcher '+manifest.game.minLauncherVersion+'. El canal del modpack no cambió.');
   }
   await validatePackage(manifest,onProgress,fetcher); await verifyDirect(manifest,onProgress,fetcher);
   let ref=await json(API+'/git/ref/heads/'+BRANCH,options);
@@ -270,6 +271,7 @@ async function restore(version,onProgress=()=>{},fetcher=fetch){
   return{mode:'restore',restoredFrom:version,base,current:{mods:old.files,excluded:[]},files:old.files,game:old.game,unresolved:[],
     contentCandidates:old.content.files.map(entry=>({path:entry.path,bytes:entry.bytes,sha256:entry.sha256,entry,selected:true,change:'Recuperado',reason:''})),
     modChanges:difference(old.files,base.manifest.files),suggestedVersion:nextVersion(base.manifest.version),
-    design:{packName:old.game.packName,background:old.presentation?.background||null}};
+    design:{packName:old.game.packName,...old.presentation,background:old.presentation?.background||null}};
 }
-module.exports={analyze,report,buildManifest,assertSourceUnchanged,validatePackage,verifyDirect,publish,baseline,scan,privacy,curseSource,difference,request,hash,history,restore,REPO,BRANCH};
+async function presentationPlan(onProgress=()=>{},fetcher=fetch){const base=await baseline(fetcher),old=base.manifest;return {mode:'presentation',base,current:{mods:old.files,excluded:[]},files:old.files,game:old.game,unresolved:[],contentCandidates:old.content.files.map(entry=>({path:entry.path,bytes:entry.bytes,sha256:entry.sha256,entry,selected:true,change:'Conservado',reason:''})),modChanges:{added:[],changed:[],removed:[]},suggestedVersion:nextVersion(old.version),design:{packName:old.game.packName,...old.presentation,background:old.presentation?.background||null}};}
+module.exports={presentationPlan,analyze,report,buildManifest,assertSourceUnchanged,validatePackage,verifyDirect,publish,baseline,scan,privacy,curseSource,difference,request,hash,history,restore,REPO,BRANCH};

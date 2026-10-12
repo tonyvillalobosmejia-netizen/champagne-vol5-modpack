@@ -1,9 +1,9 @@
-// Las contraseñas y el token de sesión nunca se escriben en disco ni se envían al renderer.
+// Sólo el token de sesión propio puede persistirse cifrado; nunca se guarda la contraseña ni se entrega el token al renderer.
 const http = require('node:http');
 const https = require('node:https');
 const crypto = require('node:crypto');
 const { receiveDiscordCode } = require('./champagne-discord-callback');
-function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'password', required = false, openBrowser } = {}) {
+function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'password', required = false, openBrowser, sessionStore } = {}) {
   if (!['password','discord'].includes(provider) || (required && provider !== 'discord')) throw Error('Configuración de autenticación inválida.');
   let endpoint = null, session = null, busy = false, discordAbort = null;
   if (baseUrl) {
@@ -11,6 +11,10 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
     const local = endpoint.protocol === 'http:' && endpoint.hostname === '127.0.0.1' && allowLocalDev;
     if ((!local && endpoint.protocol !== 'https:') || endpoint.username || endpoint.password || endpoint.search || endpoint.hash || endpoint.pathname !== '/') throw new Error('URL del servicio de cuentas inválida: requiere HTTPS.');
   }
+  let restored=false,persistent=false;
+  function clearSession(){session=null;persistent=false;try{sessionStore?.clear();}catch{}}
+  function restoreSession(){if(restored)return;restored=true;try{const saved=sessionStore?.load();if(saved && /^[A-Za-z0-9_-]{43}$/.test(saved.token)&&Number.isSafeInteger(saved.expiresAt)&&saved.expiresAt>Date.now()){session={token:saved.token,user:validateUser(saved.user),expiresAt:saved.expiresAt};persistent=true;}else if(saved)clearSession();}catch{clearSession();}}
+  function persistSession(){try{sessionStore?.save(session);persistent=!!sessionStore;}catch{persistent=false;}}
   function request(route, method = 'GET', data, token) {
     if (!endpoint) return Promise.reject(new Error('El servicio de cuentas todavía no está configurado. Puedes jugar en modo local.'));
     return new Promise((resolve, reject) => {
@@ -51,8 +55,9 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
     if (provider === 'discord' && (value.provider !== 'discord' || !/^[0-9]{17,20}$/.test(value.discordId) || value.id !== 'discord:' + value.discordId)) throw Error('Identidad de Discord inválida.');
     return { id: value.id, username: value.username, ...(provider === 'discord' ? { provider:'discord', discordId:value.discordId, discordName:typeof value.discordName === 'string'?value.discordName.slice(0,80):value.username } : {}) };
   }
-  const status = () => ({ ok: true, configured: !!endpoint, localDevelopment: endpoint?.protocol === 'http:', provider, required, user: session?.user || null });
+  const status = () => {restoreSession();if(session?.expiresAt<=Date.now())clearSession();return ({ ok: true, configured: !!endpoint, localDevelopment: endpoint?.protocol === 'http:', provider, required, user: session?.user || null, persistent });};
   async function authenticate(action, input) {
+    restoreSession();
     if (provider === 'discord') return {ok:false,message:'Usa Iniciar sesión con Discord.'};
     if (busy) return { ok: false, message: 'Espera a que termine la solicitud actual.' };
     if (session) return { ok: false, message: 'Cierra la sesión actual antes de cambiar de cuenta.' };
@@ -62,27 +67,30 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
       const result = await request(`/v1/${action}`, 'POST', { username: input.username, password: input.password });
       if (!/^[A-Za-z0-9_-]{43}$/.test(result.token) || !Number.isSafeInteger(result.expiresAt) || result.expiresAt <= Date.now()) throw new Error('Sesión inválida.');
       session = { token: result.token, user: validateUser(result.user), expiresAt: result.expiresAt };
+      persistSession();
       return { ...status(), message: action === 'register' ? 'Cuenta creada. Sesión iniciada.' : 'Sesión iniciada.' };
     } catch (error) { return { ok: false, message: error.message }; }
     finally { busy = false; }
   }
   async function verifiedUsername() {
+    restoreSession();
     if (busy) throw new Error('Espera a que termine la solicitud de cuenta.');
-    if (!session) { if(required)throw Error('Inicia sesión con Discord y consigue el rol autorizado para jugar.'); return null; }
-    if(session.expiresAt<=Date.now()){session=null;throw Error('La sesión venció. Inicia sesión nuevamente.');}
+    if (!session) { if(required)throw Error('Inicia sesión con Discord para comprobar tu acceso al servidor.'); return null; }
+    if(session.expiresAt<=Date.now()){clearSession();throw Error('La sesión venció. Inicia sesión nuevamente.');}
     try {
       const result = await request('/v1/session', 'GET', null, session.token);
       const user = validateUser(result.user);
       if (user.id !== session.user.id || user.username !== session.user.username) throw new Error('La identidad de la sesión ha cambiado.');
       return user.username;
     } catch (error) {
-      if ([401,403].includes(error.status)) session = null;
+      if ([401,403].includes(error.status)) clearSession();
       throw error;
     }
   }
   async function logout() {
+    restoreSession();
     if (busy) return { ok: false, message: 'Espera a que termine la solicitud actual.' };
-    const current = session; session = null;
+    const current = session; clearSession();
     if (!current) return { ...status(), message: 'Sesión cerrada.' };
     busy = true;
     try { await request('/v1/logout', 'POST', null, current.token); return { ...status(), message: 'Sesión cerrada.' }; }
@@ -90,6 +98,7 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
     finally { busy = false; }
   }
   async function loginDiscord() {
+    restoreSession();
     if(provider!=='discord'||!endpoint)return {ok:false,message:'El inicio de sesión con Discord todavía no está configurado.'};
     if(busy||session)return {ok:false,message:'Espera o cierra la sesión actual antes de iniciar otra.'};
     busy=true;
@@ -104,6 +113,7 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
       if(!/^[A-Za-z0-9_-]{43}$/.test(result.token)||!Number.isSafeInteger(result.expiresAt)||result.expiresAt<=Date.now())throw Error('Sesión inválida.');
       if(controller.signal.aborted){try{await request('/v1/logout','POST',null,result.token);}catch{}throw Error('Inicio de sesión cancelado.');}
       session={token:result.token,user:validateUser(result.user),expiresAt:result.expiresAt};
+      persistSession();
       return {...status(),message:'Sesión de Discord iniciada. Nombre de Minecraft: '+session.user.username};
     }catch(error){return {ok:false,message:error.message};}finally{busy=false;discordAbort=null;}
   }

@@ -45,6 +45,7 @@ function sandbox(t, document, options = {}) {
       if (name === "./champagne-presentation") return require("../champagne-presentation");
       if (name === "./champagne-launcher-updates") return require("../champagne-launcher-updates");
       if (name === "node:fs") return disk;
+      if(name==='./champagne-session-store')return require('../champagne-session-store');
       return require(name);
     }, Buffer, process, console, __dirname: path.resolve(__dirname, "..")
   });

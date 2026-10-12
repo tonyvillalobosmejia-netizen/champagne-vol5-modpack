@@ -64,6 +64,9 @@ function refreshGameInfo() { return window.launcher.getInfo().then(info => {
   if(presentation?.notes){card.textContent=presentation.notes.title;$('homeUpdateStatus').textContent=presentation.notes.text;}
   else card.textContent='Actualizaciones';
 
+  const news=document.querySelector('.news-card:not(.updates-card)');
+  if(presentation?.news){news.querySelector('h2').textContent=presentation.news.title;news.querySelector('p').textContent=presentation.news.text;}else{news.querySelector('h2').textContent='Tu próxima aventura';news.querySelector('p').textContent='Las novedades de nuestra comunidad están en Discord.';}
+  if(presentation?.updates){card.textContent=presentation.updates.title;$('homeUpdateStatus').textContent=presentation.updates.text;}
   addLog(`Carpeta de instancia: ${info.instanceDir}`);
 }); }
 refreshGameInfo();

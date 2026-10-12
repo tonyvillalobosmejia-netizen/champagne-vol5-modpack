@@ -249,3 +249,5 @@ body { overflow: hidden; background: #101521; }
 .news-card { background-image:linear-gradient(0deg,#0c1024 8%,#15142eb0),url('./assets/mundo-conejil-fondo.jpg'); }
 
 #homeUpdateStatus{max-height:90px;overflow:auto;white-space:pre-wrap}
+
+.news-card p{max-height:90px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}.news-card h2{overflow-wrap:anywhere}

@@ -36,3 +36,13 @@ El fondo y las notas requieren **VillaWolf Launcher 0.1.11**. Primero debe publi
 ## Historial y recuperación
 
 Pulsa **Consultar publicaciones** para ver las versiones archivadas, fechas y notas. Las versiones antiguas sin metadatos muestran información del historial Git. **Recuperar como nueva versión** carga el manifiesto anterior y propone un número mayor que la versión actual: no requiere modificar tu carpeta de CurseForge. Revisa el contenido, prueba ese conjunto y confirma la publicación como cualquier actualización. No borra mundos ni restaura sus datos. Elegir una versión anterior no cambia por sí solo el canal publicado.
+
+## Menús del administrador (0.1.12)
+
+- **Nombre e imagen**: pulsa Cargar diseño publicado y elige el nombre y fondo. Conserva mods, configuraciones e identidad de la instancia.
+- **Actualizar modpack**: selecciona CurseForge, analiza cambios y elige contenido. Conserva noticias e imagen actuales.
+- **Noticias y actualizaciones**: cada tarjeta tiene título y descripción independientes. Se muestran en la vista previa antes de publicar.
+
+Preparar y comprobar paquete muestra un resumen de la versión, motor, archivos añadidos/cambiados/retirados, fondo, noticias y destino. Cualquier edición invalida la preparación. Publicar sigue requiriendo revisión, token local y confirmación. Las tarjetas requieren publicar previamente VillaWolf Launcher 0.1.12; si todavía no existe, el canal queda intacto.
+
+El launcher conserva la sesión propia cifrada con Windows fuera de la carpeta de instalación. Cerrar sesión la elimina. La sesión puede vencer o revocarse; el acceso siempre se verifica antes de JUGAR. La primera migración desde 0.1.11 puede requerir iniciar sesión porque esa versión sólo la guardaba en memoria.

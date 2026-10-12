@@ -21,7 +21,9 @@ const { syncBundledConfigs, checkedTarget: checkedContentTarget } = require("./c
 const { ensureJava17 } = require("./champagne-runtime");
 const { createPreparation } = require("./champagne-preparation");
 const { createAuthClient } = require("./champagne-auth");
+const {createSessionStore}=require('./champagne-session-store');
 const authClient = createAuthClient({
+  sessionStore:createSessionStore({directory:app.getPath('userData'),safeStorage:require('electron').safeStorage,scope:(process.env.CHAMPAGNE_AUTH_DEV_URL||config.authServerUrl||'')+'|'+(config.authProvider||'password')}),
   baseUrl: process.env.CHAMPAGNE_AUTH_DEV_URL || config.authServerUrl || "",
   allowLocalDev: !!process.env.CHAMPAGNE_AUTH_DEV_URL,
   provider: config.authProvider || 'password',
