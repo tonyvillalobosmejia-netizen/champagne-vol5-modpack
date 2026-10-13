@@ -633,7 +633,8 @@ function renderLibrary(result){
  for(const button of card.querySelectorAll('button'))button.disabled=button.disabled||liveGame.running||liveGame.preparing;$('packList').append(card);
  }syncPlayButton();
 }
-async function loadLibrary(){try{const result=await window.launcher.getPackCatalog();renderLibrary(result);if(result.updating)showLauncherUpdate(await window.launcher.getLauncherUpdateStatus(),true);await refreshGameInfo();}catch(error){renderLibrary({packs:[],message:error.message});}}
+let libraryRetryTimer=null;
+async function loadLibrary(){clearTimeout(libraryRetryTimer);libraryRetryTimer=null;try{const result=await window.launcher.getPackCatalog();renderLibrary(result);if(result.retryAfter>0)libraryRetryTimer=setTimeout(loadLibrary,(Math.min(result.retryAfter,86400)+1)*1000);if(result.updating)showLauncherUpdate(await window.launcher.getLauncherUpdateStatus(),true);await refreshGameInfo();}catch(error){renderLibrary({packs:[],message:error.message});}}
 window.launcher.onPackCatalog(renderLibrary);
 $('refreshPacksBtn').onclick=loadLibrary;$('packsAccountBtn').onclick=()=>$('accountBtn').click();
 loadLibrary();

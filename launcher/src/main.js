@@ -147,11 +147,11 @@ let selectedPack=null,authorizedCatalog=[];
 const selectedPackFile=path.join(app.getPath('userData'),'selected-pack.json');
 function publishCatalog(){for(const win of BrowserWindow.getAllWindows())win.webContents.send('pack-catalog',{ok:true,packs:authorizedCatalog,selectedId:selectedPack?.id||null});}
 async function verifySelectedPack(){if(!config.catalogEnabled)return;if(!selectedPack)throw Error('Elige un modpack autorizado en tu biblioteca.');const result=await authClient.verifyPack(selectedPack.id);const pack=validateCatalog({schemaVersion:1,packs:[result.pack]}).packs[0];if(pack.id!==selectedPack.id)throw Error('Acceso a modpack inválido.');config.manifestUrl=channelFor(pack);return pack;}
-async function selectPack(id,fromLibrary=false){
+async function selectPack(id,fromLibrary=false,verifiedCatalogPack=null){
  if(libraryOperationBusy&&!fromLibrary)throw Error("Espera a que termine la operación de la biblioteca.");
  if(!config.catalogEnabled)throw Error('La biblioteca todavía no está disponible.');
  if(minecraftProcess||launchBusy||accountLaunchBusy||repairController?.busy||packUpdateBusy||automaticPreparation.busy||gamePreparationPending||manualDialogBusy)throw Error('Cierra Minecraft y espera a que termine la tarea antes de cambiar de modpack.');
- const result=await authClient.verifyPack(id),pack=validateCatalog({schemaVersion:1,packs:[result.pack]}).packs[0];
+ const result=verifiedCatalogPack?{pack:verifiedCatalogPack}:await authClient.verifyPack(id),pack=validateCatalog({schemaVersion:1,packs:[result.pack]}).packs[0];
  const manifest=validateAssistedManifest(JSON.parse((await requestBuffer(channelFor(pack))).toString('utf8')));
  if(manifest.packId!==pack.id||manifest.game?.serverId!==pack.id)throw Error('El manifiesto no corresponde al modpack seleccionado.');
  selectGame(manifest);selectedPack=pack;config.manifestUrl=channelFor(pack);downloadInboxSession=null;packPresentation={packName:manifest.game.packName,version:manifest.version,presentation:validatePresentation(manifest.presentation)};
@@ -166,9 +166,9 @@ async function refreshCatalog(){if(catalogPending)return catalogPending;catalogP
 async function refreshCatalogNow(){
  if(!config.catalogEnabled)return {ok:true,packs:[],selectedId:null,disabled:true};
  try{const result=await authClient.catalog();authorizedCatalog=await Promise.all(validateCatalog(result.catalog).packs.map(async pack=>({...pack,background:await packCardImage(pack),installed:packInstalled(pack)})));if(selectedPack&&!authorizedCatalog.some(p=>p.id===selectedPack.id))selectedPack=null;
-  if(!selectedPack&&authorizedCatalog.length&&!minecraftProcess&&!launchBusy&&!libraryOperationBusy){let prior;try{prior=JSON.parse(fs.readFileSync(selectedPackFile,'utf8')).id;}catch{}await selectPack(authorizedCatalog.find(p=>p.id===prior)?.id||authorizedCatalog[0].id);}
+  if(!selectedPack&&authorizedCatalog.length&&!minecraftProcess&&!launchBusy&&!libraryOperationBusy){let prior;try{prior=JSON.parse(fs.readFileSync(selectedPackFile,'utf8')).id;}catch{}const pack=authorizedCatalog.find(p=>p.id===prior)||authorizedCatalog[0];await selectPack(pack.id,false,pack);}
   publishCatalog();return {ok:true,packs:authorizedCatalog,selectedId:selectedPack?.id||null};
- }catch(error){if(error.code==='LAUNCHER_UPDATE_REQUIRED'){const result=await launchProblem(error);publishCatalog();return {...result,packs:authorizedCatalog,selectedId:selectedPack?.id||null};}authorizedCatalog=[];if(!minecraftProcess)selectedPack=null;publishCatalog();return {ok:false,packs:[],message:error.message,selectedId:null};}
+ }catch(error){if(error.code==='LAUNCHER_UPDATE_REQUIRED'){const result=await launchProblem(error);publishCatalog();return {...result,packs:authorizedCatalog,selectedId:selectedPack?.id||null};}authorizedCatalog=[];if(!minecraftProcess)selectedPack=null;publishCatalog();return {ok:false,packs:[],message:error.message,retryAfter:error.retryAfter||0,selectedId:null};}
 }
 function selectGame(manifest, fromRepair = false) {
   const game = validateGame(manifest.game,defaultGame,config.launcherVersion || "0.1.4");

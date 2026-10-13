@@ -8,7 +8,7 @@ let activePack=null,adminPacks=[];
 const draftFile=()=>path.join(adminRoot,'modpacks.json');
 function drafts(){try{return validateCatalog(JSON.parse(fs.readFileSync(draftFile(),'utf8'))).packs;}catch{return[];}}
 function resetPack(){plan=prepared=designPlan=null;background=null;output=null;source='';}
-async function loadPacks(){const r=await adminAuth.catalog();adminPacks=validateCatalog(r.catalog).packs.map(p=>({...p,published:true}));for(const p of drafts())if(!adminPacks.some(e=>e.id===p.id))adminPacks.push({...p,published:false});return{packs:adminPacks.filter(p=>p.enabled),selectedId:activePack?.id||null};}
+async function loadPacks(){const r=await adminCatalogAccess.catalog();adminPacks=validateCatalog(r.catalog).packs.map(p=>({...p,published:true}));for(const p of drafts())if(!adminPacks.some(e=>e.id===p.id))adminPacks.push({...p,published:false});return{packs:adminPacks.filter(p=>p.enabled),selectedId:activePack?.id||null};}
 function packSettings(){return path.join(adminRoot,activePack?'settings-'+activePack.id+'.json':'settings.json');}
 handle('admin-packs',loadPacks);
 handle('admin-select-pack',async id=>{await loadPacks();const pack=adminPacks.find(p=>p.id===id);if(!pack)throw Error('Modpack no disponible.');resetPack();activePack=pack;engine=engineModule.createEngine(pack);try{source=JSON.parse(fs.readFileSync(packSettings(),'utf8')).source||'';}catch{}return{packs:adminPacks.filter(p=>p.enabled),selectedId:activePack.id,source,packName:pack.name};});
@@ -25,10 +25,11 @@ app.setPath('userData',path.join(adminRoot,'app-data'));
 let win,source='',plan=null,prepared=null,busy=false,output=null;
 let background=null,designPlan=null;
 const adminAuth=createAuthClient({baseUrl:require('../../src/config').authServerUrl,provider:'discord',required:true,purpose:'admin',openBrowser:url=>shell.openExternal(url),sessionStore:createSessionStore({directory:app.getPath('userData'),safeStorage:require('electron').safeStorage,scope:'admin|'+require('../../src/config').authServerUrl,filename:'discord-admin-session.bin'})});
+const adminCatalogAccess=require('./catalog-access.cjs').createAdminCatalogAccess(adminAuth);
 const publicActions=new Set(['admin-info','admin-auth-status','admin-auth-login','admin-auth-logout','admin-update-check']);
-handle('admin-auth-status',async()=>{try{if(adminAuth.status().user)await adminAuth.verifiedUsername();return{...adminAuth.status(),authorized:!!adminAuth.status().user};}catch(error){return{...adminAuth.status(),authorized:false,message:error.message};}});
+handle('admin-auth-status',async()=>{try{if(adminAuth.status().user)await adminCatalogAccess.status();return{...adminAuth.status(),authorized:!!adminAuth.status().user};}catch(error){return{...adminAuth.status(),authorized:false,message:error.message,retryAfter:error.retryAfter||0};}});
 handle('admin-auth-login',async()=>{const result=await adminAuth.loginDiscord();if(!result.ok)throw Error(result.message);return{...result,authorized:true};});
-handle('admin-auth-logout',async()=>{plan=prepared=designPlan=null;background=null;output=null;return adminAuth.logout();});
+handle('admin-auth-logout',async()=>{plan=prepared=designPlan=null;background=null;output=null;adminCatalogAccess.clear();return adminAuth.logout();});
 ipcMain.handle('admin-auth-cancel',event=>{guard(event);return adminAuth.cancelDiscordLogin();});
 const adminUpdates=require('./admin-updates.cjs').createAdminUpdates({app,feed:"https://raw.githubusercontent.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/preparacion-paso97/updates/admin",loadUpdater:()=>require('electron-updater').autoUpdater,isBusy:()=>busy,status:()=>{},onState:state=>{if(win&&!win.isDestroyed())win.webContents.send('admin-update-state',state);},progress:state=>{if(win&&!win.isDestroyed())win.webContents.send('admin-update-state',{phase:'downloading',message:'Descargando actualización del Administrador…',percent:state.totalBytes?Math.round(state.bytes/state.totalBytes*100):null});}});
 handle('admin-update-check',async()=>adminUpdates.check());
@@ -37,7 +38,7 @@ function progress(message) { if(win&&!win.isDestroyed()) win.webContents.send('a
 function guard(event) { if(!win || event.sender!==win.webContents || event.senderFrame!==win.webContents.mainFrame) throw new Error('Solicitud no autorizada.'); }
 function handle(name,action) {ipcMain.handle(name,async(event,...args)=>{
   guard(event); if(busy) return {ok:false,error:'Espera a que termine la operación actual.'};
-  busy=true; try{if(!publicActions.has(name)){if(!['admin-packs','admin-select-pack','admin-create-pack'].includes(name))await adminAuth.verifiedUsername();if(!activePack&&!['admin-packs','admin-select-pack','admin-create-pack','admin-token-status','admin-token-save','admin-token-clear'].includes(name))throw Error('Selecciona un modpack antes de continuar.');}return {ok:true,...await action(...args)};}catch(error){return{ok:false,error:error.message};}finally{busy=false;}
+  busy=true; try{if(!publicActions.has(name)){if(!['admin-packs','admin-select-pack','admin-create-pack','admin-token-status'].includes(name))await adminAuth.verifiedUsername();if(!activePack&&!['admin-packs','admin-select-pack','admin-create-pack','admin-token-status','admin-token-save','admin-token-clear'].includes(name))throw Error('Selecciona un modpack antes de continuar.');}return {ok:true,...await action(...args)};}catch(error){return{ok:false,error:error.message,retryAfter:error.retryAfter||0};}finally{busy=false;}
 });}
 handle('admin-token-status',async()=>tokenStore.status());
 handle('admin-token-save',async token=>tokenStore.save(token));

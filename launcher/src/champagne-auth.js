@@ -12,11 +12,11 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
     const local = endpoint.protocol === 'http:' && endpoint.hostname === '127.0.0.1' && allowLocalDev;
     if ((!local && endpoint.protocol !== 'https:') || endpoint.username || endpoint.password || endpoint.search || endpoint.hash || endpoint.pathname !== '/') throw new Error('URL del servicio de cuentas inválida: requiere HTTPS.');
   }
-  let restored=false,persistent=false;
+  let restored=false,persistent=false,discordRetryAt=0;const pendingReads=new Map();
   function clearSession(){session=null;persistent=false;try{sessionStore?.clear();}catch{}}
   function restoreSession(){if(restored)return;restored=true;try{const saved=sessionStore?.load();if(saved && /^[A-Za-z0-9_-]{43}$/.test(saved.token)&&Number.isSafeInteger(saved.expiresAt)&&saved.expiresAt>Date.now()){session={token:saved.token,user:validateUser(saved.user),expiresAt:saved.expiresAt};persistent=true;}else if(saved)clearSession();}catch{clearSession();}}
   function persistSession(){try{sessionStore?.save(session);persistent=!!sessionStore;}catch{persistent=false;}}
-  function request(route, method = 'GET', data, token) {
+  function transportRequest(route, method = 'GET', data, token) {
     if (!endpoint) return Promise.reject(new Error('El servicio de cuentas todavía no está configurado. Puedes jugar en modo local.'));
     return new Promise((resolve, reject) => {
       const payload = data ? JSON.stringify(data) : null;
@@ -40,7 +40,7 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
             const value = JSON.parse(Buffer.concat(chunks).toString('utf8'));
             if (res.statusCode < 200 || res.statusCode >= 300 || value.ok !== true) {
               const error = new Error(typeof value.message === 'string' ? value.message : 'No se pudo iniciar sesión.');
-              error.status = res.statusCode; reject(error); return;
+              error.status = res.statusCode;if(res.statusCode===429){const seconds=Number(value.retryAfter);error.retryAfter=Number.isFinite(seconds)&&seconds>0?Math.min(Math.ceil(seconds),86400):60;discordRetryAt=Date.now()+error.retryAfter*1000;} reject(error); return;
             }
             resolve(value);
           } catch { reject(new Error('Respuesta inválida del servicio de cuentas.')); }
@@ -50,6 +50,13 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
       req.on('error', () => { clearTimeout(timer); reject(new Error('No se pudo conectar al servicio de cuentas.')); });
       req.end(payload);
     });
+  }
+  function request(route,method='GET',data,token){
+    if(method!=='GET'||!token)return transportRequest(route,method,data,token);
+    const wait=Math.max(0,Math.ceil((discordRetryAt-Date.now())/1000));
+    if(wait){const error=new Error('Discord necesita una pausa. Reintenta en '+wait+' segundos.');error.status=429;error.retryAfter=wait;return Promise.reject(error);}
+    const key=route+'|'+token;if(pendingReads.has(key))return pendingReads.get(key);
+    const pending=transportRequest(route,method,data,token);pendingReads.set(key,pending);pending.finally(()=>{if(pendingReads.get(key)===pending)pendingReads.delete(key);}).catch(()=>{});return pending;
   }
   function validAvatar(raw,id){try{const u=new URL(raw);return u.origin==='https://cdn.discordapp.com'&&!u.username&&!u.password&&!u.hash&&((u.pathname.startsWith('/avatars/'+id+'/')&&/\/avatars\/[0-9]{17,20}\/(?:a_)?[a-f0-9]{32}\.png$/.test(u.pathname)&&u.search==='?size=128')||(/^\/embed\/avatars\/[0-5]\.png$/.test(u.pathname)&&!u.search));}catch{return false;}}
   function validateUser(value) {
