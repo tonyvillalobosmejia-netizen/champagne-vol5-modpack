@@ -15,7 +15,7 @@ function sandbox(t, document, options = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "champagne99-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const appRoot = path.join(root, "MiLauncher");
-  const instance = path.join(appRoot, "instances", "principal");
+  let instance = path.join(appRoot, "instances", "principal");
   const metadata = path.join(appRoot, "metadata");
   fs.mkdirSync(path.join(instance, "mods"), { recursive: true });
   let requests = 0;
@@ -55,6 +55,7 @@ function sandbox(t, document, options = {}) {
     }, Buffer, process, console, __dirname: path.resolve(__dirname, "..")
   });
   vm.runInContext(fs.readFileSync(path.join(__dirname, "../main.js"), "utf8"), context);
+  instance=vm.runInContext("instanceDir",context);
   context.fixture = document;
   context.payload = Buffer.from("new");
   context.onRequest = () => requests++;

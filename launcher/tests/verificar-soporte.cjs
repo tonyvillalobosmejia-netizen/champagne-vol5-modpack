@@ -20,3 +20,5 @@ test('un fallo del motor o mods pendientes no modifica contenido ni deja reparac
  const repair=createRepair({isBusy:()=>false,manifest:async()=>({}),java:async()=>{},game:async()=>({ok:gameOk,message:'motor incompleto'}),forgeNeeded:()=>false,forge:async()=>{},natives:async()=>({ok:true}),pack:async()=>({ok:false,needsManual:true}),content:async()=>content++,status:()=>{},progress:()=>{}});
  await assert.rejects(repair.run(),/motor incompleto/);assert.equal(repair.busy,false);gameOk=true;assert.equal((await repair.run()).needsManual,true);assert.equal(content,0);
 });
+
+test('Una pausa de Discord no solicita volver a iniciar sesión',()=>{const value=explainError('Discord necesita una pausa. Reintenta en 250 segundos.');assert.match(value.title,/pausa/);assert.match(value.hint,/no necesitas iniciar sesión/);assert.match(explainError('No se pudo conectar al servicio de cuentas.').title,/comprobar tu acceso/);});

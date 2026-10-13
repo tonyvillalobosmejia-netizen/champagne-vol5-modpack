@@ -16,6 +16,8 @@ function redact(text) {
 }
 function explainError(message) {
   const text = String(message);
+  if (/Discord.*(?:pausa|Reintenta en)|Demasiadas solicitudes|HTTP 429/i.test(text)) return {title:'Discord está tomando una pausa',hint:'Tu sesión se conserva. Espera el tiempo indicado antes de volver a intentarlo; no necesitas iniciar sesión otra vez.'};
+  if (/(?:servicio de cuentas.*respondió|conectar al servicio de cuentas)|servicio.*comprobar el acceso|Discord.*(?:conexión|no respondió)/i.test(text)) return {title:'No pudimos comprobar tu acceso',hint:'La comprobación está temporalmente indisponible. Conservamos tu sesión; comprueba la conexión y vuelve a intentarlo.'};
   if (/Microsoft|Minecraft Java|Xbox/.test(text)) return {title:'Revisa tu cuenta de Minecraft Java',hint:'Abre tu perfil y vuelve a iniciar sesión con Microsoft. La cuenta debe tener Minecraft Java y VillaWolf debe tener su registro autorizado.'};
   if (/Discord|rol autorizado|rol que permite|sesión venció/i.test(text)) return { title: 'Revisa tu acceso con Discord', hint: 'Abre tu perfil e inicia sesión con Discord. Comprueba que perteneces al servidor y tienes el rol autorizado. Si no lo tienes, contacta con un administrador.' };
   if (/espacio|GB libre|ENOSPC/i.test(text)) return { title: "Falta espacio en el disco", hint: "Libera espacio en la unidad del launcher y vuelve a intentarlo." };

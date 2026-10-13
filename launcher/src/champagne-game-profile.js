@@ -30,10 +30,11 @@ function validateGame(game, defaults, launcherVersion) {
     ...(game.minLauncherVersion ? {minLauncherVersion:game.minLauncherVersion} : {}) };
 }
 function key(game) { return `${game.serverId}-mc${game.minecraftVersion}-forge${game.forgeVersion}-java${game.javaMajor}`; }
-function pathsForGame(root, game) {
+function pathsForGame(root, game, {named=false,migrate=true}={}) {
   const legacy = game.serverId === 'champagne-vol5' && game.minecraftVersion === '1.20.1' && game.forgeVersion === '47.4.10' && game.javaMajor === 17;
   const id = legacy ? 'principal' : key(game);
-  return { instanceDir:path.join(root,'instances',id), metadataDir:legacy ? path.join(root,'metadata') : path.join(root,'metadata','instances',id),
+  const oldInstance=path.join(root,'instances',id);
+  return { instanceDir:named?require('./champagne-instance-folders').namedInstance(root,game,oldInstance,{migrate}):oldInstance, metadataDir:legacy ? path.join(root,'metadata') : path.join(root,'metadata','instances',id),
     installerPath:path.join(root,'cache',`forge-${game.minecraftVersion}-${game.forgeVersion}-installer.jar`) };
 }
 function installerUrl(game) {

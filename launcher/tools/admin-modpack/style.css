@@ -19,3 +19,5 @@
 .menu-toolbar button {white-space:nowrap;background:#1d3528;border-color:#3d7050;}
 .menu-toolbar button:hover {background:#284935;}
 .menu-toolbar button span {font-size:22px;margin-left:10px;vertical-align:middle;}
+
+#adminLibrary .library-actions{display:flex;align-items:stretch;gap:12px;flex-wrap:wrap;margin:12px 0 18px}#adminPackChoice{flex:1;min-width:240px}#adminLibrary .menu-toolbar{position:static;display:flex;margin:0;padding:0;border:0;background:transparent}#adminLibrary .menu-toolbar>div{display:none}#adminLibrary .library-actions>button,#closeAdminMenu{min-height:52px;margin:0;padding:12px 18px;white-space:nowrap}#adminLibrary .menu-toolbar[hidden]{display:none}

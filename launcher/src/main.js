@@ -140,19 +140,19 @@ const defaultGame = { serverId:config.serverId || "champagne-vol5", loader:"forg
   javaMajor:config.javaMajor || 17, forgeInstallerSha1:config.forgeInstallerSha1 };
 let currentGame = readCachedGame(appRoot,defaultGame,config.launcherVersion || "0.1.4");
 Object.assign(config,currentGame,{forgeInstallerUrl:installerUrl(currentGame)});
-let { instanceDir, metadataDir, installerPath } = pathsForGame(appRoot,currentGame);
+let { instanceDir, metadataDir, installerPath } = pathsForGame(appRoot,currentGame,{named:true});
 let gamePreparationPending = null;
 const {validateCatalog,channelFor}=require('./champagne-pack-catalog');
 let selectedPack=null,authorizedCatalog=[],catalogUserId=null;
 const libraryCache=require('./champagne-library-cache').createLibraryCache(createSessionStore({directory:app.getPath('userData'),safeStorage:require('electron').safeStorage,scope:(process.env.CHAMPAGNE_AUTH_DEV_URL||config.authServerUrl||'')+'|library',filename:'library-cache.bin'}));
 const selectedPackFile=path.join(app.getPath('userData'),'selected-pack.json');
 function publishCatalog(){for(const win of BrowserWindow.getAllWindows())win.webContents.send('pack-catalog',{ok:true,packs:authorizedCatalog,selectedId:selectedPack?.id||null});}
-async function verifySelectedPack(){if(!config.catalogEnabled)return;if(!selectedPack)throw Error('Elige un modpack autorizado en tu biblioteca.');const result=await authClient.verifyPack(selectedPack.id);const pack=validateCatalog({schemaVersion:1,packs:[result.pack]}).packs[0];if(pack.id!==selectedPack.id)throw Error('Acceso a modpack inválido.');config.manifestUrl=channelFor(pack);return pack;}
+async function verifySelectedPack(browseOnly=false){if(!config.catalogEnabled)return;if(!selectedPack)throw Error('Elige un modpack autorizado en tu biblioteca.');const result=browseOnly?{pack:(await authClient.catalogForDownloads()).catalog.packs.find(p=>p.id===selectedPack.id)}:await authClient.verifyPack(selectedPack.id);if(!result.pack)throw Error('No tienes el rol de este modpack.');const pack=validateCatalog({schemaVersion:1,packs:[result.pack]}).packs[0];if(pack.id!==selectedPack.id)throw Error('Acceso a modpack inválido.');config.manifestUrl=channelFor(pack);return pack;}
 async function selectPack(id,fromLibrary=false,verifiedCatalogPack=null){
  if(libraryOperationBusy&&!fromLibrary)throw Error("Espera a que termine la operación de la biblioteca.");
  if(!config.catalogEnabled)throw Error('La biblioteca todavía no está disponible.');
  if(minecraftProcess||launchBusy||accountLaunchBusy||repairController?.busy||packUpdateBusy||automaticPreparation.busy||gamePreparationPending||manualDialogBusy)throw Error('Cierra Minecraft y espera a que termine la tarea antes de cambiar de modpack.');
- const result=verifiedCatalogPack?{pack:verifiedCatalogPack}:await authClient.verifyPack(id),pack=validateCatalog({schemaVersion:1,packs:[result.pack]}).packs[0];
+ const available=verifiedCatalogPack||(catalogUserId===authClient.status().user?.id?authorizedCatalog.find(p=>p.id===id):null);const result=available?{pack:available}:await authClient.verifyPack(id),pack=validateCatalog({schemaVersion:1,packs:[result.pack]}).packs[0];
  const manifest=validateAssistedManifest(JSON.parse((await requestBuffer(channelFor(pack))).toString('utf8')));
  if(manifest.packId!==pack.id||manifest.game?.serverId!==pack.id)throw Error('El manifiesto no corresponde al modpack seleccionado.');
  selectGame(manifest);selectedPack=pack;config.manifestUrl=channelFor(pack);downloadInboxSession=null;packPresentation={packName:manifest.game.packName,version:manifest.version,presentation:validatePresentation(manifest.presentation)};
@@ -160,8 +160,8 @@ async function selectPack(id,fromLibrary=false,verifiedCatalogPack=null){
  publishCatalog();return {ok:true,selectedId:pack.id};
 }
 const packCardImages=new Map();
-async function packCardImage(pack){const cached=packCardImages.get(pack.id);if(cached&&Date.now()-cached.time<60000)return cached.image;try{const manifest=JSON.parse((await requestBuffer(channelFor(pack))).toString('utf8'));if(manifest.packId!==pack.id||manifest.game?.serverId!==pack.id)throw Error('Imagen de otro modpack.');const presentation=validatePresentation(manifest.presentation),background=viewPresentation(presentation)?.background;const native=background?nativeImage.createFromDataURL(background):nativeImage.createFromPath(path.join(__dirname,'assets','mundo-conejil-fondo.jpg'));if(native.isEmpty())throw Error('Fondo inválido.');const image='data:image/jpeg;base64,'+native.resize({width:512}).toJPEG(82).toString('base64');packCardImages.set(pack.id,{time:Date.now(),image,game:manifest.game});return image;}catch{return null;}}
-function packInstalled(pack){try{const game=validateGame(packCardImages.get(pack.id)?.game,{},'9999.0.0');if(game.serverId!==pack.id)return false;const dirs=pathsForGame(appRoot,game);return fs.existsSync(path.join(dirs.metadataDir,'installed.json'))&&fs.existsSync(path.join(dirs.instanceDir,'mods'));}catch{return false;}}
+async function packCardImage(pack){const cached=packCardImages.get(pack.id);try{const manifest=JSON.parse((await requestBuffer(channelFor(pack))).toString('utf8'));if(manifest.packId!==pack.id||manifest.game?.serverId!==pack.id)throw Error('Imagen de otro modpack.');const presentation=validatePresentation(manifest.presentation),background=viewPresentation(presentation)?.background;const native=background?nativeImage.createFromDataURL(background):nativeImage.createFromPath(path.join(__dirname,'assets','villawolf-logo.png'));if(native.isEmpty())throw Error('Fondo inválido.');const image='data:image/jpeg;base64,'+native.resize({width:512}).toJPEG(82).toString('base64');packCardImages.set(pack.id,{time:Date.now(),image,game:manifest.game});if(selectedPack?.id===pack.id){packPresentation={packName:manifest.game.packName,version:manifest.version,presentation};}return image;}catch{return cached?.image||null;}}
+function packInstalled(pack){try{const game=validateGame(packCardImages.get(pack.id)?.game,{},'9999.0.0');if(game.serverId!==pack.id)return false;const dirs=pathsForGame(appRoot,game,{named:true,migrate:false});return fs.existsSync(path.join(dirs.metadataDir,'installed.json'))&&fs.existsSync(path.join(dirs.instanceDir,'mods'));}catch{return false;}}
 let catalogPending=null;
 async function refreshCatalog(){if(catalogPending)return catalogPending;catalogPending=refreshCatalogNow();try{return await catalogPending;}finally{catalogPending=null;}}
 async function refreshCatalogNow(){
@@ -188,7 +188,7 @@ function selectGame(manifest, fromRepair = false) {
   }
   currentGame = game;
   Object.assign(config,game,{forgeInstallerUrl:installerUrl(game)});
-  ({ instanceDir, metadataDir, installerPath } = pathsForGame(appRoot,game));
+  ({ instanceDir, metadataDir, installerPath } = pathsForGame(appRoot,game,{named:true}));
   ensureDirs();
 }
 
@@ -335,7 +335,7 @@ let packUpdateBusy = false;
 let manualDialogBusy = false;
 let downloadInboxSession = null;
 async function assistedManifest() {
-  await verifySelectedPack();
+  await verifySelectedPack(true);
   const document = config.manifestUrl
     ? JSON.parse((await requestBuffer(config.manifestUrl)).toString("utf8"))
     : JSON.parse(fs.readFileSync(path.join(__dirname, "champagne-assisted-manifest.json"), "utf8"));
@@ -1369,7 +1369,7 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("open-folder", async () => {
     ensureDirs();
-    await shell.openPath(instanceDir);
+    await shell.openPath(path.join(appRoot,"instances"));
     return { ok: true };
   });
   createWindow();
