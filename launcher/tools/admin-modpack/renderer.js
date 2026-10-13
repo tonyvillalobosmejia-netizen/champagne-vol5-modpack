@@ -66,7 +66,7 @@ $('publish').onclick=()=>run(async()=>{
 });
 run(async()=>{const r=await window.admin.info();if(r.ok){$('adminVersion').textContent='Versión '+(r.appVersion||'de desarrollo');if(r.updateState)adminUpdateState(r.updateState);$('source').value=r.source;$('destination').textContent=r.repository+' · Rama '+r.branch;const session=await window.admin.authStatus();accountControls(session);if(adminAuthorized){await refreshAdminPacks();const t=await window.admin.tokenStatus();if(t.ok)showTokenStatus(t);}}return r;});
 
-function preview(){ $('previewName').textContent=$('packTitle').value;for(const pair of [['News','news'],['Updates','updates']]){ $('preview'+pair[0]+'Title').textContent=$(pair[1]+'Title').value;$('preview'+pair[0]+'Text').textContent=$(pair[1]+'Text').value;}const image=$('backgroundPreview');$('previewScene').style.backgroundImage=image.hidden?'url("../../src/assets/villawolf-logo.png")':'url("'+image.src+'")';}
+function preview(){ $('previewName').textContent=$('packTitle').value;for(const pair of [['News','news'],['Updates','updates']]){ $('preview'+pair[0]+'Title').textContent=$(pair[1]+'Title').value;$('preview'+pair[0]+'Text').textContent=$(pair[1]+'Text').value;}const image=$('backgroundPreview');$('previewScene').style.backgroundImage=image.hidden?'url("../../src/assets/villawolf-icon.png")':'url("'+image.src+'")';}
 $('closeAdminMenu').onclick=()=>{if(locked)return;currentMenu=null;updateNavigation();$(activePackId?'adminPackChoice':'adminProfileButton').focus();};
 function updateNavigation(){
   $('menuToolbar').hidden=!currentMenu;
