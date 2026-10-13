@@ -32,3 +32,13 @@ VillaWolf Administrador permite guardar voluntariamente el token de GitHub cifra
 ## Instalación y retirada de modpacks
 
 Elegir un modpack no descarga su instancia. La instalación se solicita mediante Descargar instancia; los modpacks instalados comprueban sus actualizaciones antes de jugar. Borrar una instalación local pide confirmación y conserva mundos, capturas y opciones por defecto. Borrarlos también exige marcar una opción adicional. Retirar un lanzador desde Administración lo oculta del catálogo para los jugadores y conserva los manifiestos históricos y las carpetas originales de CurseForge.
+
+La biblioteca puede reutilizar durante un máximo de 60 segundos la última comprobación de roles, cifrada dentro de la sesión del servicio. La autorización del modpack al jugar y del Administrador al publicar se consulta directamente a Discord; la biblioteca no concede permiso para esas acciones.
+
+El Launcher conserva una biblioteca local cifrada y vinculada a la cuenta para mantener visibles sus mundos durante pausas de Discord o fallos de red. Una respuesta válida de permisos reemplaza esa biblioteca; cerrar sesión elimina la copia. La lista almacenada no autoriza a jugar.
+
+## Descargas oficiales de CurseForge
+La clave de CurseForge se guarda sólo como secreto CURSEFORGE_API_KEY del Worker. Nunca forma parte de los instaladores, manifiestos, código publicado o sesión del jugador. El Administrador envía huellas de archivo, SHA-1 y tamaño para localizar versiones exactas; no envía JAR locales. El servicio consulta los metadatos oficiales y respeta las restricciones de distribución. Las descargas pasan por el servicio autenticado desde el CDN oficial, sin almacenar ni republicar JAR en GitHub. El Launcher sólo puede solicitar archivos del modpack autorizado y verifica SHA-256 antes de instalar. Las bibliotecas pueden reutilizar roles durante 60 segundos para descargar; JUGAR y publicar mantienen su comprobación fresca. Los archivos que requieren intervención conservan su página oficial.
+
+## Publicación central en GitHub
+El Owner puede guardar GITHUB_TOKEN como secreto del Worker. Los administradores no reciben el token: el servicio verifica el rol Administrador u Owner y restringe las operaciones al repositorio de VillaWolf, rama preparacion-paso97, catálogo, manifiestos e historial bajo updates. Antes de activar un commit revalida el rol y comprueba que sólo cambie rutas permitidas, sin reescribir el historial. No permite publicar versiones de las aplicaciones, modificar su código, gestionar colaboradores o acceder a otros repositorios. La conexión local cifrada sigue disponible cuando el servicio central no está configurado.

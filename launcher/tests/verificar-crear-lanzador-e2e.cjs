@@ -31,5 +31,5 @@ test('Crear en Administración, preparar, publicar y mostrar sólo al jugador co
  const proof=crypto.randomBytes(32).toString('base64url'),start=await send('/v1/discord/start',{proof,purpose:'launcher-v2'}),login=await send('/v1/discord/finish',{proof,purpose:'launcher-v2',state:start.body.state,code:'ficticio'});assert.equal(login.status,200);const token=login.body.token;
  assert.deepEqual((await send('/v2/catalog',null,token)).body.catalog.packs,[]);await engine.publish(plan,manifest,{token:'test_token_not_real_12345678',tested:true,reviewed:true,fetcher});
  const library=await send('/v2/catalog',null,token);assert.equal(library.status,200);assert.deepEqual(library.body.catalog.packs.map(p=>p.id),[pack.id]);assert.equal(library.body.catalog.packs[0].name,pack.name);assert.equal(JSON.parse(published.get(pack.manifestPath)).game.serverId,pack.id);const adminList=await handlers.get('admin-packs')(event);assert.equal(adminList.packs.filter(p=>p.id===pack.id).length,1);assert.equal(adminList.packs.find(p=>p.id===pack.id).published,true);
- roles=[];assert.deepEqual((await send('/v2/catalog',null,token)).body.catalog.packs,[]);assert.equal((await send('/v2/packs/'+pack.id,null,token)).status,403);
+ roles=[];assert.equal((await send('/v2/packs/'+pack.id,null,token)).status,403);assert.deepEqual((await send('/v2/catalog',null,token)).body.catalog.packs,[]);
 });

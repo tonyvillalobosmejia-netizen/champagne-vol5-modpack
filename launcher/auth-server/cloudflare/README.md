@@ -54,3 +54,10 @@ El launcher mantiene su sesión en memoria; al cerrarlo hay que autorizar de nue
 
 Discord autoriza el uso de este launcher. No expulsa partidas ya iniciadas ni impide usar otro launcher. La protección del servidor Minecraft sigue pendiente y es independiente.
 
+
+## Conexiones oficiales compartidas
+Añadir sólo en Production, como Secret: CURSEFORGE_API_KEY (API oficial CurseForge for Studios) y GITHUB_TOKEN (fine-grained, sólo champagne-vol5-modpack, Contents: Read and write). No introducir claves en variables públicas, código o instaladores. /health sólo indica si están configuradas.
+
+POST /v2/admin/curseforge/matches consulta huellas exactas; POST /v2/admin/curseforge/download y /v2/curseforge/download descargan desde el CDN oficial con la clave en la cabecera, respetando distribución y comprobando rol/manifiesto. El jugador valida SHA-256 antes de instalar. Nunca se publican JAR en GitHub.
+
+GET /v2/admin/github/status muestra disponibilidad sin revelar token. POST /v2/admin/github limita API al repositorio y rama fijados. Sólo modifica catálogo/manifiestos/historial; bloquea código, releases, otras ramas, force push y blobs con PAT. Al activar, verifica parent actual, diff limitado y rol fresco. La firma, Microsoft y Fabric no quedan habilitados por estas conexiones.

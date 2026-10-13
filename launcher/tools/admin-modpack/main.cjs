@@ -25,11 +25,14 @@ const packSourceStore=require('./pack-source-store.cjs').createPackSourceStore(a
 let win,source='',plan=null,prepared=null,busy=false,output=null;
 let background=null,designPlan=null;
 const adminAuth=createAuthClient({baseUrl:require('../../src/config').authServerUrl,provider:'discord',required:true,purpose:'admin',openBrowser:url=>shell.openExternal(url),sessionStore:createSessionStore({directory:app.getPath('userData'),safeStorage:require('electron').safeStorage,scope:'admin|'+require('../../src/config').authServerUrl,filename:'discord-admin-session.bin'})});
+let sharedGitHub=null;async function sharedConnection(refresh=false){if(refresh||sharedGitHub===null){try{sharedGitHub=!!(await adminAuth.githubStatus()).configured;}catch(error){if([401,403].includes(error.status))throw error;sharedGitHub=false;}}return sharedGitHub;}
+async function publicationToken(){return await sharedConnection(true)?'villawolf_service_connection_1234':tokenStore.resolve('');}
+async function officialFetch(url,options={}){if(require('../../src/champagne-curseforge-api').isCurseForgeFile(url))return new Response(await adminAuth.downloadCurseforge({url}),{status:200});const prefix='https://api.github.com/repos/'+engineModule.REPO;if(String(url).startsWith(prefix+'/')&&await sharedConnection()){const r=await adminAuth.githubRequest({path:String(url).slice(prefix.length),method:options.method||'GET',...(options.body?{body:JSON.parse(options.body)}:{})});return new Response(JSON.stringify(r.data),{status:r.upstreamStatus,headers:{'Content-Type':'application/json'}});}return fetch(url,options);}
 const adminCatalogAccess=require('./catalog-access.cjs').createAdminCatalogAccess(adminAuth);
 const publicActions=new Set(['admin-info','admin-auth-status','admin-auth-login','admin-auth-logout','admin-update-check']);
 handle('admin-auth-status',async()=>{try{if(adminAuth.status().user)await adminCatalogAccess.status();return{...adminAuth.status(),authorized:!!adminAuth.status().user};}catch(error){return{...adminAuth.status(),authorized:false,message:error.message,retryAfter:error.retryAfter||0};}});
 handle('admin-auth-login',async()=>{const result=await adminAuth.loginDiscord();if(!result.ok)throw Error(result.message);return{...result,authorized:true};});
-handle('admin-auth-logout',async()=>{plan=prepared=designPlan=null;background=null;output=null;adminCatalogAccess.clear();return adminAuth.logout();});
+handle('admin-auth-logout',async()=>{sharedGitHub=null;plan=prepared=designPlan=null;background=null;output=null;adminCatalogAccess.clear();return adminAuth.logout();});
 ipcMain.handle('admin-auth-cancel',event=>{guard(event);return adminAuth.cancelDiscordLogin();});
 const adminUpdates=require('./admin-updates.cjs').createAdminUpdates({app,feed:"https://raw.githubusercontent.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/preparacion-paso97/updates/admin",loadUpdater:()=>require('electron-updater').autoUpdater,isBusy:()=>busy,status:()=>{},onState:state=>{if(win&&!win.isDestroyed())win.webContents.send('admin-update-state',state);},progress:state=>{if(win&&!win.isDestroyed())win.webContents.send('admin-update-state',{phase:'downloading',message:'Descargando actualización del Administrador…',percent:state.totalBytes?Math.round(state.bytes/state.totalBytes*100):null});}});
 handle('admin-update-check',async()=>adminUpdates.check());
@@ -40,7 +43,7 @@ function handle(name,action) {ipcMain.handle(name,async(event,...args)=>{
   guard(event); if(busy) return {ok:false,error:'Espera a que termine la operación actual.'};
   busy=true; try{if(name==='admin-prepare'&&plan?.unresolved?.length)throw Error('Faltan fuentes oficiales exactas de '+plan.unresolved.length+' mods. Vuelve a analizar después de resolverlas.');if(!publicActions.has(name)){if(!['admin-packs','admin-select-pack','admin-create-pack','admin-token-status'].includes(name))await adminAuth.verifiedUsername();if(!activePack&&!['admin-packs','admin-select-pack','admin-create-pack','admin-token-status','admin-token-save','admin-token-clear'].includes(name))throw Error('Selecciona un modpack antes de continuar.');}return {ok:true,...await action(...args)};}catch(error){return{ok:false,error:error.message,retryAfter:error.retryAfter||0};}finally{busy=false;}
 });}
-handle('admin-token-status',async()=>tokenStore.status());
+handle('admin-token-status',async()=>await sharedConnection(true)?{saved:true,shared:true}:tokenStore.status());
 handle('admin-token-save',async token=>tokenStore.save(token));
 handle('admin-token-clear',async()=>tokenStore.clear());
 handle('admin-info',async()=>{
@@ -55,14 +58,14 @@ handle('admin-source-save',async input=>{if(input?.packId!==activePack?.id)throw
 handle('admin-analyze',async input=>{
   if(input?.source!==undefined){if(input.packId!==activePack.id)throw Error('El lanzador cambió.');source=packSourceStore.save(activePack.id,input.source);}
   plan=prepared=null;output=null;
-  plan=await engine.analyze(source,progress);background=plan.design.background;return {report:engine.report(plan)};
+  plan=await engine.analyze(source,progress,officialFetch,files=>adminAuth.curseforgeMatches(files));background=plan.design.background;return {report:engine.report(plan)};
 });
 handle('admin-design',async()=>{prepared=null;output=null;plan=await engine.presentationPlan(progress);designPlan=plan;background=plan.design.background;return{report:engine.report(plan)};});
 handle('admin-history',async()=>({history:await engine.history()}));
 handle('admin-restore',async version=>{prepared=null;output=null;plan=await engine.restore(version,progress);background=plan.design.background;return{report:engine.report(plan)};});
 handle('admin-delete-pack',async()=>{
  if(!activePack)throw Error('Selecciona un lanzador.');const answer=await confirmPublication(win,{title:'Eliminar lanzador',message:'¿Retirar '+activePack.name+'?',detail:'Se ocultará del catálogo para los jugadores. Se conservan sus mundos, la carpeta original de CurseForge y el historial de versiones. Esta acción no desinstala el Launcher.',buttons:['Cancelar','Eliminar lanzador']});if(answer.response!==1)return{cancelled:true};
- let result={retired:true,packName:activePack.name};const entry=adminPacks.find(p=>p.id===activePack.id);if(entry?.published)result=await engine.disablePack({token:tokenStore.resolve(''),onProgress:progress,authorize:()=>adminAuth.verifiedUsername()});
+ let result={retired:true,packName:activePack.name};const entry=adminPacks.find(p=>p.id===activePack.id);if(entry?.published)result=await engine.disablePack({token:await publicationToken(),onProgress:progress,fetcher:officialFetch,authorize:()=>adminAuth.verifiedUsername()});
  const local=drafts();for(const p of local)if(p.id===activePack.id)p.enabled=false;fs.writeFileSync(draftFile(),JSON.stringify({schemaVersion:1,packs:local},null,2));resetPack();activePack=null;engine=engineModule;return{...await loadPacks(),result};
 });
 handle('admin-image',async()=>{
@@ -84,7 +87,7 @@ handle('admin-prepare',async({version,selected,packName,notes,news,updates})=>{
   prepared=null; engine.assertSourceUnchanged(plan);
   plan.design={packName,background,news,updates,...(typeof notes==='string'&&notes.trim()?{notes:{title:'Actualización '+version,text:notes.trim(),publishedAt:new Date().toISOString()}}:{})};
   const manifest=engine.buildManifest(plan,version,selected);
-  await engine.validatePackage(manifest,progress);
+  await engine.validatePackage(manifest,progress,officialFetch);
   const out=path.join(adminRoot,'preparados',version+'-'+crypto.randomUUID());
   fs.mkdirSync(out,{recursive:true});
   fs.writeFileSync(path.join(out,'modpack-'+version+'.json'),JSON.stringify(manifest,null,2)+'\n',{flag:'wx'});
@@ -95,14 +98,14 @@ handle('admin-prepare',async({version,selected,packName,notes,news,updates})=>{
 handle('admin-publish-design',async({packName,news,updates})=>{
   if(!designPlan)throw Error('Primero carga el diseño publicado.');
   const design={packName,news,updates,background};engine.buildPresentationManifest(designPlan,design);
-  const token=tokenStore.resolve('');
+  const token=await publicationToken();
   const answer=await confirmPublication(win,{type:'question',title:'Publicar cambios de interfaz',message:'¿Publicar el diseño de '+packName+'?',detail:'Cambiará únicamente el nombre, el fondo y las tarjetas de noticias y actualizaciones. Se conservan la versión, Minecraft, Forge, mods y configuraciones.',buttons:['Cancelar','Publicar cambios'],defaultId:0,cancelId:0,noLink:true});
   if(answer.response!==1)return{cancelled:true};
-  const result=await engine.publishPresentation(designPlan,design,{token,onProgress:progress,authorize:()=>adminAuth.verifiedUsername()});designPlan=null;return{result};
+  const result=await engine.publishPresentation(designPlan,design,{token,onProgress:progress,fetcher:officialFetch,authorize:()=>adminAuth.verifiedUsername()});designPlan=null;return{result};
 });
 handle('admin-output',async()=>{if(!output)throw new Error('No hay paquete preparado.');await shell.openPath(output);return{};});
 handle('admin-publish',async({token,tested,reviewed})=>{
-  token=tokenStore.resolve(token);
+  token=await sharedConnection(true)?'villawolf_service_connection_1234':tokenStore.resolve(token);
   if(!prepared||!plan)throw new Error('Prepara la actualización antes de publicarla.');
   if(!tested||!reviewed)throw new Error('Confirma las pruebas y la revisión del contenido.');
   const answer=await confirmPublication(win,{type:'warning',title:'Publicar actualización del modpack',
@@ -110,7 +113,7 @@ handle('admin-publish',async({token,tested,reviewed})=>{
     detail:`Se actualizará ${engine.locations?.channel||'updates/stable-v2.json'} en ${engine.REPO}, rama ${engine.BRANCH}. Contiene ${prepared.files.length} mods y ${prepared.content.files.length} archivos de contenido. Los jugadores la recibirán al pulsar JUGAR. Revisa que los archivos seleccionados puedan publicarse y no contengan datos personales.`,
     buttons:['Cancelar','Verificar y publicar'],defaultId:0,cancelId:0,noLink:true});
   if(answer.response!==1)return{cancelled:true};
-  const result=await engine.publish(plan,prepared,{token,tested,reviewed,onProgress:progress,authorize:()=>adminAuth.verifiedUsername()});
+  const result=await engine.publish(plan,prepared,{token,tested,reviewed,onProgress:progress,fetcher:officialFetch,authorize:()=>adminAuth.verifiedUsername()});
   fs.writeFileSync(path.join(output,'publicacion.json'),JSON.stringify(result,null,2)+'\n');
   plan=prepared=null; return{result};
 });

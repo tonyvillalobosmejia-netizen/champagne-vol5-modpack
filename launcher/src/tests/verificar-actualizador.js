@@ -27,6 +27,7 @@ function sandbox(t, document, options = {}) {
         BrowserWindow: { getAllWindows: () => [] }, ipcMain: {}, shell: {}
       };
       if (name === "./config") return { ...require("../config"), catalogEnabled:false, manifestUrl: options.disabled ? "" : "https://example.invalid/manifest" };
+      if (name === "./champagne-library-cache") return require("../champagne-library-cache");
       if (name === "./champagne-pack-catalog") return require("../champagne-pack-catalog");
       if (name === "./champagne-config-sync") return require("../champagne-config-sync");
       if (name === "./champagne-update-paths") return guards;

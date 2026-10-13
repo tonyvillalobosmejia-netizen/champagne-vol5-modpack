@@ -334,7 +334,7 @@ $('discordLoginBtn').addEventListener('click',async()=>{
   accountBusy=true; $('discordLoginBtn').disabled=true; $('playBtn').disabled=true;
   $('cancelDiscordLoginBtn').hidden=false;
   $('authStatus').textContent='Autoriza el acceso en el navegador. Esperando tu confirmación de Discord…';
-  try { const result=await window.launcher.loginDiscord(); if(result.ok)showAccountState(result); else $('authStatus').textContent=result.message; }
+  try { const result=await window.launcher.loginDiscord(); if(result.ok){showAccountState(result);await loadLibrary();navigate('packs');}else $('authStatus').textContent=result.message; }
   catch(error){ $('authStatus').textContent=error.message || 'No se pudo iniciar sesión con Discord.'; }
   finally { accountBusy=false; $('discordLoginBtn').disabled=false; syncPlayButton(); $('cancelDiscordLoginBtn').hidden=true; }
 });

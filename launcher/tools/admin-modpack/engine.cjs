@@ -14,7 +14,7 @@ const {validateCatalog,pathsForPack}=require('../../src/champagne-pack-catalog')
 function createEngine(packContext=null){
 const pack=packContext?validateCatalog({schemaVersion:1,packs:[packContext]}).packs[0]:null;
 const packId=pack?.id||'champagne-vol5',locations=pathsForPack(packId);
-const SUPPORTED=pack?'0.1.13':'0.1.12';
+const SUPPORTED=pack?'0.1.13':'0.1.12',COMPATIBLE='0.1.15';
 const REPO = 'tonyvillalobosmejia-netizen/champagne-vol5-modpack';
 const BRANCH = 'preparacion-paso97';
 const API = `https://api.github.com/repos/${REPO}`;
@@ -64,7 +64,7 @@ async function baseline(fetcher=fetch) {
   let manifest=await json(RAW+'/'+ref.object.sha+'/'+locations.channel,{fetcher,allow404:!!pack});
   if(!manifest&&pack){const cfg=require('../../src/config');manifest={packId,version:'0.0.0',files:[],delete:[],content:{packId,version:'0.0.0',files:[]},game:{serverId:packId,loader:'forge',packName:pack.name,minecraftVersion:cfg.minecraftVersion,forgeVersion:cfg.forgeVersion,javaMajor:cfg.javaMajor,forgeInstallerSha1:cfg.forgeInstallerSha1,minLauncherVersion:SUPPORTED}};return{head:ref.object.sha,manifest,unpublished:true};}
   if(manifest.packId!==packId||manifest.game?.serverId!==packId)throw Error('El manifiesto pertenece a otro modpack.');
-  validateAssistedManifest(manifest); validateGame(manifest.game,{},SUPPORTED); validatePresentation(manifest.presentation);
+  validateAssistedManifest(manifest); validateGame(manifest.game,{},COMPATIBLE); validatePresentation(manifest.presentation);
   return { head:ref.object.sha, manifest };
 }
 function privacy(file) {
@@ -95,7 +95,7 @@ function scan(source) {
     const target=checkedModTarget(source,'mods/'+e.name), st=fs.lstatSync(target);
     if (!st.isFile() || st.isSymbolicLink() || st.size>128*1024*1024) throw new Error('Mod inválido: '+e.name);
     const bytes=fs.readFileSync(target);
-    return { path:'mods/'+e.name, sha256:hash(bytes), sha1:hash(bytes,'sha1'), bytes:bytes.length };
+    return { fingerprint:require('../../src/champagne-curseforge-api').fingerprint(bytes), path:'mods/'+e.name, sha256:hash(bytes), sha1:hash(bytes,'sha1'), bytes:bytes.length };
   }).sort((a,b)=>a.path.localeCompare(b.path));
   if (!mods.length || mods.length>500) throw new Error('La carpeta debe tener entre 1 y 500 mods.');
   const excluded=[];
@@ -122,14 +122,16 @@ async function modrinth(file,fetcher) {
   if(!match) return null;
   return match.url;
 }
-async function analyze(source,onProgress=()=>{},fetcher=fetch) {
+async function analyze(source,onProgress=()=>{},fetcher=fetch,curseforgeResolver=null) {
   onProgress('Consultando la versión publicada…'); const base=await baseline(fetcher);
   onProgress('Leyendo mods y configuraciones…'); const current=scan(source);
+  const apiMatches=new Map();if(curseforgeResolver){onProgress('Buscando archivos exactos en la API oficial de CurseForge…');try{for(let i=0;i<current.mods.length;i+=50){const result=await curseforgeResolver(current.mods.slice(i,i+50).map(m=>({fingerprint:m.fingerprint,sha1:m.sha1,bytes:m.bytes})));for(const match of result.matches||[])if(require('../../src/champagne-curseforge-api').isCurseForgeFile(match.url))apiMatches.set(match.sha1,match);}}catch(error){onProgress('API CurseForge: '+error.message+' Se conservan las fuentes alternativas y manuales.');}}
   const old=new Map(base.manifest.files.map(e=>[e.sha256,e])); const files=[], unresolved=[];
   for(const mod of current.mods) {
-    const known=old.get(mod.sha256);
+    const known=old.get(mod.sha256), apiMatch=apiMatches.get(mod.sha1);
     const alternate=officialSource(mod);
     if(alternate) { files.push({path:mod.path,sha256:mod.sha256,acquisition:'official_direct',url:alternate.url}); onProgress('Fuente oficial exacta encontrada: '+mod.path); }
+    else if(apiMatch&&apiMatch.bytes===mod.bytes){files.push({path:mod.path,sha256:mod.sha256,acquisition:'official_direct',url:apiMatch.url});onProgress('API CurseForge: descarga automática exacta para '+mod.path);}
     else if(known) files.push({...known,path:mod.path});
     else {
       onProgress('Buscando la versión exacta: '+mod.path.slice(5));
@@ -157,8 +159,8 @@ async function analyze(source,onProgress=()=>{},fetcher=fetch) {
     const id=current.mc+'-'+current.forge;
     game.forgeInstallerSha1=hash(await request(`https://maven.minecraftforge.net/net/minecraftforge/forge/${id}/forge-${id}-installer.jar`,{fetcher,limit:32*1024*1024}),'sha1');
   }
-  validateGame(game,{},SUPPORTED);
-  return {base,current,files,unresolved,contentCandidates,game,
+  validateGame(game,{},COMPATIBLE);
+  return {base,current,files,unresolved,contentCandidates,game,curseforgeApi:files.some(f=>require('../../src/champagne-curseforge-api').isCurseForgeFile(f.url)),
     modChanges:difference(current.mods,base.manifest.files), suggestedVersion:nextVersion(base.manifest.version), design:{packName:game.packName,...base.manifest.presentation,background:base.manifest.presentation?.background||null}};
 }
 function report(plan) {
@@ -190,8 +192,10 @@ function buildManifest(plan,version,selected) {
     if(Object.keys(presentation).length){manifest.presentation=validatePresentation(presentation);manifest.game.minLauncherVersion=(presentation.news||presentation.updates)?SUPPORTED:'0.1.11';}
   }
   if(pack)manifest.game.minLauncherVersion=SUPPORTED;
+  if(plan.curseforgeApi)manifest.game.minLauncherVersion=COMPATIBLE;
+  const priorMinimum=plan.base.manifest.game?.minLauncherVersion;if(priorMinimum&&greater(priorMinimum,manifest.game.minLauncherVersion||'0.0.0'))manifest.game.minLauncherVersion=priorMinimum;
   if(plan.restoredFrom)manifest.restoredFrom=plan.restoredFrom;
-  validateAssistedManifest(manifest); validateGame(manifest.game,{},SUPPORTED); return manifest;
+  validateAssistedManifest(manifest); validateGame(manifest.game,{},COMPATIBLE); return manifest;
 }
 function assertSourceUnchanged(plan) {
   if(plan.mode==='restore'||plan.mode==='presentation')return;
@@ -200,7 +204,7 @@ function assertSourceUnchanged(plan) {
   if(signature(current)!==signature(plan.current)) throw new Error('La carpeta cambió después del análisis. Analízala de nuevo.');
 }
 async function validatePackage(manifest,onProgress=()=>{},fetcher=fetch) {
-  validateAssistedManifest(manifest); validateGame(manifest.game,{},SUPPORTED); validatePresentation(manifest.presentation);
+  validateAssistedManifest(manifest); validateGame(manifest.game,{},COMPATIBLE); validatePresentation(manifest.presentation);
   const directory=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'villawolf-admin-validation-'));
   try {
     await prepareContent(manifest.content,path.join(directory,'bundle'),url=>request(url,{fetcher,limit:128*1024*1024}));
@@ -305,12 +309,12 @@ async function presentationPlan(onProgress=()=>{},fetcher=fetch){const base=awai
 function buildPresentationManifest(plan,design){
   if(plan?.mode!=='presentation')throw Error('Primero carga el diseño publicado en Edición de interfaz.');
   if(typeof design.packName!=='string'||!design.packName.trim()||design.packName.length>80)throw Error('Escribe un nombre de modpack de hasta 80 caracteres.');
-  const manifest=clone(plan.base.manifest);manifest.game.packName=design.packName.trim();if(pack)manifest.game.minLauncherVersion=SUPPORTED;
+  const manifest=clone(plan.base.manifest);manifest.game.packName=design.packName.trim();if(pack&&greater(SUPPORTED,manifest.game.minLauncherVersion||'0.0.0'))manifest.game.minLauncherVersion=SUPPORTED;
   const presentation={...(manifest.presentation||{})};delete presentation.background;
   if(design.background)presentation.background=design.background;
   presentation.news=design.news;presentation.updates=design.updates;
   manifest.presentation=validatePresentation(presentation);
-  validateAssistedManifest(manifest);validateGame(manifest.game,{},SUPPORTED);return manifest;
+  validateAssistedManifest(manifest);validateGame(manifest.game,{},COMPATIBLE);return manifest;
 }
 async function publishPresentation(plan,design,{token,onProgress=()=>{},fetcher=fetch,authorize=async()=>{}}={}){
   if(typeof token!=='string'||!/^[A-Za-z0-9_]{20,255}$/.test(token))throw Error('Guarda un token válido en Perfil.');

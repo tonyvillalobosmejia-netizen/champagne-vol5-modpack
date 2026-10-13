@@ -13,3 +13,9 @@
 .admin-profile{flex-shrink:0}
 
 .danger{background:#46212b;border-color:#934457}.danger:hover{background:#673044}
+
+.menu-toolbar {display:flex;align-items:center;justify-content:space-between;gap:16px;margin:14px 0;padding:14px 18px;background:#121d19;border:1px solid #2a4738;border-radius:12px;}
+.menu-toolbar h2 {margin:4px 0 0;font-size:18px;}
+.menu-toolbar button {white-space:nowrap;background:#1d3528;border-color:#3d7050;}
+.menu-toolbar button:hover {background:#284935;}
+.menu-toolbar button span {font-size:22px;margin-left:10px;vertical-align:middle;}

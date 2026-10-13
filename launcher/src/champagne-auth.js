@@ -29,7 +29,7 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
         let size = 0; const chunks = [];
         res.on('data', chunk => {
           size += chunk.length;
-          if (size > 65536) req.destroy(new Error('Respuesta del servicio demasiado grande.'));
+          if (size > (route==='/v2/admin/github'?2*1024*1024:65536)) req.destroy(new Error('Respuesta del servicio demasiado grande.'));
           else chunks.push(chunk);
         });
         res.on('aborted', () => req.destroy(new Error('Conexión interrumpida.')));
@@ -46,7 +46,7 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
           } catch { reject(new Error('Respuesta inválida del servicio de cuentas.')); }
         });
       });
-      timer = setTimeout(() => req.destroy(new Error('El servicio de cuentas no respondió.')), 10000);
+      timer = setTimeout(() => req.destroy(new Error('El servicio de cuentas no respondió.')), route==='/v2/admin/github'?60000:10000);
       req.on('error', () => { clearTimeout(timer); reject(new Error('No se pudo conectar al servicio de cuentas.')); });
       req.end(payload);
     });
@@ -126,7 +126,10 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
       return {...status(),message:'Sesión de Discord iniciada. Nombre de Minecraft: '+session.user.username};
     }catch(error){return {ok:false,message:error.message};}finally{busy=false;discordAbort=null;}
   }
-  async function access(route){restoreSession();if(!session)throw Error('Inicia sesión con Discord.');try{const value=await request(route,'GET',null,session.token);session={...session,expiresAt:value.expiresAt||session.expiresAt};persistSession();return value;}catch(error){if(error.status===401)clearSession();throw error;}}
-  return { status, catalog:()=>access(purpose==='admin'?'/v2/admin/catalog':'/v2/catalog'), verifyPack:id=>{if(!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id||''))throw Error('Modpack inválido.');return access('/v2/packs/'+id);}, loginDiscord, cancelDiscordLogin:()=>{discordAbort?.abort();return {ok:true};}, register: input => authenticate('register', input), login: input => authenticate('login', input), verifiedUsername, logout };
+  async function access(route){restoreSession();if(!session)throw Error('Inicia sesión con Discord.');try{const value=await request(route,'GET',null,session.token);let user=session.user;if(value.user){user=validateUser(value.user);if(user.id!==session.user.id||user.username!==session.user.username)throw Error('La identidad de la sesión ha cambiado.');}session={...session,user,expiresAt:value.expiresAt||session.expiresAt};persistSession();return value;}catch(error){if(error.status===401)clearSession();throw error;}}
+  async function curseforgeMatches(files){restoreSession();if(purpose!=='admin'||!session)throw Error('Inicia sesión de Administrador para consultar CurseForge.');return request('/v2/admin/curseforge/matches','POST',{files},session.token);}
+  function downloadCurseforge(input,onProgress){restoreSession();return require('./champagne-curseforge-api').downloadThroughService({endpoint,token:session?.token,input,admin:purpose==='admin',onProgress});}
+  async function githubRequest(input){restoreSession();if(purpose!=='admin'||!session)throw Error('Inicia sesión de Administrador para publicar.');if(input.path==='/git/blobs'&&input.method==='POST'&&input.body?.encoding==='base64')return require('./champagne-curseforge-api').uploadGitHubBlob({endpoint,token:session.token,content:input.body.content});return request('/v2/admin/github','POST',input,session.token);}
+  return { status, githubStatus:()=>access('/v2/admin/github/status'), githubRequest, curseforgeMatches, downloadCurseforge, catalog:()=>access(purpose==='admin'?'/v2/admin/catalog':'/v2/catalog'), verifyPack:id=>{if(!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id||''))throw Error('Modpack inválido.');return access('/v2/packs/'+id);}, loginDiscord, cancelDiscordLogin:()=>{discordAbort?.abort();return {ok:true};}, register: input => authenticate('register', input), login: input => authenticate('login', input), verifiedUsername, logout };
 }
 module.exports = { createAuthClient };
