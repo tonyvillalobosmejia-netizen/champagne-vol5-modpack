@@ -111,7 +111,7 @@ function curseSource(mod,addons) {
   for(const addon of addons) {
     const file=addon.installedFile;
     if(!file || file.fileName!==mod.path.slice(5) || !file.hashes?.some(h=>h.type===1&&h.value.toLowerCase()===mod.sha1)) continue;
-    const match=/^https:\/\/www\.curseforge\.com\/minecraft\/mc-mods\/([a-z0-9-]+)\/?$/.exec(addon.websiteUrl||'');
+    const match=/^https:\/\/www\.curseforge\.com\/minecraft\/mc-mods\/([a-z0-9-]+)\/?$/.exec(addon.websiteUrl||addon.webSiteURL||addon.links?.websiteUrl||'');
     if(match && Number.isSafeInteger(file.id) && file.id>0) return { path:mod.path,sha256:mod.sha256,acquisition:'user_official_download',pageUrl:`https://www.curseforge.com/minecraft/mc-mods/${match[1]}/files/${file.id}`,curseforgeFileId:file.id };
   }
   return null;

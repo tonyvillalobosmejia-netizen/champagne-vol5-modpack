@@ -9,9 +9,8 @@ const draftFile=()=>path.join(adminRoot,'modpacks.json');
 function drafts(){try{return validateCatalog(JSON.parse(fs.readFileSync(draftFile(),'utf8'))).packs;}catch{return[];}}
 function resetPack(){plan=prepared=designPlan=null;background=null;output=null;source='';}
 async function loadPacks(){const r=await adminCatalogAccess.catalog();adminPacks=validateCatalog(r.catalog).packs.map(p=>({...p,published:true}));for(const p of drafts())if(!adminPacks.some(e=>e.id===p.id))adminPacks.push({...p,published:false});return{packs:adminPacks.filter(p=>p.enabled),selectedId:activePack?.id||null};}
-function packSettings(){return path.join(adminRoot,activePack?'settings-'+activePack.id+'.json':'settings.json');}
 handle('admin-packs',loadPacks);
-handle('admin-select-pack',async id=>{await loadPacks();const pack=adminPacks.find(p=>p.id===id);if(!pack)throw Error('Modpack no disponible.');resetPack();activePack=pack;engine=engineModule.createEngine(pack);try{source=JSON.parse(fs.readFileSync(packSettings(),'utf8')).source||'';}catch{}return{packs:adminPacks.filter(p=>p.enabled),selectedId:activePack.id,source,packName:pack.name};});
+handle('admin-select-pack',async id=>{await loadPacks();const pack=adminPacks.find(p=>p.id===id);if(!pack)throw Error('Modpack no disponible.');resetPack();activePack=pack;engine=engineModule.createEngine(pack);source=packSourceStore.load(activePack.id);return{packs:adminPacks.filter(p=>p.enabled),selectedId:activePack.id,source,packName:pack.name};});
 handle('admin-create-pack',async input=>{if(typeof input?.name!=='string'||!input.name.trim()||input.name.length>80||!/^\d{17,20}$/.test(input.roleId||''))throw Error('Escribe el nombre y el ID del rol de Discord.');await loadPacks();if(adminPacks.length>=50)throw Error('Máximo 50 modpacks.');const id='pack-'+crypto.randomBytes(8).toString('hex'),pack={id,name:input.name.trim(),roleId:input.roleId,enabled:true,manifestPath:'updates/packs/'+id+'/stable.json'};const local=drafts();local.push(pack);fs.writeFileSync(draftFile(),JSON.stringify({schemaVersion:1,packs:local},null,2));adminPacks.push(pack);resetPack();activePack=pack;engine=engineModule.createEngine(pack);return{packs:adminPacks,selectedId:id,source:'',packName:pack.name};});
 const {createAuthClient}=require('../../src/champagne-auth');
 const {createSessionStore}=require('../../src/champagne-session-store');
@@ -22,6 +21,7 @@ fs.mkdirSync(path.join(adminRoot,'app-data'),{recursive:true});
 app.setName('VillaWolf Administrador');
 app.setAppUserModelId('com.villawolf.administrador');
 app.setPath('userData',path.join(adminRoot,'app-data'));
+const packSourceStore=require('./pack-source-store.cjs').createPackSourceStore(adminRoot);
 let win,source='',plan=null,prepared=null,busy=false,output=null;
 let background=null,designPlan=null;
 const adminAuth=createAuthClient({baseUrl:require('../../src/config').authServerUrl,provider:'discord',required:true,purpose:'admin',openBrowser:url=>shell.openExternal(url),sessionStore:createSessionStore({directory:app.getPath('userData'),safeStorage:require('electron').safeStorage,scope:'admin|'+require('../../src/config').authServerUrl,filename:'discord-admin-session.bin'})});
@@ -38,22 +38,22 @@ function progress(message) { if(win&&!win.isDestroyed()) win.webContents.send('a
 function guard(event) { if(!win || event.sender!==win.webContents || event.senderFrame!==win.webContents.mainFrame) throw new Error('Solicitud no autorizada.'); }
 function handle(name,action) {ipcMain.handle(name,async(event,...args)=>{
   guard(event); if(busy) return {ok:false,error:'Espera a que termine la operación actual.'};
-  busy=true; try{if(!publicActions.has(name)){if(!['admin-packs','admin-select-pack','admin-create-pack','admin-token-status'].includes(name))await adminAuth.verifiedUsername();if(!activePack&&!['admin-packs','admin-select-pack','admin-create-pack','admin-token-status','admin-token-save','admin-token-clear'].includes(name))throw Error('Selecciona un modpack antes de continuar.');}return {ok:true,...await action(...args)};}catch(error){return{ok:false,error:error.message,retryAfter:error.retryAfter||0};}finally{busy=false;}
+  busy=true; try{if(name==='admin-prepare'&&plan?.unresolved?.length)throw Error('Faltan fuentes oficiales exactas de '+plan.unresolved.length+' mods. Vuelve a analizar después de resolverlas.');if(!publicActions.has(name)){if(!['admin-packs','admin-select-pack','admin-create-pack','admin-token-status'].includes(name))await adminAuth.verifiedUsername();if(!activePack&&!['admin-packs','admin-select-pack','admin-create-pack','admin-token-status','admin-token-save','admin-token-clear'].includes(name))throw Error('Selecciona un modpack antes de continuar.');}return {ok:true,...await action(...args)};}catch(error){return{ok:false,error:error.message,retryAfter:error.retryAfter||0};}finally{busy=false;}
 });}
 handle('admin-token-status',async()=>tokenStore.status());
 handle('admin-token-save',async token=>tokenStore.save(token));
 handle('admin-token-clear',async()=>tokenStore.clear());
 handle('admin-info',async()=>{
-  try{source=JSON.parse(fs.readFileSync(packSettings(),'utf8')).source;}catch{
-    if(!app.isPackaged){try{source=JSON.parse(fs.readFileSync(path.join(project,'tools','curseforge-local.json'),'utf8')).source;}catch{}}
-  }
+  source=activePack?packSourceStore.load(activePack.id):'';
   return {source,repository:engine.REPO,branch:engine.BRANCH,packName:activePack?.name||'modpack',appVersion:app.isPackaged?app.getVersion():require('./version.json').version,updateState:adminUpdates.getState()};
 });
 handle('admin-folder',async()=>{
   const choice=await dialog.showOpenDialog(win,{title:'Selecciona tu instancia de CurseForge',defaultPath:source||undefined,properties:['openDirectory']});
-  if(!choice.canceled){source=choice.filePaths[0];plan=prepared=null;output=null;fs.writeFileSync(packSettings(),JSON.stringify({source}));}return{source};
+  if(!choice.canceled){source=packSourceStore.save(activePack.id,choice.filePaths[0]);plan=prepared=designPlan=null;background=null;output=null;}return{source};
 });
-handle('admin-analyze',async()=>{
+handle('admin-source-save',async input=>{if(input?.packId!==activePack?.id)throw Error('El lanzador cambió. Vuelve a elegir su carpeta.');source=packSourceStore.save(activePack.id,input.source);plan=prepared=designPlan=null;background=null;output=null;return{source};});
+handle('admin-analyze',async input=>{
+  if(input?.source!==undefined){if(input.packId!==activePack.id)throw Error('El lanzador cambió.');source=packSourceStore.save(activePack.id,input.source);}
   plan=prepared=null;output=null;
   plan=await engine.analyze(source,progress);background=plan.design.background;return {report:engine.report(plan)};
 });
