@@ -10,19 +10,20 @@ function memoryProfiles(totalBytes) {
   ] };
 }
 function redact(text) {
-  return String(text).replace(/(Bearer\s+)\S+/gi, '$1[oculto]')
+  return String(text).replace(/github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9]+/g,'[credencial oculta]').replace(/(--accessToken\s+)\S+/gi,'$1[oculto]').replace(/(Bearer\s+)\S+/gi, '$1[oculto]')
     .replace(/("?(?:access[_-]?token|refresh[_-]?token|password|contraseña|authorization)"?\s*[=:]\s*"?)[^\s",;]+/gi, '$1[oculto]')
     .replace(/(https?:\/\/[^\s?]+)\?[^\s]+/gi, '$1?[parámetros ocultos]');
 }
 function explainError(message) {
   const text = String(message);
+  if (/Microsoft|Minecraft Java|Xbox/.test(text)) return {title:'Revisa tu cuenta de Minecraft Java',hint:'Abre tu perfil y vuelve a iniciar sesión con Microsoft. La cuenta debe tener Minecraft Java y VillaWolf debe tener su registro autorizado.'};
   if (/Discord|rol autorizado|rol que permite|sesión venció/i.test(text)) return { title: 'Revisa tu acceso con Discord', hint: 'Abre tu perfil e inicia sesión con Discord. Comprueba que perteneces al servidor y tienes el rol autorizado. Si no lo tienes, contacta con un administrador.' };
   if (/espacio|GB libre|ENOSPC/i.test(text)) return { title: "Falta espacio en el disco", hint: "Libera espacio en la unidad del launcher y vuelve a intentarlo." };
   if (/SHA-|checksum|hash|corrupt/i.test(text)) return { title: "Un archivo no pasó la verificación", hint: "Reintenta la descarga o usa Reparar instalación en Ajustes. Si es un mod pendiente, descarga su versión exacta." };
   if (/HTTP|conexión|timeout|tiempo.*agotado|ENOTFOUND|ECONN|interrumpid/i.test(text)) return { title: "No se pudo completar la descarga", hint: "Comprueba tu conexión y vuelve a intentarlo. Los archivos que ya se verificaron se conservan." };
   if (/RAM|memoria|heap|OutOfMemory/i.test(text)) return { title: "Revisa la memoria del juego", hint: "Elige un perfil de memoria en Ajustes y cierra otras aplicaciones antes de jugar." };
   if (/cierra Minecraft|en ejecución|Espera|curso|preparando/i.test(text)) return { title: "Hay otra tarea en curso", hint: "Espera a que termine la tarea o cierra Minecraft antes de continuar." };
-  return { title: "No se pudo completar la operación", hint: "Revisa los detalles. Puedes copiar el registro o usar Reparar instalación en Ajustes." };
+  return { title: "Vamos a revisar qué ocurrió", hint: "Esta vez no pudimos completar la tarea. Puedes volver a intentarlo o usar Reparar instalación en Ajustes. Tus mundos se conservan." };
 }
 function createRepair({ isBusy, manifest, java, game, forgeNeeded, forge, natives, pack, content, status, progress }) {
   let busy = false;

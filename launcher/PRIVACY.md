@@ -8,6 +8,8 @@ El launcher consulta GitHub y los manifiestos de actualización y contacta los p
 
 Los mundos, ajustes, archivos del juego y registros de actividad se guardan localmente. La función de copiar un registro exige la acción del usuario; debe revisar el contenido antes de compartirlo. El launcher no incluye un botón para eliminar la identidad persistente de D1.
 
+Las nuevas sesiones de Discord del Launcher y del Administrador duran hasta 30 días cuando Discord entrega una credencial de renovación; las sesiones anteriores conservan su vencimiento. Se revalidan los roles al acceder a los modpacks y antes de lanzar el juego o activar una publicación. El Administrador exige Administrador u Owner; cada modpack se muestra únicamente a quienes tengan su rol correspondiente. El avatar y nombre de Discord se usan para mostrar el perfil; las imágenes se obtienen del CDN público de Discord.
+
 El titular administra las identidades y el acceso de la comunidad. Para consultas sobre esos datos puede contactarse con la administración del [Discord de la comunidad](https://discord.gg/K2uWjjEJu). No enviar contraseñas ni tokens por ese canal.
 
 Servicios externos:
@@ -17,4 +19,16 @@ Servicios externos:
 - [GitHub](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement).
 - Los proveedores de mods y runtimes tienen sus propias políticas.
 
-La presentación de esta política y las opciones de consentimiento en el instalador se revisarán antes de solicitar firma a SignPath; la publicación de este documento no modifica el flujo del instalador 0.1.8.
+La firma gratuita de SignPath fue rechazada. Publicar esta política no representa aprobación ni firma del instalador.
+
+## Cuenta Microsoft opcional
+
+VillaWolf verifica el acceso a Minecraft Java mediante Microsoft, Xbox y Minecraft Services. Las contraseñas se introducen únicamente en la página de Microsoft. Los tokens de renovación y de Minecraft se conservan cifrados con la protección del sistema operativo, separados de la sesión Discord; nunca se envían al administrador del modpack ni al renderer. El nombre y UUID oficiales se usan para iniciar Minecraft, y la skin se obtiene de textures.minecraft.net. Cambiar la skin oficial transmite el PNG elegido a Minecraft Services y afecta a la cuenta también en otros launchers; se pide confirmación antes de enviarla. Desvincular Microsoft elimina su sesión en esta PC; cerrar la cuenta en el launcher elimina también ambas sesiones locales.
+
+## Token de publicación del administrador
+
+VillaWolf Administrador permite guardar voluntariamente el token de GitHub cifrado con Windows (Electron safeStorage/DPAPI) en su carpeta local de datos, excluida del repositorio y los paquetes. El estado público indica únicamente si hay una copia guardada; no devuelve su valor a la interfaz. Se reutiliza para publicar en el repositorio y rama configurados. Olvidar token guardado elimina sólo la copia local; la revocación del acceso se realiza en GitHub. Si el cifrado no está disponible, no se guarda en texto claro. La expiración y verificación exigidas por GitHub siguen vigentes.
+
+## Instalación y retirada de modpacks
+
+Elegir un modpack no descarga su instancia. La instalación se solicita mediante Descargar instancia; los modpacks instalados comprueban sus actualizaciones antes de jugar. Borrar una instalación local pide confirmación y conserva mundos, capturas y opciones por defecto. Borrarlos también exige marcar una opción adicional. Retirar un lanzador desde Administración lo oculta del catálogo para los jugadores y conserva los manifiestos históricos y las carpetas originales de CurseForge.

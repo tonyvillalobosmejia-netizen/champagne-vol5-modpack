@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog, nativeImage, clipboard } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, dialog, nativeImage, clipboard, session } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -9,7 +9,7 @@ const crypto = require("node:crypto");
 const config = require("./config");
 const { validatePresentation, viewPresentation } = require('./champagne-presentation');
 let packPresentation=null;
-const presentationCache=path.join(app.getPath('userData'),'pack-presentation.json');
+let presentationCache=path.join(app.getPath('userData'),'pack-presentation.json');
 try{if(!fs.lstatSync(presentationCache).isSymbolicLink()){
   const saved=JSON.parse(fs.readFileSync(presentationCache,'utf8'));
   if(typeof saved.packName==='string'&&saved.packName.length<=80)packPresentation={...saved,presentation:validatePresentation(saved.presentation)};
@@ -28,16 +28,26 @@ const authClient = createAuthClient({
   allowLocalDev: !!process.env.CHAMPAGNE_AUTH_DEV_URL,
   provider: config.authProvider || 'password',
   required: config.discordAuthRequired === true,
+  purpose:config.catalogEnabled?'launcher-v2':'launcher',
   openBrowser: url => shell.openExternal(url)
 });
+const {createMicrosoftClient}=require('./champagne-microsoft');
+const {gameIdentity}=require('./champagne-game-identity');
+const microsoftClient=createMicrosoftClient({clientId:config.microsoftClientId||'',
+ sessionStore:createSessionStore({directory:app.getPath('userData'),safeStorage:require('electron').safeStorage,scope:'microsoft|'+(config.microsoftClientId||''),filename:'microsoft-session.bin'}),
+ openBrowser:url=>shell.openExternal(url),onDevice:data=>{for(const win of BrowserWindow.getAllWindows())win.webContents.send('microsoft-device',data);}
+});
+const {knownGithubUrl,officialRedirect}=require('./champagne-official-sources');
 const { createAvatarStore } = require("./champagne-avatar");
 const { validateAcquisition, validateAssistedManifest, createManualDownloads } = require("./champagne-manual-downloads");
 const { createDownloadInbox } = require("./champagne-download-inbox");
 const { memoryProfiles, redact, explainError, createRepair } = require("./champagne-support");
 const { prepareContent, snapshotContent, activeBundle } = require("./champagne-remote-content");
 const avatarStore = createAvatarStore({ directory: path.join(app.getPath("userData"), "avatars"), nativeImage });
-const avatarUsername = () => authClient.status().user?.username || getLocalProfile().username;
+const avatarUsername = () => microsoftClient.status().user?.username || authClient.status().user?.username || getLocalProfile().username;
 let avatarDialogBusy = false;
+let microsoftOperationBusy = false;
+let officialAvatarKey=null;
 let selectedJava = null;
 let forgeInstallBusy = false;
 let repairController = null;
@@ -132,6 +142,34 @@ let currentGame = readCachedGame(appRoot,defaultGame,config.launcherVersion || "
 Object.assign(config,currentGame,{forgeInstallerUrl:installerUrl(currentGame)});
 let { instanceDir, metadataDir, installerPath } = pathsForGame(appRoot,currentGame);
 let gamePreparationPending = null;
+const {validateCatalog,channelFor}=require('./champagne-pack-catalog');
+let selectedPack=null,authorizedCatalog=[];
+const selectedPackFile=path.join(app.getPath('userData'),'selected-pack.json');
+function publishCatalog(){for(const win of BrowserWindow.getAllWindows())win.webContents.send('pack-catalog',{ok:true,packs:authorizedCatalog,selectedId:selectedPack?.id||null});}
+async function verifySelectedPack(){if(!config.catalogEnabled)return;if(!selectedPack)throw Error('Elige un modpack autorizado en tu biblioteca.');const result=await authClient.verifyPack(selectedPack.id);const pack=validateCatalog({schemaVersion:1,packs:[result.pack]}).packs[0];if(pack.id!==selectedPack.id)throw Error('Acceso a modpack inválido.');config.manifestUrl=channelFor(pack);return pack;}
+async function selectPack(id,fromLibrary=false){
+ if(libraryOperationBusy&&!fromLibrary)throw Error("Espera a que termine la operación de la biblioteca.");
+ if(!config.catalogEnabled)throw Error('La biblioteca todavía no está disponible.');
+ if(minecraftProcess||launchBusy||accountLaunchBusy||repairController?.busy||packUpdateBusy||automaticPreparation.busy||gamePreparationPending||manualDialogBusy)throw Error('Cierra Minecraft y espera a que termine la tarea antes de cambiar de modpack.');
+ const result=await authClient.verifyPack(id),pack=validateCatalog({schemaVersion:1,packs:[result.pack]}).packs[0];
+ const manifest=validateAssistedManifest(JSON.parse((await requestBuffer(channelFor(pack))).toString('utf8')));
+ if(manifest.packId!==pack.id||manifest.game?.serverId!==pack.id)throw Error('El manifiesto no corresponde al modpack seleccionado.');
+ selectGame(manifest);selectedPack=pack;config.manifestUrl=channelFor(pack);downloadInboxSession=null;packPresentation={packName:manifest.game.packName,version:manifest.version,presentation:validatePresentation(manifest.presentation)};
+ presentationCache=path.join(app.getPath('userData'),'pack-presentations',pack.id+'.json');writeAtomic(selectedPackFile,Buffer.from(JSON.stringify({id:pack.id})));
+ publishCatalog();return {ok:true,selectedId:pack.id};
+}
+const packCardImages=new Map();
+async function packCardImage(pack){const cached=packCardImages.get(pack.id);if(cached&&Date.now()-cached.time<60000)return cached.image;try{const manifest=JSON.parse((await requestBuffer(channelFor(pack))).toString('utf8'));if(manifest.packId!==pack.id||manifest.game?.serverId!==pack.id)throw Error('Imagen de otro modpack.');const presentation=validatePresentation(manifest.presentation),background=viewPresentation(presentation)?.background;const native=background?nativeImage.createFromDataURL(background):nativeImage.createFromPath(path.join(__dirname,'assets','mundo-conejil-fondo.jpg'));if(native.isEmpty())throw Error('Fondo inválido.');const image='data:image/jpeg;base64,'+native.resize({width:512}).toJPEG(82).toString('base64');packCardImages.set(pack.id,{time:Date.now(),image,game:manifest.game});return image;}catch{return null;}}
+function packInstalled(pack){try{const game=validateGame(packCardImages.get(pack.id)?.game,{},'9999.0.0');if(game.serverId!==pack.id)return false;const dirs=pathsForGame(appRoot,game);return fs.existsSync(path.join(dirs.metadataDir,'installed.json'))&&fs.existsSync(path.join(dirs.instanceDir,'mods'));}catch{return false;}}
+let catalogPending=null;
+async function refreshCatalog(){if(catalogPending)return catalogPending;catalogPending=refreshCatalogNow();try{return await catalogPending;}finally{catalogPending=null;}}
+async function refreshCatalogNow(){
+ if(!config.catalogEnabled)return {ok:true,packs:[],selectedId:null,disabled:true};
+ try{const result=await authClient.catalog();authorizedCatalog=await Promise.all(validateCatalog(result.catalog).packs.map(async pack=>({...pack,background:await packCardImage(pack),installed:packInstalled(pack)})));if(selectedPack&&!authorizedCatalog.some(p=>p.id===selectedPack.id))selectedPack=null;
+  if(!selectedPack&&authorizedCatalog.length&&!minecraftProcess&&!launchBusy&&!libraryOperationBusy){let prior;try{prior=JSON.parse(fs.readFileSync(selectedPackFile,'utf8')).id;}catch{}await selectPack(authorizedCatalog.find(p=>p.id===prior)?.id||authorizedCatalog[0].id);}
+  publishCatalog();return {ok:true,packs:authorizedCatalog,selectedId:selectedPack?.id||null};
+ }catch(error){if(error.code==='LAUNCHER_UPDATE_REQUIRED'){const result=await launchProblem(error);publishCatalog();return {...result,packs:authorizedCatalog,selectedId:selectedPack?.id||null};}authorizedCatalog=[];if(!minecraftProcess)selectedPack=null;publishCatalog();return {ok:false,packs:[],message:error.message,selectedId:null};}
+}
 function selectGame(manifest, fromRepair = false) {
   const game = validateGame(manifest.game,defaultGame,config.launcherVersion || "0.1.4");
   if (gameKey(game) !== gameKey(defaultGame) && !manifest.content) {
@@ -193,13 +231,15 @@ async function ensureJavaForLauncher() {
     javaMajor, runtimeSpec:require(javaMajor === 21 ? "./java21-runtime.json" : "./java17-runtime.json"), status: sendStatus, progress: sendProgress });
   return selectedJava;
 }
-function requestBuffer(url, redirects = 5) {
+function requestBuffer(url, redirects = 5, githubDownload = knownGithubUrl(url)) {
   return new Promise((resolve, reject) => {
     if (!/^https:\/\//i.test(url)) return reject(new Error("La descarga requiere HTTPS."));
     const req = https.get(url, { timeout: 30000, headers: { "User-Agent": "ChampagneLauncher/0.1.0" } }, res => {
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0) {
         res.resume();
-        return resolve(requestBuffer(new URL(res.headers.location, url).toString(), redirects - 1));
+        const next = new URL(res.headers.location,url);
+        if(githubDownload && !officialRedirect(url,next.href)) return reject(new Error('Redirección GitHub no autorizada.'));
+        return resolve(requestBuffer(next.href, redirects - 1, githubDownload));
       }
       if (res.statusCode !== 200) {
         res.resume();
@@ -290,6 +330,7 @@ let packUpdateBusy = false;
 let manualDialogBusy = false;
 let downloadInboxSession = null;
 async function assistedManifest() {
+  await verifySelectedPack();
   const document = config.manifestUrl
     ? JSON.parse((await requestBuffer(config.manifestUrl)).toString("utf8"))
     : JSON.parse(fs.readFileSync(path.join(__dirname, "champagne-assisted-manifest.json"), "utf8"));
@@ -324,10 +365,11 @@ async function applyUpdates(suppliedManifest = null) {
     if (!manifest || !Array.isArray(manifest.files) || typeof manifest.version !== "string") {
       throw new Error("El manifiesto no tiene el formato esperado.");
     }
-    if (manifest.packId !== "champagne-vol5" || !Number.isSafeInteger(manifest.expectedFiles) ||
+    if (manifest.packId !== currentGame.serverId || !Number.isSafeInteger(manifest.expectedFiles) ||
         manifest.expectedFiles < 1 || manifest.expectedFiles > 500 || manifest.files.length !== manifest.expectedFiles) {
-      throw new Error("Manifiesto de Champagne Vol.5 incompleto o incorrecto. No se instaló nada.");
+      throw new Error("El manifiesto del modpack está incompleto o es incorrecto. No se instaló nada.");
     }
+    validateAssistedManifest(manifest);
     // La instancia se selecciona antes de bloquear el actualizador.
     // Los llamadores seleccionan un perfil compatible antes de entrar aquí.
     const expectedGame = validateGame(manifest.game,defaultGame,config.launcherVersion || "0.1.4");
@@ -339,7 +381,7 @@ async function applyUpdates(suppliedManifest = null) {
       if (!entry || typeof entry.path !== "string" || !/^[a-f0-9]{64}$/i.test(entry.sha256 || "") ||
           unique.has(entry.path)) throw new Error("Manifiesto inválido o duplicado. No se instaló nada.");
       validateAcquisition(entry);
-      if (manifest.packId === "champagne-vol5" && !/^mods\/[^/\\]+\.jar$/i.test(entry.path)) {
+      if (!/^mods\/[^/\\]+\.jar$/i.test(entry.path)) {
         throw new Error("Ruta de mod inválida. No se instaló nada.");
       }
       unique.add(entry.path);
@@ -347,7 +389,7 @@ async function applyUpdates(suppliedManifest = null) {
     }
     const deletions = Array.isArray(manifest.delete) ? manifest.delete : [];
     for (const relative of deletions) {
-      if (typeof relative !== "string" || (manifest.packId === "champagne-vol5" && !/^mods\/[^/\\]+\.jar$/i.test(relative)) || unique.has(relative)) {
+      if (typeof relative !== "string" || (!/^mods\/[^/\\]+\.jar$/i.test(relative)) || unique.has(relative)) {
         throw new Error("Ruta de eliminación inválida o duplicada.");
       }
       safeTarget(relative);
@@ -357,7 +399,7 @@ async function applyUpdates(suppliedManifest = null) {
     let previous = { files: {} };
     if (fs.existsSync(statePath)) {
       previous = readJsonFile(statePath);
-      if (previous.packId !== "champagne-vol5" || !previous.files ||
+      if (previous.packId !== manifest.packId || !previous.files ||
           typeof previous.files !== "object" || Array.isArray(previous.files)) {
         throw new Error("Estado anterior inválido. No se modificó ningún mod.");
       }
@@ -773,6 +815,15 @@ async function prepareWindowsNatives() {
 // Paso 67: construir y ejecutar el arranque de Forge usando metadatos locales.
 let minecraftProcess = null;
 let accountLaunchBusy = false;
+function playState(){return {running:!!minecraftProcess,preparing:launchBusy||accountLaunchBusy||libraryOperationBusy};}
+function publishPlayState(){for(const win of BrowserWindow.getAllWindows())win.webContents.send('play-state',playState());}
+async function launchProblem(error){
+  if(error.code==='LAUNCHER_UPDATE_REQUIRED'){
+    const state=await launcherUpdates.requireVersion(error.requiredVersion);
+    return {ok:false,updating:true,requiredVersion:error.requiredVersion,message:state.message};
+  }
+  sendStatus(error.message,'error');return {ok:false,message:error.message};
+}
 function forgeVersionId() { return `${config.minecraftVersion}-forge-${config.forgeVersion}`; }
 function offlineUuid(name) {
   const bytes = crypto.createHash("md5").update(`OfflinePlayer:${name}`, "utf8").digest();
@@ -804,7 +855,7 @@ function versionArguments(data, kind, replacements) {
   }
   return result;
 }
-function buildForgeLaunch(accountUsername = null) {
+function buildForgeLaunch(accountUsername = null, microsoft = null) {
   if (process.platform !== "win32" || process.arch !== "x64") throw new Error("Este paso está preparado para Windows x64.");
   if (nativePrepBusy || gameDownloadBusy) throw new Error("Espera a que terminen las descargas y la preparación de nativos.");
   const id = forgeVersionId();
@@ -817,7 +868,7 @@ function buildForgeLaunch(accountUsername = null) {
   if (!fs.existsSync(reportFile)) throw new Error("Ejecuta primero PREPARAR NATIVOS / REVISAR FORGE.");
   const report = readJsonFile(reportFile);
   if (report.forgeId !== id || report.missing?.length || report.dllCount < 7) throw new Error("Forge o los nativos no están listos. Repite PREPARAR NATIVOS.");
-  const username = accountUsername || getLocalProfile().username;
+  const username = microsoft?.username || accountUsername || getLocalProfile().username;
   if (!username) throw new Error("Guarda primero un nombre de usuario local válido.");
   const nativesDir = path.join(instanceDir, "natives");
   for (const dll of ["lwjgl.dll", "glfw.dll", "jemalloc.dll", "OpenAL.dll", "lwjgl_opengl.dll", "lwjgl_stb.dll", "lwjgl_tinyfd.dll"]) {
@@ -843,12 +894,11 @@ function buildForgeLaunch(accountUsername = null) {
   // (módulos minecraft y _1._20._1 exportan los mismos paquetes).
   if (missing.length) throw new Error(`Faltan ${missing.length} librerías para iniciar. Primera: ${path.basename(missing[0])}`);
   const ramMB = getSettings().ramMB;
-  const uuid = offlineUuid(username);
+  const identity = gameIdentity(username,offlineUuid,microsoft);
   const replacements = {
-    auth_player_name: username, version_name: id, game_directory: instanceDir,
+    ...identity, version_name: id, game_directory: instanceDir,
     assets_root: path.join(appRoot, "assets"), assets_index_name: vanilla.assetIndex.id,
-    auth_uuid: uuid, auth_access_token: "0", clientid: "", auth_xuid: "",
-    user_type: "legacy", version_type: "release", user_properties: "{}",
+    version_type: "release", user_properties: "{}",
     natives_directory: nativesDir, launcher_name: "ChampagneVol5", launcher_version: "0.1",
     classpath: classpath.join(path.delimiter), classpath_separator: path.delimiter,
     library_directory: path.join(appRoot, "libraries"),
@@ -885,6 +935,7 @@ function offlineError(error) {
   return ["ENOTFOUND", "EAI_AGAIN", "ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "ENETUNREACH", "EHOSTUNREACH"].includes(error.code) || error.message === "Tiempo de descarga agotado. Puedes reintentar.";
 }
 async function playManifest() {
+  await verifySelectedPack();
   if (!config.manifestUrl) return { ok: true };
   sendStatus("Comprobando actualizaciones del modpack antes de jugar…");
   let bytes;
@@ -918,8 +969,10 @@ async function prepareSelectedGame() {
   try { return await gamePreparationPending; }
   finally { gamePreparationPending = null; }
 }
-let launchBusy = false;
+let launchBusy = false,libraryOperationBusy=false;
 async function launchForge() {
+  if(libraryOperationBusy)return{ok:false,message:"Espera a que termine la operación de la biblioteca."};
+  if(microsoftOperationBusy||microsoftClient.status().busy)return {ok:false,message:"Espera a que termine la operación de Microsoft."};
   if (repairController?.busy) return { ok: false, message: "Espera a que termine la reparación de la instalación." };
   if (launchBusy) return { ok: false, message: "Ya se está preparando el inicio de Minecraft." };
   launchBusy = true;
@@ -927,15 +980,19 @@ async function launchForge() {
   finally { launchBusy = false; }
 }
 async function launchForgePrepared() {
-  if (launcherUpdates.ready) return { ok:false, message:"Hay una actualización del launcher lista. Se instalará automáticamente antes de jugar." };
+  if (launcherUpdates.ready||['downloading','waiting','restarting'].includes(launcherUpdates.getState().phase)) return { ok:false, updating:true, message:"Hay una actualización del launcher lista. Se instalará automáticamente antes de jugar." };
   if (packUpdateBusy) return { ok: false, message: "Espera a que termine la actualización del modpack." };
   if (minecraftProcess) return { ok: false, message: "Minecraft ya está en ejecución." };
+  await verifySelectedPack();
   const accountUsername = await authClient.verifiedUsername();
   if (!accountUsername && !getLocalProfile().username) return { ok: false, message: "Inicia sesión o guarda un nombre para jugar localmente." };
+  if(config.catalogEnabled&&!fs.existsSync(path.join(metadataDir,"installed.json")))return{ok:false,needsInstallation:true,message:"Descarga esta instancia desde la biblioteca antes de jugar."};
   const manifest = await prepareSelectedGame();
   const update = await verifyPackBeforePlay(manifest);
   if (!update.ok) return update;
-  const launch = buildForgeLaunch(accountUsername);
+  // Verificar Microsoft después de las descargas para no arrancar con un token vencido.
+  const microsoft = await microsoftClient.identity();
+  const launch = buildForgeLaunch(accountUsername,microsoft);
   await checkJava17(launch.java);
   if (minecraftProcess) return { ok: false, message: "Minecraft ya está en ejecución." };
   if (packUpdateBusy) return { ok: false, message: "Espera a que termine la actualización del modpack." };
@@ -946,18 +1003,19 @@ async function launchForgePrepared() {
   writeAtomic(path.join(appRoot,"metadata","active-game.json"),Buffer.from(JSON.stringify(currentGame)));
   fs.mkdirSync(path.join(instanceDir, "logs"), { recursive: true });
   if (authClient.status().provider === 'discord' && await authClient.verifiedUsername() !== accountUsername) throw Error('La cuenta cambió durante la preparación. Inicia sesión nuevamente.');
+  await verifySelectedPack();
   sendStatus(`Iniciando Forge ${config.forgeVersion} con ${launch.ramMB} MB y ${launch.classpathCount} archivos en classpath…`);
   return new Promise((resolve, reject) => {
     const child = spawn(launch.java, launch.args, {
       cwd: instanceDir, windowsHide: false, stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, PATH: path.join(instanceDir, "natives") + path.delimiter + (process.env.PATH || "") }
     });
-    minecraftProcess = child;
+    minecraftProcess = child; publishPlayState();
     let settled = false, tail = "", lines = 0;
     const logFile = path.join(instanceDir, "logs", "champagne-launcher.log");
     const stream = fs.createWriteStream(logFile, { flags: "a" });
     const handle = data => {
-      const s = data.toString();
+      const s = redact(data.toString().split(microsoft?.accessToken || "\u0000").join("[token oculto]"));
       stream.write(s);
       tail = (tail + s).slice(-7000);
       for (const line of s.split(/\r?\n/)) {
@@ -967,7 +1025,7 @@ async function launchForgePrepared() {
     child.stdout.on("data", handle);
     child.stderr.on("data", handle);
     child.on("error", err => {
-      minecraftProcess = null;
+      minecraftProcess = null; publishPlayState();
       stream.end();
       sendStatus(`No se pudo iniciar Java: ${err.message}`, "error");
       if (!settled) { settled = true; reject(err); }
@@ -977,7 +1035,7 @@ async function launchForgePrepared() {
       if (!settled) { settled = true; resolve({ ok: true, message: `Java iniciado (PID ${child.pid}). Comprueba si aparece Minecraft; el registro está en logs/champagne-launcher.log.` }); }
     });
     child.on("close", code => {
-      minecraftProcess = null;
+      minecraftProcess = null; publishPlayState();
       stream.end();
       sendStatus(code === 0 ? "Minecraft se cerró normalmente." : `Minecraft terminó con código ${code}. Revisa logs/champagne-launcher.log. ${tail.slice(-450)}`, code === 0 ? "info" : "error");
     });
@@ -1047,7 +1105,7 @@ const automaticPreparation = createPreparation({
 });
 const launcherUpdates = createLauncherUpdates({ app, feed:config.launcherUpdateUrl,
   loadUpdater:()=>require("electron-updater").autoUpdater,
-  isBusy:()=>!!minecraftProcess || !!repairController?.busy || launchBusy || !!gamePreparationPending || packUpdateBusy || automaticPreparation.busy || manualDialogBusy || forgeInstallBusy || nativePrepBusy || gameDownloadBusy,
+  isBusy:()=>!!minecraftProcess || !!repairController?.busy || launchBusy || !!gamePreparationPending || packUpdateBusy || automaticPreparation.busy || manualDialogBusy || libraryOperationBusy || forgeInstallBusy || nativePrepBusy || gameDownloadBusy,
   progress:sendProgress,
   onState:state=>{ for (const win of BrowserWindow.getAllWindows()) win.webContents.send('launcher-update-state',state); },
   status:sendStatus });
@@ -1057,7 +1115,7 @@ async function manualPreparation(action) {
   return action();
 }
 repairController = createRepair({
-  isBusy: () => !!minecraftProcess || launchBusy || !!gamePreparationPending || automaticPreparation.busy || packUpdateBusy || manualDialogBusy || forgeInstallBusy || nativePrepBusy || gameDownloadBusy,
+  isBusy: () => !!minecraftProcess || launchBusy || !!gamePreparationPending || automaticPreparation.busy || packUpdateBusy || manualDialogBusy || libraryOperationBusy || forgeInstallBusy || nativePrepBusy || gameDownloadBusy,
   manifest: async () => { const value = await assistedManifest(); selectGame(value, true); return value; },
   java: ensureJavaForLauncher, game: downloadGameFiles, forgeNeeded: needsForgeInstall,
   forge: installForge, natives: prepareWindowsNatives, pack: applyUpdates,
@@ -1067,7 +1125,7 @@ repairController = createRepair({
 app.whenReady().then(() => {
   ipcMain.handle('uninstall-launcher', async event => {
     if (!app.isPackaged) return {ok:false,message:'La desinstalación está disponible en la aplicación instalada.'};
-    const busy=()=>minecraftProcess || accountLaunchBusy || launchBusy || gamePreparationPending || repairController?.busy || packUpdateBusy || automaticPreparation.busy || manualDialogBusy || forgeInstallBusy || nativePrepBusy || gameDownloadBusy || launcherUpdates.ready || ['checking','downloading','waiting','restarting'].includes(launcherUpdates.getState().phase);
+    const busy=()=>minecraftProcess || accountLaunchBusy || launchBusy || gamePreparationPending || repairController?.busy || packUpdateBusy || automaticPreparation.busy || manualDialogBusy || libraryOperationBusy || forgeInstallBusy || nativePrepBusy || gameDownloadBusy || launcherUpdates.ready || ['checking','downloading','waiting','restarting'].includes(launcherUpdates.getState().phase);
     if (busy()) return {ok:false,message:'Cierra Minecraft y espera a que terminen las descargas o actualizaciones antes de desinstalar.'};
     const owner=BrowserWindow.fromWebContents(event.sender);
     const choice=await dialog.showMessageBox(owner,{type:'warning',title:'Desinstalar VillaWolf',message:'¿Qué quieres eliminar?',detail:'Sólo aplicación: conserva Minecraft, mods, mundos y ajustes para una futura instalación.\n\nAplicación y datos: elimina también Java descargado por VillaWolf, Minecraft, mods, mundos, skins y configuraciones de VillaWolf. Tu carpeta de CurseForge y Java del sistema se conservan.',buttons:['Cancelar','Sólo aplicación','Aplicación y todos sus datos'],defaultId:0,cancelId:0,noLink:true});
@@ -1088,6 +1146,7 @@ app.whenReady().then(() => {
   ipcMain.handle("memory-profiles", () => memoryProfiles(os.totalmem()));
   ipcMain.handle("diagnostics", (_event, message) => { lastProblem = typeof message === "string" ? message.slice(0, 8000) : ""; return { ...explainError(lastProblem), log: diagnostics() }; });
   ipcMain.handle("copy-diagnostics", () => { clipboard.writeText(diagnostics()); return { ok: true, message: "Registro copiado." }; });
+  ipcMain.handle('open-error-log',async()=>{const dir=path.join(instanceDir,'logs');fs.mkdirSync(dir,{recursive:true});const file=path.join(dir,'villawolf-diagnostico.txt');writeAtomic(file,Buffer.from(diagnostics(),'utf8'));const error=await shell.openPath(file);return {ok:!error,message:error||'Registro abierto.'};});
   ipcMain.handle("open-logs", async () => { const dir = path.join(instanceDir, "logs"); fs.mkdirSync(dir, { recursive: true }); const error = await shell.openPath(dir); return { ok: !error, message: error || "Carpeta de registros abierta." }; });
   ipcMain.handle("repair-installation", async () => {
     try { return await repairController.run(); }
@@ -1110,11 +1169,26 @@ app.whenReady().then(() => {
       };
     }
   });
-  ipcMain.handle("account-avatar", () => avatarStore.get(avatarUsername()));
+  ipcMain.handle("account-avatar", async () => {
+    const user=microsoftClient.status().user,username=avatarUsername();
+    if(user?.skinUrl){
+      const key=user.id+'|'+user.skinUrl;
+      if(officialAvatarKey===key){const saved=avatarStore.get(username);if(saved.image)return saved;}
+      try{
+        const response=await fetch(user.skinUrl,{redirect:'error',signal:AbortSignal.timeout(10000)});
+        if(!response.ok)throw Error('Skin oficial no disponible.');
+        const chunks=[];let total=0;for await(const part of response.body){total+=part.length;if(total>256*1024)throw Error('Skin demasiado grande.');chunks.push(Buffer.from(part));}
+        if(microsoftClient.status().user?.id!==user.id||microsoftClient.status().user?.skinUrl!==user.skinUrl)return {ok:true,image:null};
+        const result=avatarStore.saveBytes(username,Buffer.concat(chunks));officialAvatarKey=key;return result;
+      }catch{return avatarStore.get(username);}
+    }
+    return avatarStore.get(username);
+  });
   ipcMain.handle("choose-account-avatar", async event => {
     if (avatarDialogBusy) return { ok: false, message: "Ya hay una selección de skin abierta." };
     avatarDialogBusy = true;
     try {
+      if(microsoftClient.status().user)return {ok:false,message:"Usa Cambiar skin oficial para personalizar tu cuenta Microsoft."};
       const username = avatarUsername();
       if (!username) return { ok: false, message: "Elige primero una cuenta o un nombre local." };
       const result = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), { title: "Elegir skin para el avatar del launcher", filters: [{ name: "Skin Minecraft PNG", extensions: ["png"] }], properties: ["openFile"] });
@@ -1128,28 +1202,54 @@ app.whenReady().then(() => {
     try { return avatarStore.clear(avatarUsername()); }
     catch (error) { return { ok: false, message: error.message }; }
   });
-  ipcMain.handle("auth-status", () => authClient.status());
+  ipcMain.handle("auth-status", () => ({...authClient.status(),microsoft:microsoftClient.status()}));
   const accountOperation = action => {
+    if (microsoftOperationBusy || microsoftClient.status().busy) return {ok:false,message:"Espera o cancela la solicitud Microsoft."};
     if (minecraftProcess || accountLaunchBusy) return { ok: false, message: "Espera a que termine el inicio y cierra Minecraft antes de cambiar de cuenta." };
     return action();
   };
+  const microsoftOperation=action=>accountOperation(async()=>{microsoftOperationBusy=true;try{return await action();}finally{microsoftOperationBusy=false;}});
   ipcMain.handle("auth-register", (_event, input) => accountOperation(() => authClient.register(input)));
   ipcMain.handle("auth-login", (_event, input) => accountOperation(() => authClient.login(input)));
   ipcMain.handle("auth-discord-login", () => accountOperation(() => authClient.loginDiscord()));
   ipcMain.handle("auth-discord-cancel", () => authClient.cancelDiscordLogin());
-  ipcMain.handle("auth-logout", () => accountOperation(() => authClient.logout()));
+  ipcMain.handle('microsoft-status',()=>microsoftClient.status());
+  ipcMain.handle('microsoft-login',()=>microsoftOperation(async()=>{
+   await authClient.verifiedUsername();
+   const result=await dialog.showMessageBox({type:'info',title:'Cuenta Minecraft Java',message:'Usar tu identidad oficial de Minecraft',detail:'Al vincular Microsoft, Minecraft usará tu nombre y UUID oficiales. Podrías aparecer con otro inventario en mundos que usaban tu identidad local. Tus mundos se conservarán.',buttons:['Continuar','Cancelar'],defaultId:1,cancelId:1});
+   return result.response===0?microsoftClient.login():{ok:true,cancelled:true,...microsoftClient.status()};
+  }));
+  ipcMain.handle('microsoft-cancel',()=>microsoftClient.cancel());
+  ipcMain.handle('microsoft-logout',()=>accountOperation(()=>microsoftClient.logout()));
+  ipcMain.handle('microsoft-skin',(_event,variant)=>microsoftOperation(async()=>{
+   try{
+    if(!['classic','slim'].includes(variant))throw Error('Elige el tipo de brazos.');
+    if(!microsoftClient.status().user)throw Error('Inicia sesión con Microsoft.');
+    const result=await dialog.showOpenDialog({title:'Cambiar skin oficial de Minecraft',filters:[{name:'Skin Minecraft PNG',extensions:['png']}],properties:['openFile']});
+    if(result.canceled)return {ok:true,cancelled:true};
+    const file=result.filePaths[0],stat=fs.lstatSync(file);
+    if(!stat.isFile()||stat.isSymbolicLink()||stat.size>256*1024)throw Error('Skin inválida.');
+    const bytes=fs.readFileSync(file),image=nativeImage.createFromBuffer(bytes),size=image.getSize();
+    if(!bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))||image.isEmpty()||size.width!==64||![32,64].includes(size.height))throw Error('Selecciona una skin PNG de 64 × 64 o 64 × 32.');
+    const confirm=await dialog.showMessageBox({type:'question',title:'Cambiar skin oficial',message:'Esta skin se cambiará en tu cuenta de Minecraft.',detail:'Se verá también al jugar desde otros launchers. Puedes cambiarla nuevamente.',buttons:['Cambiar skin','Cancelar'],defaultId:1,cancelId:1});
+    if(confirm.response!==0)return {ok:true,cancelled:true};
+    return await microsoftClient.uploadSkin(image.toPNG(),variant);
+   }catch(e){return {ok:false,message:e.message};}
+  }));
+  ipcMain.handle("auth-logout", () => accountOperation(async()=>{microsoftClient.logout();selectedPack=null;authorizedCatalog=[];publishCatalog();return {...await authClient.logout(),microsoft:microsoftClient.status()};}));
   ipcMain.handle("get-local-profile", () => getLocalProfile());
   ipcMain.handle("save-local-profile", (_event, username) => saveLocalProfile(username));
+  ipcMain.handle("play-state",()=>playState());
   ipcMain.handle("launch-forge", async () => {
     if (accountLaunchBusy) return { ok: false, message: "Minecraft se está iniciando." };
-    accountLaunchBusy = true;
+    accountLaunchBusy = true; publishPlayState();
     try { return await launchForge(); }
-    catch (e) { sendStatus(e.message, "error"); return { ok: false, message: e.message }; }
-    finally { accountLaunchBusy = false; }
+    catch (e) { return await launchProblem(e); }
+    finally { accountLaunchBusy = false; publishPlayState(); }
   });
   ipcMain.handle("prepare-game", async () => {
     try { await prepareSelectedGame(); return {ok:true,message:"Java, Minecraft y Forge preparados."}; }
-    catch (e) { sendStatus(e.message + " Puedes reintentar pulsando JUGAR.", "error"); return { ok: false, message: e.message }; }
+    catch (e) { return await launchProblem(e); }
   });
   ipcMain.handle("prepare-windows-natives", async () => {
     try { return await manualPreparation(prepareWindowsNatives); }
@@ -1163,9 +1263,21 @@ app.whenReady().then(() => {
     try { return await manualPreparation(prepareMinecraftMetadata); }
     catch (e) { sendStatus(e.message, "error"); return { ok: false, message: e.message }; }
   });
+  ipcMain.handle('pack-download',async(_event,id)=>{
+    if(libraryOperationBusy||minecraftProcess||launchBusy||accountLaunchBusy||manualDialogBusy||packUpdateBusy||repairController?.busy)return{ok:false,message:'Espera a que termine la tarea o cierra Minecraft.'};libraryOperationBusy=true;publishPlayState();
+    try{await selectPack(id,true);const manifest=await prepareSelectedGame();const result=await verifyPackBeforePlay(manifest);return{...result,selectedId:id};}catch(error){return launchProblem(error);}finally{libraryOperationBusy=false;publishPlayState();}
+  });
+  ipcMain.handle('pack-remove-local',async(event,id)=>{
+    if(libraryOperationBusy||minecraftProcess||launchBusy||accountLaunchBusy||manualDialogBusy||packUpdateBusy||automaticPreparation.busy||repairController?.busy)return{ok:false,message:'Cierra Minecraft y espera a que termine la tarea.'};libraryOperationBusy=true;publishPlayState();
+    try{await selectPack(id,true);const {confirmPublication}=require('./champagne-pack-confirmation');const answer=await confirmPublication(BrowserWindow.fromWebContents(event.sender),{title:'Borrar instalación local',message:'¿Borrar la instalación de '+selectedPack.name+'?',detail:'Se eliminan los mods y archivos instalados de este modpack en esta PC. Tus mundos, capturas y opciones se conservan por defecto. No cambia el catálogo ni afecta a otros jugadores. Podrás volver a descargarla.',checkboxLabel:'Borrar también mis mundos, capturas y opciones de esta instalación',buttons:['Cancelar','Borrar instalación']});if(answer.response!==1)return{ok:true,cancelled:true};await verifySelectedPack();const result=require('./champagne-pack-removal').removeLocalPack({root:appRoot,game:currentGame,removeWorlds:answer.removeWorlds});downloadInboxSession=null;packCardImages.delete(id);return{ok:true,...result,message:result.keptWorlds?'Instalación borrada. Tus mundos y opciones se conservan.':'Instalación y datos locales borrados.'};}catch(error){return{ok:false,message:error.message};}finally{libraryOperationBusy=false;publishPlayState();}
+  });
+  ipcMain.handle('pack-open-folder',async(_event,id)=>{try{await selectPack(id);ensureDirs();await shell.openPath(instanceDir);return{ok:true};}catch(error){return{ok:false,message:error.message};}});
+  ipcMain.handle("pack-catalog",()=>refreshCatalog());
+  ipcMain.handle("select-pack",async(_event,id)=>{try{return await selectPack(id);}catch(error){if(error.code==='LAUNCHER_UPDATE_REQUIRED')return launchProblem(error);return {ok:false,message:error.message};}});
   ipcMain.handle("get-info", () => ({
-    packName: packPresentation?.packName || config.packName, subtitle: config.packSubtitle,
-    presentation:viewPresentation(packPresentation?.presentation),packVersion:packPresentation?.version,
+    catalogEnabled:config.catalogEnabled,selectedPackId:selectedPack?.id||null,
+    packName: config.catalogEnabled&&!selectedPack?"Tus modpacks":packPresentation?.packName || config.packName, subtitle: config.packSubtitle,
+    presentation:config.catalogEnabled&&!selectedPack?null:viewPresentation(packPresentation?.presentation),packVersion:selectedPack||!config.catalogEnabled?packPresentation?.version:null,
     minecraftVersion: config.minecraftVersion, forgeVersion: config.forgeVersion,
     javaMajor:config.javaMajor || 17, launcherVersion:config.launcherVersion, instanceDir, appRoot
   }));
@@ -1198,6 +1310,15 @@ app.whenReady().then(() => {
   ipcMain.handle("assisted-status", async () => {
     try { return await assistedStatus(); }
     catch (error) { return { ok: false, message: error.message }; }
+  });
+  ipcMain.handle('assisted-download-all',async()=>{
+    if(minecraftProcess||manualDialogBusy||packUpdateBusy||automaticPreparation.busy||repairController?.busy||accountLaunchBusy)return{ok:false,message:'Espera a que termine la preparación o cierra Minecraft.'};
+    manualDialogBusy=true;
+    try{const manifest=await assistedManifest();selectGame(manifest);const manual=manualDownloads(manifest),pending=new Set(manual.pending().map(e=>e.path)),entries=manifest.files.filter(e=>pending.has(e.path));const rejected=[],accepted=[];
+      const {downloadOfficial}=require('./champagne-curseforge-batch');const downloadSession=session.fromPartition('villawolf-curseforge-batch-'+crypto.randomUUID());
+      for(let i=0;i<entries.length;i++){const entry=entries[i];let file;try{await verifySelectedPack();file=await downloadOfficial({entry,BrowserWindow,session:downloadSession,directory:path.join(metadataDir,'official-downloads'),onState:state=>{for(const target of BrowserWindow.getAllWindows())if(!target.isDestroyed())target.webContents.send('assisted-batch-state',{...state,index:i+1,count:entries.length});}});const result=manual.importFiles([file]);if(result.rejected.length)throw Error(result.rejected[0].message);accepted.push(...result.accepted);for(const target of BrowserWindow.getAllWindows())if(!target.isDestroyed())target.webContents.send('assisted-batch-state',{index:i+1,count:entries.length,missing:manual.pending()});}catch(error){rejected.push({name:entry.path,message:error.message});break;}finally{if(file)try{fs.unlinkSync(file);}catch{}}}
+      return{ok:true,accepted,rejected,missing:manual.pending(),version:manifest.version,expectedFiles:manifest.expectedFiles,remote:!!config.manifestUrl,message:accepted.length+' mods verificados.'};
+    }catch(error){return{ok:false,message:error.message};}finally{manualDialogBusy=false;}
   });
   ipcMain.handle("assisted-open-page", async (_event, relative) => {
     try {

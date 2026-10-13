@@ -21,10 +21,12 @@ function validateAcquisition(entry) {
   return "direct";
 }
 function validateAssistedManifest(manifest) {
-  if (manifest?.packId !== "champagne-vol5" || typeof manifest.version !== "string" ||
+  if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(manifest?.packId || "") || typeof manifest.version !== "string" ||
       !/^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$/.test(manifest.version) ||
       !Number.isSafeInteger(manifest.expectedFiles) || manifest.expectedFiles < 1 || manifest.expectedFiles > 500 ||
       !Array.isArray(manifest.files) || manifest.files.length !== manifest.expectedFiles) throw new Error("Manifiesto incompleto o incorrecto.");
+  if(manifest.content&&manifest.content.packId!==manifest.packId)throw Error('El contenido pertenece a otro modpack.');
+  if(manifest.game&&manifest.game.serverId!==manifest.packId)throw Error('El perfil pertenece a otro modpack.');
   validateModPathSets(manifest.files, manifest.delete === undefined ? [] : manifest.delete);
   manifest.files.forEach(validateAcquisition);
   return manifest;

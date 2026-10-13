@@ -1,7 +1,8 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
-function createSessionStore({directory,safeStorage,scope}) {
- const file=path.join(directory,'account-session.bin');
+function createSessionStore({directory,safeStorage,scope,filename='account-session.bin'}) {
+ if(!/^[a-z-]+\.bin$/.test(filename))throw Error('Nombre de almacén inválido.');
+ const file=path.join(directory,filename);
  function available(){return safeStorage?.isEncryptionAvailable() && safeStorage.getSelectedStorageBackend?.()!=='basic_text';}
  function regular(){if(fs.existsSync(directory)&&fs.lstatSync(directory).isSymbolicLink())throw Error('Carpeta de sesión inválida.');if(fs.existsSync(file)&&(!fs.lstatSync(file).isFile()||fs.lstatSync(file).isSymbolicLink()))throw Error('Archivo de sesión inválido.');}
  return {

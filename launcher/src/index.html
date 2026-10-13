@@ -14,21 +14,22 @@
       <button id="accountBtn" class="rail-button sidebar-account" title="Tu cuenta" aria-label="Abrir cuenta" aria-haspopup="dialog" aria-expanded="false" aria-controls="accountOverlay"><img id="sidebarAvatar" class="profile-avatar" src="./assets/avatar-default.svg" alt="Avatar del jugador"><span id="sidebarUsername" class="sr-only">Cuenta</span><span id="sidebarAccountType" class="sr-only">SIN SESIÓN</span></button>
       <nav class="rail-nav">
         <button id="homeBtn" class="rail-button active" title="Inicio" aria-label="Inicio" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 3l9 8v10h-6v-7H9v7H3Z"/></svg></button>
-        <button id="settingsBtn" class="rail-button" title="Ajustes" aria-label="Ajustes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v4H4zm0 8h16v4H4z"/></svg></button>
+        <button id="packsBtn" class="rail-button" title="Tus modpacks" aria-label="Elegir modpack"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v4H4zm0 8h16v4H4z"/></svg></button>
         <button id="discordBtn" class="rail-button" title="Discord del servidor" aria-label="Abrir Discord del servidor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5 9 4l1 2h4l1-2 3 1c3 4 4 8 3 12l-4 2-2-3H9l-2 3-4-2c-1-4 0-8 3-12Z"/><circle cx="8" cy="12" r="1.5" class="icon-cut"/><circle cx="16" cy="12" r="1.5" class="icon-cut"/></svg></button>
         <button id="activityBtn" class="rail-button" title="Actividad y registros" aria-label="Actividad y registros"><svg viewBox="0 0 24 24" aria-hidden="true" class="stroke-icon"><path d="m4 5 6 6-6 6m9 1h7"/></svg></button>
       </nav>
       <div class="rail-bottom"><button id="bottomSettingsBtn" class="rail-button" title="Ajustes" aria-label="Ajustes"><svg viewBox="0 0 24 24" aria-hidden="true" class="stroke-icon"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg></button><button id="closeLauncherBtn" class="rail-button" title="Cerrar launcher" aria-label="Cerrar launcher">×</button></div>
     </aside>
     <main class="main">
-      <section id="homePage" class="page home-page" aria-label="Inicio">
+      <section id="homePage" class="page home-page no-pack-selected" aria-label="Inicio">
         <img class="launcher-logo" src="./assets/villawolf-logo-horizontal.png" alt="VillaWolf Launcher">
         <div class="home-bottom">
-          <div class="launch-area"><p id="packSubtitle" class="subtitle">MODPACK OFICIAL</p><h1 id="packName">Mundo Conejil</h1><button id="playBtn" class="primary" type="button">JUGAR</button><div id="operationProgress" class="operation-progress" hidden aria-live="polite"><b id="progressLabel"></b><progress id="progressBar" max="100"></progress><small id="progressDetail"></small></div></div>
+          <div class="launch-area"><p id="packSubtitle" class="subtitle">MODPACK OFICIAL</p><h1 id="packName">Tus modpacks</h1><button id="playBtn" class="primary" type="button">JUGAR</button><div id="operationProgress" class="operation-progress" hidden aria-live="polite"><b id="progressLabel"></b><progress id="progressBar" max="100"></progress><small id="progressDetail"></small></div></div>
           <div class="news-grid"><article class="news-card"><span class="eyebrow">NOTICIAS</span><h2>Tu próxima aventura</h2><p>Las novedades de nuestra comunidad están en Discord.</p><button id="newsDiscordBtn" class="text-button">ABRIR COMUNIDAD →</button></article><article class="news-card updates-card"><span class="eyebrow">ACTUALIZACIONES</span><h2>Siempre al día</h2><p id="homeUpdateStatus">El modpack se verifica antes de jugar.</p><button id="updateBtn" class="text-button">REVISAR MODPACK →</button></article></div>
         </div>
         <div class="home-versions"><span id="mcVersion">Minecraft 1.20.1</span><span id="forgeVersion">Forge 47.4.10</span><span id="javaVersion">Java 17</span></div>
       </section>
+      <section id="packsPage" class="page content-page" hidden aria-labelledby="packsTitle"><header class="page-heading"><div><span class="eyebrow">TU BIBLIOTECA</span><h1 id="packsTitle">Elige dónde jugar</h1><p>Verás sólo los modpacks que tus roles de Discord permiten abrir.</p></div><button id="refreshPacksBtn" class="outline">ACTUALIZAR BIBLIOTECA</button></header><p id="packsStatus" aria-live="polite">Inicia sesión con Discord para consultar tus modpacks.</p><div id="packList" class="pack-list"></div><div id="libraryProgress" class="operation-progress" hidden><b id="libraryProgressLabel"></b><progress id="libraryProgressBar" max="100"></progress><small id="libraryProgressDetail"></small></div><button id="packsAccountBtn" class="text-button">ABRIR MI CUENTA</button></section>
       <div id="settingsPanel" class="page settings-page" hidden>
   <div class="settings-box" role="region" aria-labelledby="settingsTitle">
     <h2 id="settingsTitle"><img class="settings-brand-icon" src="./assets/villawolf-icon.png" alt="">Ajustes de VillaWolf</h2>
@@ -91,6 +92,14 @@
         <p id="authStatus" aria-live="polite">Comprobando el servicio de cuentas…</p>
         <button id="discordLoginBtn" class="outline" type="button" hidden>INICIAR SESIÓN CON DISCORD</button>
         <button id="cancelDiscordLoginBtn" class="text-button" type="button" hidden>CANCELAR INICIO DE SESIÓN</button>
+        <section class="microsoft-account" aria-labelledby="microsoftTitle">
+          <h3 id="microsoftTitle">Minecraft Java Premium</h3>
+          <p id="microsoftStatus" aria-live="polite">Comprobando Microsoft…</p>
+          <p>Discord comprueba tu acceso a la comunidad. Microsoft verifica Minecraft Java y usa tu nombre, UUID y skin oficiales. Cambiar de identidad puede cambiar tu inventario.</p>
+          <div id="microsoftDevice" hidden><p>Escribe este código en la página oficial de Microsoft:</p><strong id="microsoftCode"></strong><button id="microsoftCancelBtn" class="text-button" type="button">CANCELAR</button></div>
+          <div class="account-actions"><button id="microsoftLoginBtn" class="outline" type="button">VINCULAR MICROSOFT</button><button id="microsoftLogoutBtn" class="text-button" type="button" hidden>DESVINCULAR MICROSOFT</button></div>
+          <div id="microsoftSkinControls" hidden><label for="microsoftSkinVariant">Modelo de skin</label><select id="microsoftSkinVariant"><option value="classic">Brazos anchos</option><option value="slim">Brazos delgados</option></select><button id="microsoftSkinBtn" class="outline" type="button">CAMBIAR SKIN OFICIAL</button></div>
+        </section>
         <form id="authForm" hidden>
           <div class="account-fields">
             <div><label for="accountUsername">Nombre de usuario</label><input id="accountUsername" name="username" type="text" minlength="3" maxlength="16" pattern="[A-Za-z0-9_]{3,16}" autocomplete="username" required placeholder="TuNombreMinecraft"></div>
@@ -116,21 +125,30 @@
   </div>
   <div id="errorOverlay" class="settings-overlay error-overlay" hidden>
     <section id="errorPanel" class="panel error-dialog" role="alertdialog" aria-modal="true" aria-labelledby="errorTitle" aria-describedby="errorHint" tabindex="-1">
-      <div class="panel-heading"><h2 id="errorTitle">No se pudo completar la operación</h2><button id="closeErrorBtn" class="account-close" type="button" aria-label="Cerrar error">×</button></div>
+      <div class="panel-heading"><h2 id="errorTitle">No se pudo completar la operación</h2><span class="friendly-symbol" aria-hidden="true">♡</span></div>
       <p id="errorHint"></p><p id="errorMessage"></p>
-      <label for="errorLog">Registro para revisar o compartir</label><textarea id="errorLog" readonly spellcheck="false"></textarea>
-      <div class="account-actions"><button id="copyErrorBtn" class="outline" type="button">COPIAR REGISTRO</button><button id="openLogsBtn" class="outline" type="button">ABRIR REGISTROS</button></div>
+      <details id="errorDetails"><summary>Ver detalles técnicos</summary><label for="errorLog">Registro para soporte</label><textarea id="errorLog" readonly spellcheck="false"></textarea></details>
+      <div class="account-actions"><button id="copyErrorBtn" class="outline" type="button">COPIAR ERROR</button><button id="openLogsBtn" class="outline" type="button">ABRIR REGISTRO</button><button id="closeErrorBtn" class="outline" type="button">CERRAR</button></div>
       <p id="errorActionStatus" aria-live="polite"></p>
+    </section>
+  </div>
+  <div id="launcherUpdateOverlay" class="settings-overlay" hidden>
+    <section id="launcherUpdatePanel" class="panel update-dialog" role="dialog" aria-modal="true" aria-labelledby="launcherUpdateTitle" tabindex="-1">
+      <span class="eyebrow">VILLAWOLF</span><h2 id="launcherUpdateTitle">Estamos actualizando tu launcher</h2>
+      <p id="launcherUpdateMessage">Al terminar se reiniciará y volverá a abrirse. Después podrás jugar.</p>
+      <progress id="launcherUpdateProgress" max="100" aria-label="Progreso de actualización del launcher"></progress><p id="launcherUpdateDetail" aria-live="polite"></p>
+      <div class="account-actions"><button id="retryLauncherUpdate" class="outline" type="button" hidden>VOLVER A BUSCAR</button><button id="hideLauncherUpdate" class="text-button" type="button">ENTENDIDO</button></div>
     </section>
   </div>
   <div id="downloadsOverlay" class="settings-overlay" hidden>
     <section id="downloadsPanel" class="panel downloads-dialog" role="dialog" aria-modal="true" aria-labelledby="downloadsTitle" tabindex="-1">
-      <div class="panel-heading"><div><span class="eyebrow">MODPACK</span><h2 id="downloadsTitle">Actualizar Mundo Conejil</h2></div><button id="closeDownloadsBtn" class="account-close" type="button" aria-label="Cerrar descargas">×</button></div>
+      <div class="panel-heading"><div><span class="eyebrow">MODPACK</span><h2 id="downloadsTitle">Descargas del modpack</h2></div><button id="closeDownloadsBtn" class="account-close" type="button" aria-label="Cerrar descargas">×</button></div>
       <p id="downloadsStatus" aria-live="polite">Revisando los archivos…</p>
       <p>Pulsa DESCARGAR para abrir la versión exacta en su página oficial y guarda el JAR en Descargas. Lo verificaremos automáticamente y desaparecerá de esta lista. Cuando estén todos listos, se instalará el modpack. No necesitas instalar CurseForge.</p>
       <ul id="downloadsList" class="downloads-list"></ul>
       <div id="downloadsProgress" class="operation-progress" hidden aria-live="polite"><b id="downloadsProgressLabel"></b><progress id="downloadsProgressBar" max="100"></progress><small id="downloadsProgressDetail"></small></div>
       <div class="account-actions">
+        <button id="downloadAllModsBtn" class="outline" type="button">DESCARGAR TODOS LOS MODS</button>
         <button id="importDownloadsBtn" class="outline" type="button">ELEGIR ARCHIVOS DE OTRA CARPETA</button>
         <button id="refreshDownloadsBtn" class="text-button" type="button">REVISAR ARCHIVOS</button>
         <button id="installDownloadsBtn" class="outline" type="button" disabled>INSTALAR VERSIÓN</button>
@@ -138,6 +156,7 @@
       <p id="downloadsResult" aria-live="polite">La instalación comienza solo cuando estén listas todas las descargas manuales. Los demás mods se descargarán y verificarán antes de aplicar los cambios.</p>
     </section>
   </div>
+  <script src="champagne-play-state.js"></script>
   <script src="renderer.js"></script> 
 </body>
 </html>

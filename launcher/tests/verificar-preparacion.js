@@ -161,6 +161,7 @@ test("JUGAR espera preparación y dos clics no generan dos procesos Java", async
   const context = vm.createContext({
     require: name => {
       if (name === "electron") return { app: { getPath: () => root, whenReady: () => ({ then() {} }), on() {} }, BrowserWindow: { getAllWindows: () => [] }, ipcMain: {}, shell: {} };
+      if (name === "./config") return {...require("../src/config"),catalogEnabled:false};
       if (name === "./champagne-runtime") return { ensureJava17: async () => { await javaReady; return "test-java"; } };
       if (name === "./champagne-preparation") return { createPreparation: options => createPreparation({ ...options, isReady: () => true }) };
       if (name === "./champagne-config-sync") return { syncBundledConfigs: () => {} };

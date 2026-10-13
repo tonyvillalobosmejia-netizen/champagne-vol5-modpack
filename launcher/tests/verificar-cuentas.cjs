@@ -124,6 +124,7 @@ async function launchFixture(t, verifiedUsername, provider = 'password') {
   const context = vm.createContext({
     require: name => {
       if (name === 'electron') return { app: { getPath: () => dir, whenReady: () => ({ then() {} }), on() {} }, BrowserWindow: { getAllWindows: () => [] }, ipcMain: {}, shell: {} };
+      if (name === './config') return {...require('../src/config'),catalogEnabled:false};
       if (name === './champagne-auth') return { createAuthClient: () => ({ verifiedUsername, status: () => ({provider}) }) };
       if (name === './champagne-preparation') return { createPreparation: () => ({ prepare: async () => ({ ok: true }) }) };
       if (name === './champagne-config-sync') return { syncBundledConfigs: () => {} };

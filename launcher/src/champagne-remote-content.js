@@ -6,7 +6,7 @@ const { validatePath, MAX_FILE_BYTES, MAX_TOTAL_BYTES, checkedTarget } = require
 const hash = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 async function prepareContent(content, directory, download) {
   if (!content) return null;
-  if (content.packId !== 'champagne-vol5' || !/^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/.test(content.version || '') ||
+  if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(content.packId || '') || !/^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/.test(content.version || '') ||
       !Array.isArray(content.files) || !content.files.length || content.files.length > 2000 || content.expectedFiles !== content.files.length) throw new Error('Contenido remoto incompleto.');
   let total = 0; const seen = new Set();
   for (const item of content.files) {

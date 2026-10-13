@@ -1,6 +1,10 @@
 module.exports = {
+  // ID público de VillaWolf en Entra. Acceso real a Minecraft pendiente de verificar.
+  microsoftClientId: "9e23973b-3d22-4a32-9b14-3a439a255758",
   launcherVersion: require("../package.json").version,
   launcherUpdateUrl: "https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/latest/download",
+  catalogEnabled: true,
+  catalogUrl: "https://raw.githubusercontent.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/preparacion-paso97/updates/catalog.json",
   serverId: "champagne-vol5",
   javaMajor: 17,
   packName: "Mundo Conejil",

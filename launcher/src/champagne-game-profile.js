@@ -21,7 +21,8 @@ function validateGame(game, defaults, launcherVersion) {
     throw new Error('Perfil de juego inválido. Se admite Forge moderno con Java 17 o 21; las versiones antiguas necesitan soporte específico.');
   }
   if (game.minLauncherVersion && !atLeast(launcherVersion, game.minLauncherVersion)) {
-    throw new Error('Este modpack necesita el launcher ' + game.minLauncherVersion + '. Espera su actualización antes de jugar.');
+    const error = new Error('Este modpack necesita el launcher ' + game.minLauncherVersion + '. Estamos preparando la actualización.');
+    error.code = 'LAUNCHER_UPDATE_REQUIRED'; error.requiredVersion = game.minLauncherVersion; throw error;
   }
   return { serverId:game.serverId, loader:'forge', minecraftVersion:game.minecraftVersion,
     forgeVersion:game.forgeVersion, javaMajor:game.javaMajor, forgeInstallerSha1:game.forgeInstallerSha1.toLowerCase(),

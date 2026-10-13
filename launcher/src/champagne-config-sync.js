@@ -51,7 +51,7 @@ function checkedTarget(instanceDir, relative) {
 function readState(file) {
   if (!fs.existsSync(file)) return { files: {} };
   const value = JSON.parse(fs.readFileSync(file, "utf8"));
-  if (value.packId !== "champagne-vol5" || !value.files || typeof value.files !== "object" || Array.isArray(value.files)) {
+  if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(value.packId||"") || !value.files || typeof value.files !== "object" || Array.isArray(value.files)) {
     throw new Error("Estado previo de configuraciones inválido; se bloqueó la sincronización.");
   }
   for (const [name, hash] of Object.entries(value.files)) {
@@ -63,7 +63,7 @@ function readState(file) {
 function syncBundledConfigs({ instanceDir, metadataDir, bundleDir, status = () => {} }) {
   if (!instanceDir || !metadataDir || !bundleDir) throw new Error("Faltan rutas de sincronización.");
   const manifest = JSON.parse(fs.readFileSync(path.join(bundleDir, "manifest.json"), "utf8"));
-  if (manifest.packId !== "champagne-vol5" || !/^\d+\.\d+\.\d+/.test(manifest.version || "") ||
+  if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(manifest.packId||"") || !/^\d+\.\d+\.\d+/.test(manifest.version || "") ||
       !Array.isArray(manifest.files) || manifest.files.length === 0 || manifest.files.length > 2000) {
     throw new Error("Manifiesto de configuraciones inválido.");
   }
@@ -88,7 +88,8 @@ function syncBundledConfigs({ instanceDir, metadataDir, bundleDir, status = () =
   ensureDirectory(instanceDir);ensureDirectory(metadataDir);
   const statePath = path.join(metadataDir, "managed-client-config.json");
   const previous = readState(statePath);
-  const next = { packId: "champagne-vol5", version: manifest.version, files: {} };
+  if(previous.packId&&previous.packId!==manifest.packId)throw Error("El estado de configuraciones pertenece a otro modpack.");
+  const next = { packId: manifest.packId, version: manifest.version, files: {} };
   const changes = [], report = { installed:0, updated:0, removed:0, keptModified:0, keptUnmanaged:0, unchanged:0, backupDir:null };
   for (const [name, item] of desired) {
     const target = checkedTarget(instanceDir, name);

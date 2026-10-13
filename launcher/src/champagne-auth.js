@@ -3,8 +3,9 @@ const http = require('node:http');
 const https = require('node:https');
 const crypto = require('node:crypto');
 const { receiveDiscordCode } = require('./champagne-discord-callback');
-function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'password', required = false, openBrowser, sessionStore } = {}) {
+function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'password', required = false, openBrowser, sessionStore, purpose='launcher' } = {}) {
   if (!['password','discord'].includes(provider) || (required && provider !== 'discord')) throw Error('Configuración de autenticación inválida.');
+  if(!['launcher','launcher-v2','admin'].includes(purpose))throw Error('Aplicación de acceso inválida.');
   let endpoint = null, session = null, busy = false, discordAbort = null;
   if (baseUrl) {
     endpoint = new URL(baseUrl);
@@ -28,7 +29,7 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
         let size = 0; const chunks = [];
         res.on('data', chunk => {
           size += chunk.length;
-          if (size > 16384) req.destroy(new Error('Respuesta del servicio demasiado grande.'));
+          if (size > 65536) req.destroy(new Error('Respuesta del servicio demasiado grande.'));
           else chunks.push(chunk);
         });
         res.on('aborted', () => req.destroy(new Error('Conexión interrumpida.')));
@@ -50,10 +51,11 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
       req.end(payload);
     });
   }
+  function validAvatar(raw,id){try{const u=new URL(raw);return u.origin==='https://cdn.discordapp.com'&&!u.username&&!u.password&&!u.hash&&((u.pathname.startsWith('/avatars/'+id+'/')&&/\/avatars\/[0-9]{17,20}\/(?:a_)?[a-f0-9]{32}\.png$/.test(u.pathname)&&u.search==='?size=128')||(/^\/embed\/avatars\/[0-5]\.png$/.test(u.pathname)&&!u.search));}catch{return false;}}
   function validateUser(value) {
     if (!value || typeof value.id !== 'string' || typeof value.username !== 'string' || !/^[A-Za-z0-9_]{3,16}$/.test(value.username)) throw new Error('Identidad de cuenta inválida.');
     if (provider === 'discord' && (value.provider !== 'discord' || !/^[0-9]{17,20}$/.test(value.discordId) || value.id !== 'discord:' + value.discordId)) throw Error('Identidad de Discord inválida.');
-    return { id: value.id, username: value.username, ...(provider === 'discord' ? { provider:'discord', discordId:value.discordId, discordName:typeof value.discordName === 'string'?value.discordName.slice(0,80):value.username } : {}) };
+    return { id: value.id, username: value.username, ...(provider === 'discord' ? { provider:'discord', discordId:value.discordId, discordName:typeof value.discordName === 'string'?value.discordName.slice(0,80):value.username,...(validAvatar(value.avatarUrl,value.discordId)?{avatarUrl:value.avatarUrl}:{}) } : {}) };
   }
   const status = () => {restoreSession();if(session?.expiresAt<=Date.now())clearSession();return ({ ok: true, configured: !!endpoint, localDevelopment: endpoint?.protocol === 'http:', provider, required, user: session?.user || null, persistent });};
   async function authenticate(action, input) {
@@ -78,12 +80,12 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
     if (!session) { if(required)throw Error('Inicia sesión con Discord para comprobar tu acceso al servidor.'); return null; }
     if(session.expiresAt<=Date.now()){clearSession();throw Error('La sesión venció. Inicia sesión nuevamente.');}
     try {
-      const result = await request('/v1/session', 'GET', null, session.token);
+      const result = await request(purpose==='launcher'?'/v1/session':purpose==='admin'?'/v2/admin/session':'/v2/session', 'GET', null, session.token);
       const user = validateUser(result.user);
       if (user.id !== session.user.id || user.username !== session.user.username) throw new Error('La identidad de la sesión ha cambiado.');
-      return user.username;
+      session={...session,user,expiresAt:result.expiresAt||session.expiresAt};persistSession();return user.username;
     } catch (error) {
-      if ([401,403].includes(error.status)) clearSession();
+      if(error.status===401||(purpose==='launcher'&&error.status===403))clearSession();
       throw error;
     }
   }
@@ -105,11 +107,11 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
     const controller=new AbortController();discordAbort=controller;
     try {
       const proof=crypto.randomBytes(32).toString('base64url');
-      const flow=await request('/v1/discord/start','POST',{proof});
+      const flow=await request('/v1/discord/start','POST',{proof,purpose});
       if(controller.signal.aborted)throw Error('Inicio de sesión cancelado.');
       if(!/^[A-Za-z0-9_-]{43}$/.test(flow.state))throw Error('Solicitud de Discord inválida.');
       const code=await receiveDiscordCode({...flow,openBrowser,signal:controller.signal});
-      const result=await request('/v1/discord/finish','POST',{state:flow.state,proof,code});
+      const result=await request('/v1/discord/finish','POST',{state:flow.state,proof,code,purpose});
       if(!/^[A-Za-z0-9_-]{43}$/.test(result.token)||!Number.isSafeInteger(result.expiresAt)||result.expiresAt<=Date.now())throw Error('Sesión inválida.');
       if(controller.signal.aborted){try{await request('/v1/logout','POST',null,result.token);}catch{}throw Error('Inicio de sesión cancelado.');}
       session={token:result.token,user:validateUser(result.user),expiresAt:result.expiresAt};
@@ -117,6 +119,7 @@ function createAuthClient({ baseUrl = '', allowLocalDev = false, provider = 'pas
       return {...status(),message:'Sesión de Discord iniciada. Nombre de Minecraft: '+session.user.username};
     }catch(error){return {ok:false,message:error.message};}finally{busy=false;discordAbort=null;}
   }
-  return { status, loginDiscord, cancelDiscordLogin:()=>{discordAbort?.abort();return {ok:true};}, register: input => authenticate('register', input), login: input => authenticate('login', input), verifiedUsername, logout };
+  async function access(route){restoreSession();if(!session)throw Error('Inicia sesión con Discord.');try{const value=await request(route,'GET',null,session.token);session={...session,expiresAt:value.expiresAt||session.expiresAt};persistSession();return value;}catch(error){if(error.status===401)clearSession();throw error;}}
+  return { status, catalog:()=>access(purpose==='admin'?'/v2/admin/catalog':'/v2/catalog'), verifyPack:id=>{if(!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id||''))throw Error('Modpack inválido.');return access('/v2/packs/'+id);}, loginDiscord, cancelDiscordLogin:()=>{discordAbort?.abort();return {ok:true};}, register: input => authenticate('register', input), login: input => authenticate('login', input), verifiedUsername, logout };
 }
 module.exports = { createAuthClient };

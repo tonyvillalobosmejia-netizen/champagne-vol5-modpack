@@ -35,11 +35,18 @@ function createAvatarStore({ directory, nativeImage }) {
     finally { if (fs.existsSync(temporary)) fs.unlinkSync(temporary); }
     return get(username);
   }
+  function saveBytes(username,bytes){
+    const destination=target(username),image=decode(bytes);
+    fs.mkdirSync(directory,{recursive:true});
+    const temporary=destination+'.'+crypto.randomBytes(8).toString('hex')+'.tmp';
+    try{fs.writeFileSync(temporary,image.toPNG());fs.renameSync(temporary,destination);}finally{if(fs.existsSync(temporary))fs.unlinkSync(temporary);}
+    return get(username);
+  }
   function clear(username) {
     const file = target(username);
     if (fs.existsSync(file)) fs.unlinkSync(file);
     return { ok: true, image: null };
   }
-  return { get, save, clear };
+  return { get, save, saveBytes, clear };
 }
 module.exports = { createAvatarStore };

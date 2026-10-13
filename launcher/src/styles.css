@@ -251,3 +251,21 @@ body { overflow: hidden; background: #101521; }
 #homeUpdateStatus{max-height:90px;overflow:auto;white-space:pre-wrap}
 
 .news-card p{max-height:90px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}.news-card h2{overflow-wrap:anywhere}
+
+.update-dialog{max-width:580px;text-align:center;padding:36px}.update-dialog progress{width:100%;height:12px;accent-color:#d946ef}.update-dialog h2{font-size:25px}.friendly-symbol{font-size:32px;color:#f2a5cf}#errorDetails{margin:20px 0}#errorDetails summary{cursor:pointer;color:#c4cfe3}#errorMessage{color:#aeb8c8}
+
+.pack-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}.pack-card{padding:28px;text-align:left;border:1px solid #35405a;background:#141a29;border-radius:16px;color:#eef0f8}.pack-card strong{display:block;font-size:22px;margin-bottom:12px}.pack-card span{color:#b9c2d6}.pack-card.selected{border-color:#db64aa}
+
+.pack-list{grid-template-columns:repeat(auto-fill,minmax(200px,240px));align-content:start}.pack-card{aspect-ratio:1;width:100%;height:auto;min-height:0;padding:20px;display:flex;flex-direction:column;justify-content:flex-end;background-size:cover;background-position:center;overflow:hidden;box-shadow:0 8px 24px #0005}.pack-card strong{font-size:23px;line-height:1.15;text-shadow:0 2px 8px #000;margin-bottom:10px;overflow-wrap:anywhere}.pack-card span{font-size:11px;text-shadow:0 2px 5px #000;color:#e0e7f1}.pack-card:hover{border-color:#eea1d1;transform:translateY(-2px)}
+
+.pack-card{position:relative;padding:0}.pack-open{flex:1;display:flex;flex-direction:column;justify-content:flex-end;text-align:left;background:transparent;border:0;color:inherit;padding:22px 18px 12px;width:100%;text-transform:none;letter-spacing:normal;box-shadow:none}.pack-open:hover{background:#ffffff08}.pack-download{margin:0 16px 16px;padding:8px;background:#12192dcc;border:1px solid #8d6481;color:#ffeaf6;font-size:11px}.pack-options{position:absolute;right:9px;top:9px;width:32px;height:34px;padding:0;font-size:26px;line-height:1;background:#0b111acc;border:1px solid #78809866;border-radius:8px}.pack-options-menu{position:absolute;top:47px;right:9px;z-index:10;max-width:220px;background:#141b2cf5;border:1px solid #64708e;border-radius:10px;padding:6px;box-shadow:0 10px 30px #0008}.pack-options-menu[hidden]{display:none}.pack-options-menu button{display:block;width:100%;padding:10px;text-align:left;border:0;border-radius:6px;background:transparent;color:#eef0f8;letter-spacing:normal;text-transform:none;font-size:12px}.pack-options-menu button:hover{background:#ffffff12}#libraryProgress{margin-top:20px}
+
+/* La portada de la comunidad se muestra hasta seleccionar un modpack. */
+.home-page.no-pack-selected {
+  background-image: url('./assets/villawolf-logo-horizontal.png'), radial-gradient(ellipse at 50% 35%,#222535 0%,#080b11 75%);
+  background-size: min(78%,900px) auto,cover;
+  background-position: center 30%,center;
+}
+.home-page.no-pack-selected .news-card {
+  background-image:linear-gradient(145deg,#202435e8,#0c1024f5);
+}

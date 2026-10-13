@@ -26,7 +26,8 @@ function sandbox(t, document, options = {}) {
         app: { getPath: () => root, whenReady: () => ({ then() {} }), on() {} },
         BrowserWindow: { getAllWindows: () => [] }, ipcMain: {}, shell: {}
       };
-      if (name === "./config") return { ...require("../config"), manifestUrl: options.disabled ? "" : "https://example.invalid/manifest" };
+      if (name === "./config") return { ...require("../config"), catalogEnabled:false, manifestUrl: options.disabled ? "" : "https://example.invalid/manifest" };
+      if (name === "./champagne-pack-catalog") return require("../champagne-pack-catalog");
       if (name === "./champagne-config-sync") return require("../champagne-config-sync");
       if (name === "./champagne-update-paths") return guards;
       if (name === "./champagne-runtime") return require("../champagne-runtime");
@@ -44,6 +45,9 @@ function sandbox(t, document, options = {}) {
       if (name === "./champagne-game-profile") return require("../champagne-game-profile");
       if (name === "./champagne-presentation") return require("../champagne-presentation");
       if (name === "./champagne-launcher-updates") return require("../champagne-launcher-updates");
+      if (name === "./champagne-microsoft") return require("../champagne-microsoft");
+      if (name === "./champagne-game-identity") return require("../champagne-game-identity");
+      if (name === "./champagne-official-sources") return require("../champagne-official-sources");
       if (name === "node:fs") return disk;
       if(name==='./champagne-session-store')return require('../champagne-session-store');
       return require(name);
@@ -85,13 +89,14 @@ test('cambiar de servidor instala en otra instancia y conserva los mundos y mods
   fs.writeFileSync(path.join(env.instance,'mods/old.jar'),'old');
   env.context.fixture.game={serverId:'otro-servidor',loader:'forge',packName:'Otro servidor',minecraftVersion:'1.20.1',forgeVersion:'47.4.10',javaMajor:17,forgeInstallerSha1:'a'.repeat(40),minLauncherVersion:'0.1.4'};
   env.context.fixture.content=content([['config/server.txt','new server']]);
+  env.context.fixture.packId=env.context.fixture.content.packId='otro-servidor';
   vm.runInContext('selectGame(fixture)',env.context);
   const next=vm.runInContext('instanceDir',env.context);
   assert.notEqual(next,env.instance);assert.equal((await env.assisted()).ok,true);
   assert.equal(fs.readFileSync(path.join(next,'mods/a.jar'),'utf8'),'new');
   assert.equal(fs.readFileSync(path.join(env.instance,'mods/old.jar'),'utf8'),'old');
   assert.equal(fs.readFileSync(path.join(env.instance,'saves/world'),'utf8'),'world');
-  delete env.context.fixture.game;vm.runInContext('selectGame(fixture)',env.context);
+  delete env.context.fixture.game;env.context.fixture.packId=env.context.fixture.content.packId='champagne-vol5';vm.runInContext('selectGame(fixture)',env.context);
   assert.equal(vm.runInContext('instanceDir',env.context),env.instance);
 });
 
@@ -291,3 +296,5 @@ test("fallo durante el segundo reemplazo restaura ambos mods", async t => {
   for (const name of ["a.jar", "b.jar"]) assert.equal(fs.readFileSync(path.join(env.instance, "mods", name), "utf8"), "old " + name);
   assert.equal(fs.existsSync(path.join(env.metadata, "installed.json")), false);
 });
+
+test('una operación Microsoft impide arrancar o descargar mientras cambia la identidad',async t=>{const env=sandbox(t,manifest([entry('test.jar')]));vm.runInContext('microsoftOperationBusy=true',env.context);const result=await vm.runInContext('launchForge()',env.context);assert.equal(result.ok,false);assert.match(result.message,/Microsoft/);assert.equal(env.requests(),0);});

@@ -39,3 +39,7 @@ Abre **VillaWolf Administrador** desde el acceso directo local del escritorio o 
 SignPath Foundation recibió la solicitud de firma gratuita y está pendiente de revisión. No se garantiza una firma ni una fecha.
 
 Las pruebas automatizadas simulan Discord y D1; la autorización real y el funcionamiento en dos computadoras fueron verificados por separado. Toda nueva versión firmada debe verificar el instalador y la actualización antes de publicarse.
+
+## Lista de desarrollo
+
+Los cambios solicitados y pendientes están en [ROADMAP.md](ROADMAP.md).
