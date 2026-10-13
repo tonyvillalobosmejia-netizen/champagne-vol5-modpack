@@ -143,7 +143,7 @@ Object.assign(config,currentGame,{forgeInstallerUrl:installerUrl(currentGame)});
 let { instanceDir, metadataDir, installerPath } = pathsForGame(appRoot,currentGame,{named:true});
 let gamePreparationPending = null;
 const {validateCatalog,channelFor}=require('./champagne-pack-catalog');
-let selectedPack=null,authorizedCatalog=[],catalogUserId=null;
+let selectedPack=null,authorizedCatalog=[],catalogUserId=null,openingVerifiedUserId=null;
 const libraryCache=require('./champagne-library-cache').createLibraryCache(createSessionStore({directory:app.getPath('userData'),safeStorage:require('electron').safeStorage,scope:(process.env.CHAMPAGNE_AUTH_DEV_URL||config.authServerUrl||'')+'|library',filename:'library-cache.bin'}));
 const selectedPackFile=path.join(app.getPath('userData'),'selected-pack.json');
 function publishCatalog(){for(const win of BrowserWindow.getAllWindows())win.webContents.send('pack-catalog',{ok:true,packs:authorizedCatalog,selectedId:selectedPack?.id||null});}
@@ -167,9 +167,9 @@ async function refreshCatalog(){if(catalogPending)return catalogPending;catalogP
 async function refreshCatalogNow(){
  if(!config.catalogEnabled)return {ok:true,packs:[],selectedId:null,disabled:true};
  const userId=authClient.status().user?.id;
- if(!userId){authorizedCatalog=[];selectedPack=null;catalogUserId=null;publishCatalog();return{ok:false,packs:[],selectedId:null,message:'Inicia sesión con Discord para ver tus mundos.'};}
+ if(!userId){authorizedCatalog=[];selectedPack=null;catalogUserId=null;openingVerifiedUserId=null;publishCatalog();return{ok:false,packs:[],selectedId:null,message:'Inicia sesión con Discord para ver tus mundos.'};}
  if(catalogUserId!==userId){authorizedCatalog=libraryCache.read(userId);catalogUserId=userId;selectedPack=null;}
- try{const result=await authClient.catalog();authorizedCatalog=await Promise.all(validateCatalog(result.catalog).packs.map(async pack=>({...pack,background:await packCardImage(pack),installed:packInstalled(pack)})));libraryCache.save(userId,authorizedCatalog);if(selectedPack&&!authorizedCatalog.some(p=>p.id===selectedPack.id))selectedPack=null;
+ try{if(openingVerifiedUserId!==userId){await authClient.verifiedUsername();if(authClient.status().user?.id!==userId)throw Error('La cuenta cambió durante la comprobación.');openingVerifiedUserId=userId;}const result=await authClient.catalog();authorizedCatalog=await Promise.all(validateCatalog(result.catalog).packs.map(async pack=>({...pack,background:await packCardImage(pack),installed:packInstalled(pack)})));libraryCache.save(userId,authorizedCatalog);if(selectedPack&&!authorizedCatalog.some(p=>p.id===selectedPack.id))selectedPack=null;
   if(!selectedPack&&authorizedCatalog.length&&!minecraftProcess&&!launchBusy&&!libraryOperationBusy){let prior;try{prior=JSON.parse(fs.readFileSync(selectedPackFile,'utf8')).id;}catch{}const pack=authorizedCatalog.find(p=>p.id===prior)||authorizedCatalog[0];await selectPack(pack.id,false,pack);}
   publishCatalog();return {ok:true,packs:authorizedCatalog,selectedId:selectedPack?.id||null};
  }catch(error){if(error.code==='LAUNCHER_UPDATE_REQUIRED'){const result=await launchProblem(error);publishCatalog();return {...result,packs:authorizedCatalog,selectedId:selectedPack?.id||null};}if(error.status===401||error.status===403||!authClient.status().user){authorizedCatalog=[];libraryCache.clear();if(!minecraftProcess)selectedPack=null;}publishCatalog();return {ok:false,packs:authorizedCatalog,message:error.message+(authorizedCatalog.length?' Tus mundos siguen visibles; el permiso para jugar se comprobará al iniciarlos.':''),retryAfter:error.retryAfter||0,selectedId:selectedPack?.id||null,stale:authorizedCatalog.length>0};}
@@ -334,8 +334,8 @@ if (!fs.existsSync(launcherProfilesPath)) {
 let packUpdateBusy = false;
 let manualDialogBusy = false;
 let downloadInboxSession = null;
-async function assistedManifest() {
-  await verifySelectedPack(true);
+async function assistedManifest({freshPermission=false}={}) {
+  await verifySelectedPack(!freshPermission);
   const document = config.manifestUrl
     ? JSON.parse((await requestBuffer(config.manifestUrl)).toString("utf8"))
     : JSON.parse(fs.readFileSync(path.join(__dirname, "champagne-assisted-manifest.json"), "utf8"));
@@ -1121,7 +1121,7 @@ async function manualPreparation(action) {
 }
 repairController = createRepair({
   isBusy: () => !!minecraftProcess || launchBusy || !!gamePreparationPending || automaticPreparation.busy || packUpdateBusy || manualDialogBusy || libraryOperationBusy || forgeInstallBusy || nativePrepBusy || gameDownloadBusy,
-  manifest: async () => { const value = await assistedManifest(); selectGame(value, true); return value; },
+  manifest: async () => { const value = await assistedManifest({freshPermission:true}); selectGame(value, true); return value; },
   java: ensureJavaForLauncher, game: downloadGameFiles, forgeNeeded: needsForgeInstall,
   forge: installForge, natives: prepareWindowsNatives, pack: applyUpdates,
   content: () => syncBundledConfigs({ instanceDir, metadataDir, bundleDir: activeBundle(metadataDir, path.join(__dirname, "champagne-defaults")), status: sendStatus }),
@@ -1309,7 +1309,7 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("update-pack", async () => {
     if (repairController?.busy) return { ok: false, message: "Espera a que termine la reparación." };
-    try { const manifest=await assistedManifest();selectGame(manifest);return await applyUpdates(manifest); }
+    try { const manifest=await assistedManifest({freshPermission:true});selectGame(manifest);return await applyUpdates(manifest); }
     catch (e) { sendStatus(e.message, "error"); return { ok: false, message: e.message }; }
   });
   ipcMain.handle("assisted-status", async () => {
@@ -1319,7 +1319,7 @@ app.whenReady().then(() => {
   ipcMain.handle('assisted-download-all',async()=>{
     if(minecraftProcess||manualDialogBusy||packUpdateBusy||automaticPreparation.busy||repairController?.busy||accountLaunchBusy)return{ok:false,message:'Espera a que termine la preparación o cierra Minecraft.'};
     manualDialogBusy=true;
-    try{const manifest=await assistedManifest();selectGame(manifest);const manual=manualDownloads(manifest),pending=new Set(manual.pending().map(e=>e.path)),entries=manifest.files.filter(e=>pending.has(e.path));const rejected=[],accepted=[];
+    try{const manifest=await assistedManifest({freshPermission:true});selectGame(manifest);const manual=manualDownloads(manifest),pending=new Set(manual.pending().map(e=>e.path)),entries=manifest.files.filter(e=>pending.has(e.path));const rejected=[],accepted=[];
       const {downloadOfficial}=require('./champagne-curseforge-batch');const downloadSession=session.fromPartition('villawolf-curseforge-batch-'+crypto.randomUUID());
       for(let i=0;i<entries.length;i++){const entry=entries[i];let file;try{let apiBytes=null;try{if(config.catalogEnabled&&selectedPack)apiBytes=await authClient.downloadCurseforge({packId:selectedPack.id,path:entry.path},state=>{for(const target of BrowserWindow.getAllWindows())if(!target.isDestroyed())target.webContents.send('assisted-batch-state',{name:entry.path,index:i+1,count:entries.length,...state});});}catch(error){if([401,403].includes(error.status))throw error;sendStatus('Este mod necesita su página oficial. Continuando con la descarga asistida…');}if(apiBytes){if(sha256(apiBytes)!==entry.sha256.toLowerCase())throw Error('El archivo de CurseForge no coincide con el modpack.');const directory=path.join(metadataDir,'official-downloads');fs.mkdirSync(directory,{recursive:true});file=path.join(directory,crypto.randomUUID()+'.jar');fs.writeFileSync(file,apiBytes,{flag:'wx'});}else file=await downloadOfficial({entry,BrowserWindow,session:downloadSession,directory:path.join(metadataDir,'official-downloads'),onState:state=>{for(const target of BrowserWindow.getAllWindows())if(!target.isDestroyed())target.webContents.send('assisted-batch-state',{...state,index:i+1,count:entries.length});}});const result=manual.importFiles([file]);if(result.rejected.length)throw Error(result.rejected[0].message);accepted.push(...result.accepted);for(const target of BrowserWindow.getAllWindows())if(!target.isDestroyed())target.webContents.send('assisted-batch-state',{index:i+1,count:entries.length,missing:manual.pending()});}catch(error){rejected.push({name:entry.path,message:error.message});break;}finally{if(file)try{fs.unlinkSync(file);}catch{}}}
       return{ok:true,accepted,rejected,missing:manual.pending(),version:manifest.version,expectedFiles:manifest.expectedFiles,remote:!!config.manifestUrl,message:accepted.length+' mods verificados.'};
@@ -1327,7 +1327,7 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("assisted-open-page", async (_event, relative) => {
     try {
-      const manifest = await assistedManifest();
+      const manifest = await assistedManifest({freshPermission:true});
       const entry = manifest.files.find(e => e.path === relative);
       if (!entry || validateAcquisition(entry) !== "manual") throw new Error("Descarga oficial desconocida.");
       await shell.openExternal(entry.pageUrl);
@@ -1364,7 +1364,7 @@ app.whenReady().then(() => {
   ipcMain.handle("assisted-install", async () => {
     if (repairController?.busy) return { ok: false, message: "Espera a que termine la reparación." };
     if (manualDialogBusy) return { ok: false, message: "Termina de importar los archivos antes de instalar." };
-    try { const manifest=await assistedManifest();selectGame(manifest);return await applyUpdates(manifest); }
+    try { const manifest=await assistedManifest({freshPermission:true});selectGame(manifest);return await applyUpdates(manifest); }
     catch (error) { sendStatus(error.message, "error"); return { ok: false, message: error.message }; }
   });
   ipcMain.handle("open-folder", async () => {
