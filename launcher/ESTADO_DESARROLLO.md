@@ -1,6 +1,6 @@
 # Estado de desarrollo de VillaWolf
 
-**Actualizado:** 13 de octubre de 2026 (America/Mexico_City).
+**Actualizado:** 14 de octubre de 2026 (America/Mexico_City).
 **Alcance:** VillaWolf Launcher, VillaWolf Administrador, autenticación/publicación central y bot de roles.
 **Propósito:** compartir avances y pendientes con otra persona o ChatGPT sin conceder permisos para modificar código.
 
@@ -17,8 +17,8 @@
 
 | Componente | Publicada | En desarrollo local | Situación |
 | --- | --- | --- | --- |
-| Launcher Windows x64 | **0.1.16** | El código sigue declarando **0.1.16**; no se ha asignado una siguiente versión | Release pública comprobada mediante API de GitHub. Instalador probado e instalado previamente en esta PC. |
-| Administrador Windows x64 | **0.1.19** | **0.1.19**, sin versión posterior asignada | Release admin-v0.1.19 publicada; instalador y descargas comprobados, canal automático actualizado. No se instaló sobre el perfil habitual en esta entrega. |
+| Launcher Windows x64 | **0.1.16** | **0.1.17**, eliminación y compatibilidad de nombres en pruebas locales | Release pública comprobada mediante API de GitHub. Instalador probado e instalado previamente en esta PC. |
+| Administrador Windows x64 | **0.1.19** | **0.1.20**, eliminación, nombres y diagnóstico en pruebas locales | Release admin-v0.1.19 publicada; instalador y descargas comprobados, canal automático actualizado. No se instaló sobre el perfil habitual en esta entrega. |
 | Servicio Cloudflare villawolf-auth | Health informa **1.1.0** | Código local con integración opcional del bot | La versión del servicio es independiente de la de las aplicaciones. Integración del bot desplegada; versión activa 567cc551, ROLE_BOT_ENABLED=true. |
 | VillaWolf Bot local | No distribuido públicamente | **0.1.0** | Conectado en esta PC y sincronizado con producción; configuración cifrada. No distribuido como instalador. |
 
@@ -269,3 +269,24 @@ La edición de interfaz rechazaba publicar si cualquier archivo de la rama cambi
 Publicación 0.1.19: código 8fb17403dd52dd60d9fd40fd0f168f084f41f79b, canal 7b653af63a3f3b001232fdb392a17f5494c4bc22. Instalador de 115.468.142 bytes, SHA-256 954b603e0737e18bc3fba3c8d97fd8d05ecef1c65be52313e7402f5e2574379b. No se instaló sobre el perfil habitual ni se publicó el diseño del usuario; prueba real de publicar su edición pendiente. La versión estable del Launcher sigue en 0.1.16.
 
 Canal público 0.1.19 propagado y comprobado: NsisUpdater detectó 0.1.19 desde 0.1.18 usando el feed habitual, sin descargar ni instalar en el perfil del usuario. La copia antigua 0.1.18 dejó de servirse después de la propagación de GitHub.
+
+## Estado adicional, 14-10-2026: eliminación y diagnóstico de preparación
+
+### Eliminación definitiva — parcial, sin desplegar ni publicar
+El usuario autorizó desarrollar la eliminación global de un lanzador, mundos/configuraciones de sus instalaciones VillaWolf y preparaciones del Administrador; pidió conservar la carpeta original de CurseForge. Código local añade endpoint central limitado al modpack elegido, índice mínimo de eliminaciones en catálogo/D1, limpieza por registro de carpetas y espera mientras Minecraft está abierto. Borrar una instalación local deja de exigir rol de juego. La lista del Administrador se actualiza sin depender de una segunda consulta después de borrar.
+
+La suite completa más reciente pasó: 236 pruebas, 0 fallos y 0 omitidas, incluyendo limpieza, nombres de Forge y preparación/publicación simulada. Los paquetes preliminares 0.1.17/0.1.20 necesitan recompilarse y verificarse porque el código cambió después de compilarlos. No están publicados ni instalados. El Worker activo sigue 567cc551; la tabla deleted_packs no se creó en producción, y el borrador del editor requiere verificación antes de cualquier despliegue. No se borró ningún modpack ni mundo real en estos ensayos; se usaron carpetas aisladas.
+
+Límites: los commits históricos de GitHub y copias externas no se purgan; se conserva un identificador mínimo para evitar reapariciones y completar limpieza. Hasta 250 archivos publicados por lanzador; un historial mayor requiere eliminación por lotes. PCs desconectadas o launchers antiguos necesitan conectarse y actualizarse para recibir la limpieza.
+
+### Compatibilidad de nombres Forge y diagnóstico — implementados localmente, no publicados
+El usuario informó que eliminó la carpeta que producía el error y autorizó admitir los archivos válidos de Forge. Se mantiene su instrucción de no publicar nuevas versiones ni actualizar el servidor Minecraft.
+
+Causa confirmada del segundo error: modPathKey en src/champagne-update-paths.js usaba una lista de caracteres que rechazaba los corchetes de mods/dungeons-and-taverns-ancient-city-overhaul-1 [Forge].jar. La regla ahora acepta nombres Windows válidos con corchetes, Unicode y puntuación. src/champagne-file-names.js centraliza la validación; mods siguen siendo JAR dentro de mods, y configuraciones/recursos siguen limitados a sus rutas y formatos administrados. Se rechazan rutas externas, enlaces, dispositivos reservados y nombres ambiguos. Esto no acredita compatibilidad con todos los loaders, versiones de Minecraft o dependencias de mods. Referencia: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file.
+
+Contenido remoto incompleto se generaba en la guardia inicial de prepareContent, src/champagne-remote-content.js, antes de descargar: identificador, versión, lista no vacía, máximo de 2.000 y concordancia de expectedFiles. No se puede determinar cuál falló en el paquete original porque su carpeta fue eliminada; no se atribuye al shader ComplementaryReimagined ni al instalador de Forge. Se sustituyó el mensaje genérico por diagnósticos de dato o recurso afectado, causa y cantidades cuando corresponda. Los errores de descarga no exponen la URL completa, parámetros ni credenciales. tools/admin-modpack/engine.cjs muestra el contexto del paquete y comprueba el límite antes de prepararlo; src/champagne-config-sync.js comparte ese límite y la validación de nombres.
+
+Pruebas: tests/verificar-nombres-forge.cjs añade 13 casos, incluido el JAR exacto con [Forge], nombres Unicode, rutas peligrosas, junction real, contadores incompletos, hashes y URLs no autorizadas. El flujo analizar → preparar → comprobar → publicar se probó con GitHub simulado y carpetas desechables: archivos originales, mundo e historial conservados. Suite completa: 236 éxitos, 0 fallos, 0 omitidas. Se mantienen hashes, fuentes oficiales y restricciones de distribución. No se modificaron archivos originales de CurseForge. Falta reproducir el paquete real con la nueva versión, recompilar/verificar instaladores y probar en la aplicación instalada. La edición local y este informe aún no se sincronizaron con GitHub; rama objetivo preparacion-paso97 del repositorio tonyvillalobosmejia-netizen/champagne-vol5-modpack.
+
+### Publicación autorizada en preparación, 14-10-2026
+Instaladores finales 0.1.17/0.1.20 recompilados con código 0. Integridad de fuentes empaquetadas y metadatos comprobada; Administrador arrancó en perfil aislado. Cloudflare activó el Worker 475d159f tras confirmación expresa del usuario y creación no destructiva de deleted_packs. Consulta real de Administrador: catálogo HTTP 200 con Mundo Conejil y Minecraft Extremo, publicación central configurada. No se ejecutó borrado real. Publicación de instaladores aún en preparación; no se actualizó el servidor Minecraft.

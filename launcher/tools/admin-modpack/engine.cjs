@@ -8,7 +8,7 @@ const {officialSource,knownGithubUrl,officialRedirect}=require('../../src/champa
 const { validateAssistedManifest } = require('../../src/champagne-manual-downloads');
 const { validateGame } = require('../../src/champagne-game-profile');
 const { prepareContent } = require('../../src/champagne-remote-content');
-const { syncBundledConfigs, checkedTarget } = require('../../src/champagne-config-sync');
+const { syncBundledConfigs, checkedTarget, MAX_CONTENT_FILES } = require('../../src/champagne-config-sync');
 const { checkedModTarget } = require('../../src/champagne-update-paths');
 const { validatePresentation } = require('../../src/champagne-presentation');
 const {validateCatalog,pathsForPack}=require('../../src/champagne-pack-catalog');
@@ -180,6 +180,7 @@ function buildManifest(plan,version,selected) {
   if(selected.some(p=>!plan.contentCandidates.some(e=>e.path===p&&e.entry))) throw new Error('Hay contenido sin fuente oficial.');
   const contentFiles=plan.contentCandidates.filter(e=>chosen.has(e.path)).map(e=>clone(e.entry));
   if(!contentFiles.length) throw new Error('Selecciona al menos un archivo de contenido.');
+  if(contentFiles.length>MAX_CONTENT_FILES) throw new Error('Seleccionaste '+contentFiles.length+' archivos de contenido; el máximo permitido es '+MAX_CONTENT_FILES+'. Revisa la selección antes de preparar.');
   const files=clone(plan.files);
   const removed=[...new Set([...(plan.base.manifest.delete||[]),...plan.modChanges.removed])].filter(p=>!files.some(e=>e.path.toLowerCase()===p.toLowerCase()));
   const manifest={packId,version,minecraftVersion:plan.game.minecraftVersion,forgeVersion:plan.game.forgeVersion,
@@ -208,9 +209,12 @@ async function validatePackage(manifest,onProgress=()=>{},fetcher=fetch) {
   validateAssistedManifest(manifest); validateGame(manifest.game,{},COMPATIBLE); validatePresentation(manifest.presentation);
   const directory=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'villawolf-admin-validation-'));
   try {
+    onProgress('Verificando el contenido de '+manifest.packId+' '+manifest.version+'…');
     await prepareContent(manifest.content,path.join(directory,'bundle'),url=>request(url,{fetcher,limit:128*1024*1024}));
     const result=syncBundledConfigs({instanceDir:path.join(directory,'client'),metadataDir:path.join(directory,'metadata'),bundleDir:path.join(directory,'bundle')});
     onProgress('Contenido verificado en una instalación aislada: '+result.installed+' archivos.');
+  } catch(error) {
+    throw new Error('No se pudo preparar el contenido de '+manifest.packId+' '+manifest.version+': '+error.message);
   } finally {
     safeRoot(directory); fs.rmSync(directory,{recursive:true,force:true});
   }

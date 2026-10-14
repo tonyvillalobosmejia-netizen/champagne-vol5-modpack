@@ -84,11 +84,12 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
     const value=await discord(`users/@me/guilds/${env.DISCORD_GUILD_ID}/member`,{headers:{Authorization:'Bearer '+accessToken}});
     if(!Array.isArray(value.roles)||value.roles.some(id=>!snowflake(id))||(value.user&&value.user.id!==discordId)||value.pending===true)throw new AuthError(403,'Completa tu acceso al Discord de VillaWolf.');return value;
   }
-  async function catalog(){
+  async function catalog(env){
     let response;try{response=await fetchImpl(catalogUrl,{redirect:'manual',signal:AbortSignal.timeout(10000)});}catch{throw new AuthError(503,'No se pudo consultar la biblioteca de modpacks.');}
     let value;if(response.status===404)value=catalogSeed;else{if(!response.ok)throw new AuthError(503,'La biblioteca no está disponible.');const text=await response.text();if(encoder.encode(text).length>65536)throw new AuthError(503,'Catálogo demasiado grande.');try{value=JSON.parse(text);}catch{throw new AuthError(503,'Catálogo inválido.');}}
     if(value?.schemaVersion!==1||!Array.isArray(value.packs)||value.packs.length>50)throw new AuthError(503,'Catálogo inválido.');
-    const ids=new Set();for(const p of value.packs){const expected=p.id==='champagne-vol5'?'updates/stable-v2.json':'updates/packs/'+p.id+'/stable.json';if(!/^[a-z0-9][a-z0-9-]{0,63}$/.test(p.id||'')||ids.has(p.id)||typeof p.name!=='string'||!p.name.trim()||p.name.length>80||!snowflake(p.roleId)||typeof p.enabled!=='boolean'||p.manifestPath!==expected)throw new AuthError(503,'Catálogo inválido.');ids.add(p.id);}return value;
+    const ids=new Set();for(const p of value.packs){const expected=p.id==='champagne-vol5'?'updates/stable-v2.json':'updates/packs/'+p.id+'/stable.json';if(!/^[a-z0-9][a-z0-9-]{0,63}$/.test(p.id||'')||ids.has(p.id)||typeof p.name!=='string'||!p.name.trim()||p.name.length>80||!snowflake(p.roleId)||typeof p.enabled!=='boolean'||p.manifestPath!==expected)throw new AuthError(503,'Catálogo inválido.');ids.add(p.id);}const deleted=value.deletedPacks||[];if(!Array.isArray(deleted)||deleted.length>1000||new Set(deleted).size!==deleted.length)throw new AuthError(503,'Registro de eliminaciones inválido.');
+    const recorded=JSON.parse((await env.DB.prepare('SELECT json_group_array(pack_id) AS ids FROM deleted_packs').first())?.ids||'[]');const deletedPacks=[...new Set([...deleted,...recorded])];if(deletedPacks.length>1000||deletedPacks.some(id=>typeof id!=='string'||!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id)))throw new AuthError(503,'Registro de eliminaciones inválido.');return{...value,packs:value.packs.filter(p=>!deletedPacks.includes(p.id)),...(deletedPacks.length?{deletedPacks}:{})};
   }
   async function member(env,accessToken,discordId){
     const value=await discord(`users/@me/guilds/${env.DISCORD_GUILD_ID}/member`,{headers:{Authorization:'Bearer '+accessToken}});
@@ -174,9 +175,9 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
     if(!await env.DB.prepare('SELECT token_hash FROM discord_sessions WHERE token_hash=? AND expires_at>?').bind(key,clock()).first())throw new AuthError(401,'La sesión se cerró o venció.');
     const user={id:'discord:'+row.discord_id,discordId:row.discord_id,username:row.username,discordName:row.discord_name,provider:'discord',avatarUrl:avatarUrl(row.discord_id,guild.user?.avatar||bundle.avatar)};
     if(route==='/v2/session'||route==='/v2/admin/session')return {ok:true,user,expiresAt:row.expires_at,administrator:admin};
-    const library=await catalog();if(route==='/v2/admin/catalog')return {ok:true,user,expiresAt:row.expires_at,catalog:library};
+    const library=await catalog(env);if(route==='/v2/admin/catalog')return {ok:true,user,expiresAt:row.expires_at,catalog:library};
     const allowed=library.packs.filter(p=>p.enabled&&guild.roles.includes(p.roleId));
-    if(route==='/v2/catalog')return {ok:true,user,expiresAt:row.expires_at,catalog:{schemaVersion:1,packs:allowed}};
+    if(route==='/v2/catalog')return {ok:true,user,expiresAt:row.expires_at,catalog:{schemaVersion:1,packs:allowed,...(library.deletedPacks?.length?{deletedPacks:library.deletedPacks}:{})}};
     const id=route.slice('/v2/packs/'.length),pack=allowed.find(p=>p.id===id);if(!pack)throw new AuthError(403,'No tienes el rol de acceso a este modpack.');return {ok:true,user,expiresAt:row.expires_at,pack};
   }
 
@@ -276,6 +277,31 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
   }
 
 
+
+  async function deletePublishedPack(env,token,input){
+    if(!/^[a-z0-9][a-z0-9-]{0,63}$/.test(input.packId||'')||typeof input.confirmName!=='string')throw new AuthError(400,'Confirma el lanzador que deseas eliminar.');
+    await accessSession(env,token,'/v2/admin/session');
+    const release=await ghRequired(env,'/releases/latest'),version=String(release.tag_name||'').replace(/^v/,'').split('.').map(Number);if(version.length!==3||version.some(n=>!Number.isInteger(n)||n<0)||version[0]===0&&(version[1]===0||version[1]===1&&version[2]<17))throw new AuthError(412,'Publica primero Launcher 0.1.17 para distribuir la limpieza a los jugadores.');
+    const id=input.packId,head=(await ghRequired(env,'/git/ref/heads/'+ghBranch)).object?.sha;if(!ghSha(head))throw new AuthError(503,'Referencia de GitHub inválida.');
+    const commit=await ghRequired(env,'/git/commits/'+head),snapshot=await ghRequired(env,'/git/trees/'+commit.tree.sha+'?recursive=1');if(snapshot.truncated||!Array.isArray(snapshot.tree))throw new AuthError(503,'No se pudo obtener el árbol completo del repositorio.');
+    const catalogFile=await ghRequired(env,'/contents/updates/catalog.json?ref='+head);let current;try{current=JSON.parse(decoder.decode(decodeBase64(catalogFile.content.replace(/\s/g,''))));}catch{throw new AuthError(503,'Catálogo inválido en GitHub.');}
+    if(current.schemaVersion!==1||!Array.isArray(current.packs)||current.packs.length>50)throw new AuthError(503,'Catálogo inválido en GitHub.');
+    const entry=current.packs.find(p=>p.id===id),deleted=current.deletedPacks||[];if(!Array.isArray(deleted)||deleted.some(x=>typeof x!=='string'||!/^[a-z0-9][a-z0-9-]{0,63}$/.test(x)))throw new AuthError(503,'Registro de eliminaciones inválido.');
+    if(!entry){if(!deleted.includes(id))throw new AuthError(404,'El lanzador no está publicado.');await env.DB.prepare('INSERT INTO deleted_packs(pack_id,deleted_at) VALUES(?,?) ON CONFLICT(pack_id) DO NOTHING').bind(id,clock()).run();return{ok:true,deleted:true,alreadyDeleted:true,packId:id};}
+    if(input.confirmName!==entry.name)throw new AuthError(409,'El nombre del lanzador cambió; vuelve a confirmar su eliminación.');
+    const owned=p=>id==='champagne-vol5'?p==='updates/stable-v2.json'||p==='updates/history.json'||/^updates\/versions\/modpack-[0-9]+\.[0-9]+\.[0-9]+\.json$/.test(p):new RegExp('^updates/packs/'+id+'/(?:stable\\.json|history\\.json|versions/modpack-[0-9]+\\.[0-9]+\\.[0-9]+\\.json)$').test(p);
+    const paths=snapshot.tree.filter(n=>n.type==='blob'&&owned(n.path)).map(n=>n.path);if(paths.length>250)throw new AuthError(413,'Este lanzador tiene más de 250 archivos publicados; necesita una eliminación por lotes. No se borró nada.');
+    const nextCatalog={...current,packs:current.packs.filter(p=>p.id!==id),deletedPacks:[...new Set([...deleted,id])]};if(nextCatalog.deletedPacks.length>1000)throw new AuthError(413,'Registro de eliminación lleno. No se borró nada.');
+    const raw=JSON.stringify(nextCatalog,null,2)+'\n';const blobResult=await ghApi(env,'/git/blobs','POST',{encoding:'utf-8',content:raw});if(blobResult.status!==201||!ghSha(blobResult.data.sha))throw new AuthError(503,'No se pudo preparar el catálogo.');
+    const treeResult=await ghApi(env,'/git/trees','POST',{base_tree:commit.tree.sha,tree:[{path:'updates/catalog.json',mode:'100644',type:'blob',sha:blobResult.data.sha},...paths.map(path=>({path,mode:'100644',type:'blob',sha:null}))]});if(treeResult.status!==201||!ghSha(treeResult.data.sha))throw new AuthError(503,'No se pudo preparar la eliminación.');
+    const commitResult=await ghApi(env,'/git/commits','POST',{message:'Eliminar definitivamente lanzador '+id,tree:treeResult.data.sha,parents:[head]});if(commitResult.status!==201||!ghSha(commitResult.data.sha))throw new AuthError(503,'No se pudo preparar el commit.');const next=commitResult.data.sha;
+    const diff=await ghRequired(env,'/compare/'+head+'...'+next);if(diff.total_commits!==1||!Array.isArray(diff.files)||diff.files.length!==paths.length+1||!diff.files.some(f=>f.filename==='updates/catalog.json'&&f.status==='modified')||diff.files.some(f=>f.filename!=='updates/catalog.json'&&(f.status!=='removed'||!paths.includes(f.filename))))throw new AuthError(403,'La eliminación intenta afectar otro lanzador.');
+    const verifiedCatalog=await ghRequired(env,'/contents/updates/catalog.json?ref='+next);if(decoder.decode(decodeBase64(verifiedCatalog.content.replace(/\s/g,'')))!==raw)throw new AuthError(503,'No se pudo verificar el catálogo preparado.');
+    if((await ghRequired(env,'/git/ref/heads/'+ghBranch)).object?.sha!==head)throw new AuthError(409,'Hubo una publicación simultánea; vuelve a intentar la eliminación.');await accessSession(env,token,'/v2/admin/session');
+    const activated=await ghApi(env,'/git/refs/heads/'+ghBranch,'PATCH',{sha:next,force:false});if(activated.status!==200)throw new AuthError(503,'No se activó la eliminación.');
+    await env.DB.prepare('INSERT INTO deleted_packs(pack_id,deleted_at) VALUES(?,?) ON CONFLICT(pack_id) DO NOTHING').bind(id,clock()).run();return{ok:true,deleted:true,packId:id,commit:next,removedFiles:paths.length};
+  }
+
   async function ghBlobUpload(env,token,request){
     await accessSession(env,token,'/v2/admin/catalog');if(!env.GITHUB_TOKEN)throw new AuthError(503,'La conexión central con GitHub todavía no está configurada.');if(request.headers.get('content-type')?.split(';')[0]!=='application/json'||!request.body)throw new AuthError(400,'Se requiere un archivo JSON del modpack.');
     if(Number(request.headers.get('content-length')||0)>64*1024*1024)throw new AuthError(413,'Paquete demasiado grande.');
@@ -292,13 +318,14 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
       const url=new URL(request.url);if(url.search)throw new AuthError(400,'Solicitud inválida.');
       if(request.method==='POST'&&url.pathname==='/internal/role-bot')return reply(200,await roleBot.receive(request,env));
       if(request.method==='GET'&&url.pathname==='/health')return reply(200,{ok:true,provider:'discord',storage:'D1',version:'1.1.0',catalog:true,admin:true,discordRetry:true,catalogSnapshotSeconds:60,curseforgeApi:true,curseforgeConfigured:!!env.CURSEFORGE_API_KEY,githubPublishing:true,githubConfigured:!!env.GITHUB_TOKEN});
-      const cfRoute=/^\/v2\/(?:admin\/)?curseforge\/(?:matches|download)$/.test(url.pathname),ghRoute=url.pathname==='/v2/admin/github'||url.pathname==='/v2/admin/github/status'||url.pathname==='/v2/admin/github/blob';
+      const cfRoute=/^\/v2\/(?:admin\/)?curseforge\/(?:matches|download)$/.test(url.pathname),ghRoute=url.pathname==='/v2/admin/delete-pack'||url.pathname==='/v2/admin/github'||url.pathname==='/v2/admin/github/status'||url.pathname==='/v2/admin/github/blob';
       const bucket=await digest((request.headers.get('CF-Connecting-IP')||'unknown')+':'+(cfRoute?'curseforge:':ghRoute?'github:':'')+Math.floor(clock()/60000));
       const count=await env.DB.prepare('INSERT INTO discord_limits VALUES(?,1,?) ON CONFLICT(bucket) DO UPDATE SET count=count+1 RETURNING count').bind(bucket,clock()+120000).all();
       if(count.results[0].count>(cfRoute?300:ghRoute?120:30))throw new AuthError(429,'Demasiadas solicitudes. Espera un minuto.');
       if(request.method==='POST'&&url.pathname==='/v1/discord/start')return reply(200,await start(env,await body(request)));
       if(request.method==='POST'&&url.pathname==='/v1/discord/finish')return reply(200,await finish(env,await body(request)));
       const authorization=request.headers.get('authorization'),token=authorization?.startsWith('Bearer ')?authorization.slice(7):null;
+      if(request.method==='POST'&&url.pathname==='/v2/admin/delete-pack')return reply(200,await deletePublishedPack(env,token,await body(request)));
       if(request.method==='GET'&&url.pathname==='/v2/admin/github/status'){await accessSession(env,token,'/v2/admin/catalog');return reply(200,{ok:true,configured:!!env.GITHUB_TOKEN});}
       if(request.method==='POST'&&url.pathname==='/v2/admin/github/blob')return reply(200,await ghBlobUpload(env,token,request));
       if(request.method==='POST'&&url.pathname==='/v2/admin/github')return reply(200,await ghGateway(env,token,await body(request,9*1024*1024)));

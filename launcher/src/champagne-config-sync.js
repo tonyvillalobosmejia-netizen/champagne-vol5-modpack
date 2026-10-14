@@ -5,6 +5,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const { validateFileName } = require("./champagne-file-names");
 function sha256(data) { return crypto.createHash("sha256").update(data).digest("hex"); }
 function fileHash(p) { return sha256(fs.readFileSync(p)); }
 function ensureDirectory(p) { fs.mkdirSync(p, { recursive: true }); }
@@ -17,6 +18,7 @@ function writeAtomic(dest, bytes) {
 const MANAGED_ROOTS = new Set(["config", "defaultconfigs", "resourcepacks", "shaderpacks", "kubejs", "scripts", "global_packs", "openloader", "fancymenu"]);
 const MAX_FILE_BYTES = 128 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 512 * 1024 * 1024;
+const MAX_CONTENT_FILES = 2000;
 function validatePath(relative) {
   const parts = typeof relative === "string" ? relative.split("/") : [];
   const root = parts[0];
@@ -28,13 +30,14 @@ function validatePath(relative) {
       relative.includes(":")) {
     throw new Error("Ruta de contenido del modpack no permitida: " + String(relative));
   }
+  for (const part of parts) validateFileName(part);
   return relative;
 }
 function checkedTarget(instanceDir, relative) {
   validatePath(relative);
   const target = path.resolve(instanceDir, ...relative.split("/"));
   const diff = path.relative(instanceDir, target);
-  if (!diff || diff.startsWith("..") || path.isAbsolute(diff)) throw new Error("Ruta fuera de instancia: " + relative);
+  if (!diff || diff === ".." || diff.startsWith(".." + path.sep) || path.isAbsolute(diff)) throw new Error("Ruta fuera de instancia: " + relative);
   for (let here = path.resolve(instanceDir); ; here = path.dirname(here)) {
     try { if (fs.lstatSync(here).isSymbolicLink()) throw new Error("Enlace simbólico bloqueado: " + here); }
     catch (error) { if (error.code !== "ENOENT") throw error; }
@@ -64,7 +67,7 @@ function syncBundledConfigs({ instanceDir, metadataDir, bundleDir, status = () =
   if (!instanceDir || !metadataDir || !bundleDir) throw new Error("Faltan rutas de sincronización.");
   const manifest = JSON.parse(fs.readFileSync(path.join(bundleDir, "manifest.json"), "utf8"));
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(manifest.packId||"") || !/^\d+\.\d+\.\d+/.test(manifest.version || "") ||
-      !Array.isArray(manifest.files) || manifest.files.length === 0 || manifest.files.length > 2000) {
+      !Array.isArray(manifest.files) || manifest.files.length === 0 || manifest.files.length > MAX_CONTENT_FILES) {
     throw new Error("Manifiesto de configuraciones inválido.");
   }
   const desired = new Map(), seen = new Set();
@@ -152,4 +155,4 @@ function syncBundledConfigs({ instanceDir, metadataDir, bundleDir, status = () =
   status(`Configuraciones cliente ${manifest.version}: ${report.installed} nuevas, ${report.updated} actualizadas, ${report.removed} retiradas, ${report.keptModified + report.keptUnmanaged} personales conservadas.`, "success");
   return report;
 }
-module.exports = { syncBundledConfigs, validatePath, checkedTarget, MANAGED_ROOTS, MAX_FILE_BYTES, MAX_TOTAL_BYTES };
+module.exports = { syncBundledConfigs, validatePath, checkedTarget, MANAGED_ROOTS, MAX_FILE_BYTES, MAX_TOTAL_BYTES, MAX_CONTENT_FILES };

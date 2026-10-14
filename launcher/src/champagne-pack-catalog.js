@@ -8,7 +8,7 @@ function validateCatalog(value){
   const manifestPath=p.id===LEGACY_ID?'updates/stable-v2.json':'updates/packs/'+p.id+'/stable.json';
   if(p.manifestPath!==manifestPath)throw Error('Canal de modpack inválido.');ids.add(p.id);
   return{id:p.id,name:p.name.trim(),roleId:p.roleId,enabled:p.enabled,manifestPath};
- });return{schemaVersion:1,packs};
+ });const deletedPacks=value.deletedPacks||[];if(!Array.isArray(deletedPacks)||deletedPacks.length>1000||new Set(deletedPacks).size!==deletedPacks.length||deletedPacks.some(id=>typeof id!=='string'||!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id)||ids.has(id)))throw Error('Registro de lanzadores eliminados inválido.');return{schemaVersion:1,packs,...(deletedPacks.length?{deletedPacks:[...deletedPacks]}:{})};
 }
 function channelFor(pack){return RAW+validateCatalog({schemaVersion:1,packs:[pack]}).packs[0].manifestPath;}
 function pathsForPack(id){if(!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id||''))throw Error('Identificador de modpack inválido.');return id===LEGACY_ID?{channel:'updates/stable-v2.json',history:'updates/history.json',versions:'updates/versions'}:{channel:'updates/packs/'+id+'/stable.json',history:'updates/packs/'+id+'/history.json',versions:'updates/packs/'+id+'/versions'};}

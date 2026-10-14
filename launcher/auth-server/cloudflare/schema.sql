@@ -8,3 +8,5 @@ CREATE TABLE IF NOT EXISTS discord_limits(bucket TEXT PRIMARY KEY, count INTEGER
 CREATE INDEX IF NOT EXISTS discord_limits_expiry ON discord_limits(expires_at);
 CREATE TABLE IF NOT EXISTS role_bot_state(guild_id TEXT PRIMARY KEY,generation TEXT NOT NULL,sequence INTEGER NOT NULL,ready INTEGER NOT NULL,last_seen INTEGER NOT NULL,last_message_at INTEGER NOT NULL,message_signature TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS role_bot_members(guild_id TEXT NOT NULL,discord_id TEXT NOT NULL,generation TEXT NOT NULL,roles TEXT NOT NULL,present INTEGER NOT NULL,pending INTEGER NOT NULL,avatar TEXT,PRIMARY KEY(guild_id,discord_id));
+
+CREATE TABLE IF NOT EXISTS deleted_packs (pack_id TEXT PRIMARY KEY, deleted_at INTEGER NOT NULL);

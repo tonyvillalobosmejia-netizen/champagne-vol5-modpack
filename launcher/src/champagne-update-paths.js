@@ -1,17 +1,16 @@
 "use strict";
 const fs = require("node:fs");
 const path = require("node:path");
+const { validateFileName } = require("./champagne-file-names");
 
 function modPathKey(relative) {
   if (typeof relative !== "string" ||
-      !/^mods\/[A-Za-z0-9][A-Za-z0-9_.+() -]*\.jar$/i.test(relative)) {
+      !/^mods\/[^/\\]+\.jar$/i.test(relative)) {
     throw new Error("Ruta de mod no permitida: " + String(relative));
   }
   const name = relative.slice(5);
-  // Windows interpreta estos nombres como dispositivos incluso con extensión.
-  if (/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name)) {
-    throw new Error("Nombre reservado de Windows: " + name);
-  }
+  validateFileName(name);
+  if (name.length === 4) throw new Error("El mod necesita un nombre antes de .jar.");
   return relative.toLowerCase();
 }
 
@@ -20,7 +19,7 @@ function checkedModTarget(instanceDir, relative) {
   const root = path.resolve(instanceDir);
   const target = path.resolve(root, ...relative.split("/"));
   const diff = path.relative(root, target);
-  if (!diff || diff.startsWith("..") || path.isAbsolute(diff)) {
+  if (!diff || diff === ".." || diff.startsWith(".." + path.sep) || path.isAbsolute(diff)) {
     throw new Error("Ruta fuera de la instancia: " + relative);
   }
   // Incluye los padres: una junction en instances/principal también redirige.
