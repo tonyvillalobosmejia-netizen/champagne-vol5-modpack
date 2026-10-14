@@ -15,7 +15,50 @@ const digest=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('
 class AuthError extends Error{constructor(status,message){super(message);this.status=status;this.retryAfter=0;}}
 const reply=(status,value)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 
+
+// Signed, sequenced updates from the owner-operated Gateway bot.
+export function createRoleBotStore({clock=Date.now}={}){
+ const enc=new TextEncoder(),id=x=>typeof x==='string'&&/^[0-9]{17,20}$/.test(x),hex=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
+ function error(status,message){return Object.assign(new Error(message),{status});}
+ async function receive(request,env){
+  if(!hex(env.ROLE_BOT_KEY)||env.ROLE_BOT_ENABLED!=='true')throw error(503,'El bot de roles no está habilitado.');
+  if(request.headers.get('content-type')?.split(';')[0]!=='application/json')throw error(415,'Se requiere JSON.');
+  const signature=request.headers.get('x-villawolf-signature');if(!hex(signature))throw error(401,'Firma inválida.');
+  const reader=request.body?.getReader();if(!reader)throw error(400,'Solicitud inválida.');let size=0,parts=[];
+  try{for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>524288){await reader.cancel();throw error(413,'Actualización demasiado grande.');}parts.push(value);}}finally{reader.releaseLock();}
+  const bytes=new Uint8Array(size);let at=0;for(const b of parts){bytes.set(b,at);at+=b.length;}
+  const key=await crypto.subtle.importKey('raw',Uint8Array.from(env.ROLE_BOT_KEY.match(/../g),b=>parseInt(b,16)),{name:'HMAC',hash:'SHA-256'},false,['verify']);
+  if(!await crypto.subtle.verify('HMAC',key,Uint8Array.from(signature.match(/../g),b=>parseInt(b,16)),bytes))throw error(401,'Firma inválida.');
+  let p;try{p=JSON.parse(new TextDecoder().decode(bytes));}catch{throw error(400,'Actualización inválida.');}
+  const allowed=new Set([env.DISCORD_GUILD_ID,...String(env.ROLE_BOT_GUILDS||'').split(',').filter(id)]);
+  if(!id(p.guildId)||!allowed.has(p.guildId)||!/^[-a-f0-9]{36}$/.test(p.generation||'')||!Number.isSafeInteger(p.sequence)||p.sequence<1||!Number.isSafeInteger(p.sentAt)||Math.abs(clock()-p.sentAt)>60000||!['reset','members','ready','heartbeat','offline'].includes(p.kind))throw error(400,'Actualización inválida.');
+  const members=p.kind==='members'?p.members:[];
+  if(!Array.isArray(members)||members.length< (p.kind==='members'?1:0)||members.length>50||new Set(members.map(m=>m.id)).size!==members.length||members.some(m=>!id(m.id)||typeof m.present!=='boolean'||typeof m.pending!=='boolean'||!Array.isArray(m.roles)||m.roles.length>250||m.roles.some(r=>!id(r))||(m.avatar!==null&&!(typeof m.avatar==='string'&&/^(?:a_)?[a-f0-9]{32}$/.test(m.avatar)))))throw error(400,'Miembros inválidos.');
+  const statements=[];
+  if(p.kind==='reset'){
+   statements.push(env.DB.prepare('INSERT INTO role_bot_state(guild_id,generation,sequence,ready,last_seen,last_message_at,message_signature) VALUES(?,?,?,0,?,?,?) ON CONFLICT(guild_id) DO UPDATE SET generation=excluded.generation,sequence=excluded.sequence,ready=0,last_seen=excluded.last_seen,last_message_at=excluded.last_message_at,message_signature=excluded.message_signature WHERE excluded.last_message_at>role_bot_state.last_message_at AND excluded.generation<>role_bot_state.generation').bind(p.guildId,p.generation,p.sequence,clock(),p.sentAt,signature));
+   statements.push(env.DB.prepare('DELETE FROM role_bot_members WHERE guild_id=? AND EXISTS(SELECT 1 FROM role_bot_state WHERE guild_id=? AND generation=? AND sequence=? AND message_signature=?)').bind(p.guildId,p.guildId,p.generation,p.sequence,signature));
+  }else{
+   statements.push(env.DB.prepare('UPDATE role_bot_state SET sequence=?,last_seen=?,last_message_at=?,message_signature=?,ready=CASE WHEN ?=\'ready\' THEN 1 WHEN ?=\'offline\' THEN 0 ELSE ready END WHERE guild_id=? AND generation=? AND sequence<?').bind(p.sequence,clock(),p.sentAt,signature,p.kind,p.kind,p.guildId,p.generation,p.sequence));
+   for(const m of members)statements.push(env.DB.prepare('INSERT INTO role_bot_members(guild_id,discord_id,generation,roles,present,pending,avatar) SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM role_bot_state WHERE guild_id=? AND generation=? AND sequence=? AND message_signature=?) ON CONFLICT(guild_id,discord_id) DO UPDATE SET generation=excluded.generation,roles=excluded.roles,present=excluded.present,pending=excluded.pending,avatar=excluded.avatar').bind(p.guildId,m.id,p.generation,JSON.stringify(m.roles),Number(m.present),Number(m.pending),m.avatar,p.guildId,p.generation,p.sequence,signature));
+  }
+  const result=await env.DB.batch(statements);if(!Number(result[0]?.meta?.changes))throw error(409,'Secuencia del bot inválida. Reinicia la sincronización.');
+  return{ok:true,sequence:p.sequence};
+ }
+ async function membership(env,guildId,discordId){
+  if(env.ROLE_BOT_ENABLED!=='true')return null;
+  const state=await env.DB.prepare('SELECT * FROM role_bot_state WHERE guild_id=?').bind(guildId).first();
+  if(!state||state.ready!==1||state.last_seen>clock()||clock()-state.last_seen>90000)return null;
+  const member=await env.DB.prepare('SELECT * FROM role_bot_members WHERE guild_id=? AND discord_id=? AND generation=?').bind(guildId,discordId,state.generation).first();
+  if(!member||member.present!==1||member.pending!==0)throw error(403,'Debes pertenecer al Discord del servidor y completar tu acceso.');
+  let roles;try{roles=JSON.parse(member.roles);}catch{throw error(503,'La información de roles no es válida.');}if(!Array.isArray(roles)||roles.some(r=>!id(r)))throw error(503,'La información de roles no es válida.');
+  return{roles,pending:false,user:{id:discordId,avatar:member.avatar},botVerified:true};
+ }
+ return{receive,membership};
+}
+
 export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
+  const roleBot=createRoleBotStore({clock});
   const discordCooldown=new Map(),discordPending=new Map();
   async function discord(route,options={}){
     const key=await digest(route+'|'+String(options.headers?.Authorization||''));
@@ -37,6 +80,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
     try{return JSON.parse(text);}catch{throw new AuthError(503,'Respuesta de Discord inválida.');}
   }
   async function membership(env,accessToken,discordId){
+    const fromBot=await roleBot.membership(env,env.DISCORD_GUILD_ID,discordId);if(fromBot)return fromBot;
     const value=await discord(`users/@me/guilds/${env.DISCORD_GUILD_ID}/member`,{headers:{Authorization:'Bearer '+accessToken}});
     if(!Array.isArray(value.roles)||value.roles.some(id=>!snowflake(id))||(value.user&&value.user.id!==discordId)||value.pending===true)throw new AuthError(403,'Completa tu acceso al Discord de VillaWolf.');return value;
   }
@@ -123,7 +167,8 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
     const snapshot=bundle.membershipSnapshot;
     const browseOnly=route==='/v2/catalog'||route==='/v2/admin/catalog';
     const reusable=browseOnly&&snapshot&&Number.isSafeInteger(snapshot.checkedAt)&&snapshot.checkedAt<=clock()&&clock()-snapshot.checkedAt<60000&&Array.isArray(snapshot.roles)&&snapshot.roles.every(snowflake)&&snapshot.user?.id===row.discord_id&&snapshot.pending===false;
-    const guild=reusable?snapshot:await membership(env,bundle.accessToken,row.discord_id);
+    const fromBot=await roleBot.membership(env,env.DISCORD_GUILD_ID,row.discord_id);
+    const guild=fromBot||(reusable?snapshot:await membership(env,bundle.accessToken,row.discord_id));
     if(!reusable&&bundle.purpose!=='launcher'){const membershipSnapshot={checkedAt:clock(),roles:[...guild.roles],pending:false,user:{id:row.discord_id,avatar:guild.user?.avatar||null}};const encrypted=await encrypt(env,JSON.stringify({...bundle,membershipSnapshot}));await env.DB.prepare('UPDATE discord_sessions SET encrypted_access_token=? WHERE token_hash=? AND expires_at>? AND encrypted_access_token=?').bind(encrypted,key,clock(),row.encrypted_access_token).run();}
     if(admin&&!adminRoles.some(id=>guild.roles.includes(id)))throw new AuthError(403,'Tu cuenta no tiene el rol Administrador u Owner.');
     if(!await env.DB.prepare('SELECT token_hash FROM discord_sessions WHERE token_hash=? AND expires_at>?').bind(key,clock()).first())throw new AuthError(401,'La sesión se cerró o venció.');
@@ -245,6 +290,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
       if(!env.DB||![env.DISCORD_CLIENT_ID,env.DISCORD_GUILD_ID,env.DISCORD_ROLE_ID].every(snowflake)||!env.DISCORD_CLIENT_SECRET||!/^[a-fA-F0-9]{64}$/.test(env.TOKEN_KEY||''))throw new AuthError(503,'El servicio de Discord todavía no está configurado.');
       if(request.headers.has('origin'))throw new AuthError(403,'Solicitud no permitida.');
       const url=new URL(request.url);if(url.search)throw new AuthError(400,'Solicitud inválida.');
+      if(request.method==='POST'&&url.pathname==='/internal/role-bot')return reply(200,await roleBot.receive(request,env));
       if(request.method==='GET'&&url.pathname==='/health')return reply(200,{ok:true,provider:'discord',storage:'D1',version:'1.1.0',catalog:true,admin:true,discordRetry:true,catalogSnapshotSeconds:60,curseforgeApi:true,curseforgeConfigured:!!env.CURSEFORGE_API_KEY,githubPublishing:true,githubConfigured:!!env.GITHUB_TOKEN});
       const cfRoute=/^\/v2\/(?:admin\/)?curseforge\/(?:matches|download)$/.test(url.pathname),ghRoute=url.pathname==='/v2/admin/github'||url.pathname==='/v2/admin/github/status'||url.pathname==='/v2/admin/github/blob';
       const bucket=await digest((request.headers.get('CF-Connecting-IP')||'unknown')+':'+(cfRoute?'curseforge:':ghRoute?'github:':'')+Math.floor(clock()/60000));

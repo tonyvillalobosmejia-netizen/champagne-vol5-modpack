@@ -33,7 +33,7 @@ VillaWolf Administrador permite guardar voluntariamente el token de GitHub cifra
 
 Elegir un modpack no descarga su instancia. La instalación se solicita mediante Descargar instancia; los modpacks instalados comprueban sus actualizaciones antes de jugar. Borrar una instalación local pide confirmación y conserva mundos, capturas y opciones por defecto. Borrarlos también exige marcar una opción adicional. Retirar un lanzador desde Administración lo oculta del catálogo para los jugadores y conserva los manifiestos históricos y las carpetas originales de CurseForge.
 
-La biblioteca puede reutilizar durante un máximo de 60 segundos la última comprobación de roles, cifrada dentro de la sesión del servicio. La autorización del modpack al jugar y del Administrador al publicar se consulta directamente a Discord; la biblioteca no concede permiso para esas acciones.
+La biblioteca puede reutilizar durante un máximo de 60 segundos la última comprobación de roles, cifrada dentro de la sesión del servicio. La autorización del modpack al jugar y del Administrador al publicar se revalida mediante el servicio; la biblioteca no concede permiso para esas acciones. Cuando el bot está activo y sincronizado se usa su estado reciente; en caso contrario se consulta Discord directamente.
 
 El Launcher conserva una biblioteca local cifrada y vinculada a la cuenta para mantener visibles sus mundos durante pausas de Discord o fallos de red. Una respuesta válida de permisos reemplaza esa biblioteca; cerrar sesión elimina la copia. La lista almacenada no autoriza a jugar.
 
@@ -42,3 +42,11 @@ La clave de CurseForge se guarda sólo como secreto CURSEFORGE_API_KEY del Worke
 
 ## Publicación central en GitHub
 El Owner puede guardar GITHUB_TOKEN como secreto del Worker. Los administradores no reciben el token: el servicio verifica el rol Administrador u Owner y restringe las operaciones al repositorio de VillaWolf, rama preparacion-paso97, catálogo, manifiestos e historial bajo updates. Antes de activar un commit revalida el rol y comprueba que sólo cambie rutas permitidas, sin reescribir el historial. No permite publicar versiones de las aplicaciones, modificar su código, gestionar colaboradores o acceder a otros repositorios. La conexión local cifrada sigue disponible cuando el servicio central no está configurado.
+
+## Bot de comprobación de roles
+
+El propietario puede ejecutar VillaWolf Bot en una PC propia. El bot usa los intents Guilds y Server Members para recibir pertenencia y cambios de roles en el servidor autorizado; no solicita mensajes ni presencia. Conserva su token y una clave de conexión cifrados con Windows en una carpeta independiente, fuera de los instaladores del Launcher y del Administrador.
+
+La conexión envía a Cloudflare por HTTPS el identificador del servidor y del miembro, sus identificadores de roles, pertenencia, estado pendiente y avatar, con firma HMAC, fecha y secuencia. D1 guarda ese estado para comprobar permisos sin consultar repetidamente Discord. La primera sincronización y las reconciliaciones sustituyen los datos del servidor; las salidas se registran como no presentes. Estos datos no se eliminan automáticamente a los 90 segundos: ese límite invalida su uso para autorizar si no hay señal reciente. La siguiente sincronización limpia el estado anterior del servidor.
+
+Los cambios de rol se aplican cuando llega su evento. Si el bot informa desconexión se invalida su estado; si se pierde la conexión sin aviso puede quedar válido hasta 90 segundos desde la última señal. El servicio vuelve entonces a la comprobación directa de Discord y puede mostrar sus límites de espera. La PC debe permanecer encendida y conectada. No se transmite el token del bot al Worker ni a los jugadores.

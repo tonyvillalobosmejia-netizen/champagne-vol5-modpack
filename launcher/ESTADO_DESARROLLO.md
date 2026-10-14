@@ -19,8 +19,8 @@
 | --- | --- | --- | --- |
 | Launcher Windows x64 | **0.1.16** | El código sigue declarando **0.1.16**; no se ha asignado una siguiente versión | Release pública comprobada mediante API de GitHub. Instalador probado e instalado previamente en esta PC. |
 | Administrador Windows x64 | **0.1.17** | **0.1.18** | Instalador 0.1.18 generado y comprobado; Release admin-v0.1.18 devuelve 404. No está publicado ni instalado como actualización final. |
-| Servicio Cloudflare villawolf-auth | Health informa **1.1.0** | Código local con integración opcional del bot | La versión del servicio es independiente de la de las aplicaciones. Cambios del bot no desplegados. |
-| VillaWolf Bot local | No distribuido públicamente | **0.1.0** | Aplicación local iniciada; clave guardada cifrada. La sincronización con producción está pendiente. |
+| Servicio Cloudflare villawolf-auth | Health informa **1.1.0** | Código local con integración opcional del bot | La versión del servicio es independiente de la de las aplicaciones. Integración del bot desplegada; versión activa 567cc551, ROLE_BOT_ENABLED=true. |
+| VillaWolf Bot local | No distribuido públicamente | **0.1.0** | Conectado en esta PC y sincronizado con producción; configuración cifrada. No distribuido como instalador. |
 
 Publicaciones verificadas:
 
@@ -89,14 +89,14 @@ Publicaciones verificadas:
 | Launcher 0.1.16 | Reducción de consultas repetidas durante navegación/descargas; comprobación inicial de roles; pausa de Discord con explicación correcta; refresco de imágenes y uso del icono incluido en el paquete como respaldo; carpetas legibles y migración tolerante a carpetas ocupadas; apertura de raíz o carpeta individual según el botón. | Publicada y previamente instalada/verificada. No elimina los límites de Discord. |
 | Administrador 0.1.17 | Reutiliza brevemente la autorización para tareas locales, manteniendo comprobaciones sensibles; menús de edición directos; historial directo sin Consultar publicaciones; acciones del selector y Cerrar menú ordenadas; corrección/instalación de paquete y snapshots para recuperar el arranque. | Publicada y previamente instalada/verificada. |
 | Administrador 0.1.18 | Nuevo módulo publication-connection.cjs. Sólo una respuesta exitosa configured:false habilita el uso del token local. Los errores de Discord/red se conservan y no se convierten en token ausente. Agrupa consultas simultáneas de conexión. Mantiene verificaciones de publicación y mejora las instrucciones del paquete. | Código, pruebas e instalador local preparados; no publicado ni instalado como versión final. |
-| Bot local 0.1.0 / Worker sin nueva versión asignada | Proyecto aislado discord.js, ventana de configuración cifrada, bandeja y acceso local de escritorio. Worker local recibe actualizaciones firmadas/secuenciadas; sincronización completa, eventos de roles y control de desconexión/caducidad. Tablas adicionales creadas en D1; clave de conexión guardada por el propietario como Secret. Server Members Intent guardado en Discord y pertenencia del bot confirmada. | Parcial. Aplicación local iniciada; falta completar integración en producción y prueba real. |
+| Bot local 0.1.0 / Worker sin nueva versión asignada | Proyecto aislado discord.js, ventana de configuración cifrada, bandeja y acceso local de escritorio. Worker local recibe actualizaciones firmadas/secuenciadas; sincronización completa, eventos de roles y control de desconexión/caducidad. Tablas adicionales creadas en D1; clave de conexión guardada por el propietario como Secret. Server Members Intent guardado en Discord y pertenencia del bot confirmada. | Integración desplegada y sincronización real comprobada. Falta ensayo de retirada/reposición de roles reales y desconexión/suspensión de la PC. |
 | Documentación, 13-10-2026 | Se crea ESTADO_DESARROLLO.md, se comprueban releases/rama/health y se ejecutan 201 pruebas existentes. Se añade una regla documental de mantenimiento para futuros cambios. | Cambio documental; no añade funciones a las aplicaciones. |
 
 No se atribuyen cambios nuevos a versiones 0.1.17 del Launcher o 0.1.19 del Administrador: no están asignadas en el código ni comprobadas como publicaciones.
 
 ## 4. Funciones en desarrollo
 
-### Bot de roles en la PC del propietario — parcial
+### Bot de roles en la PC del propietario — activo; verificación parcial de escenarios
 
 - Usa Gateway de Discord con Guilds y GuildMembers; no solicita contenido de mensajes ni presencia.
 - Configuración protegida con Electron safeStorage/Windows en una carpeta de datos independiente. El Launcher y el Administrador no contienen la clave del bot.
@@ -105,8 +105,9 @@ No se atribuyen cambios nuevos a versiones 0.1.17 del Launcher o 0.1.19 del Admi
 - El código local del Worker rechaza firmas falsas, mensajes vencidos, servidores no autorizados y repeticiones. No usa una sincronización incompleta para autorizar.
 - La comprobación del bot se invalida al informar desconexión o al superar 90 segundos sin señal. El diseño vuelve a OAuth si el bot no está disponible; no concede acceso indefinidamente por una lista antigua.
 - **Verificado en producción:** tablas role_bot_state/role_bot_members creadas sin modificar identidades/sesiones, ROLE_BOT_KEY guardada como Secret y pertenencia del bot al servidor oficial comprobada mediante API (HTTP 200).
-- **No activado:** código nuevo preparado en el editor del Worker y ROLE_BOT_ENABLED pendiente. No se afirma que la sincronización esté operativa.
-- **No verificado en producción:** sincronización completa, revocación real de roles y reducción efectiva de contadores en ambas apps.
+- **Activado y verificado:** Worker 567cc551 desplegado, ROLE_BOT_ENABLED=true y estado local «Bot conectado. Roles sincronizados.». Prueba con sesiones cifradas reales: catálogos de Launcher y Administrador HTTP 200 muestran Minecraft Extremo y Mundo Conejil, autorización de ambos mundos HTTP 200, conexión central GitHub HTTP 200/configured=true.
+- Tiempos observados en una prueba: catálogo Administrador 1.024 ms, catálogo Launcher 616 ms, autorización Extremo 304 ms y Conejil 357 ms. Una medición no garantiza rendimiento bajo carga. No se ejecutó Minecraft ni una publicación nueva en este ensayo.
+- **No verificado en producción:** retirada/reposición real de roles y comportamiento bajo carga; las comprobaciones de esta prueba no mostraron contador.
 - La ventana local informa sincronización pendiente. running:true significa proceso iniciado, no servicio de permisos operativo.
 - La PC debe permanecer encendida, sin suspensión y con Internet. No se ha instalado inicio automático de Windows.
 
@@ -120,7 +121,7 @@ No se atribuyen cambios nuevos a versiones 0.1.17 del Launcher o 0.1.19 del Admi
 
 | Trabajo | Estado / condición |
 | --- | --- |
-| Completar el bot local y desplegar integración | En desarrollo; faltan conexión, despliegue y prueba real. No anunciar reducción de pausas hasta medirla. |
+| Completar el bot local y desplegar integración | Activo en la PC del propietario; catálogos y autorización comprobados. Pendiente prueba de cambios reales de roles y disponibilidad continua. |
 | Alojamiento continuo del bot | Pendiente. Oracle rechazó Micro y A1 en Querétaro por falta de capacidad. La máquina no se creó. La alternativa temporal aprobada es esta PC. |
 | Servidor Discord por lanzador | **Planeado y aprobado.** Crear lanzador pedirá nombre, ID de servidor e ID de rol. El catálogo actual todavía no almacena guildId por modpack. |
 | Acceso de jugadores en servidores ajenos | Planeado. El bot debe estar en el servidor del modpack; jugador necesita ese rol allí. No exigir pertenencia al Discord oficial para esos jugadores. |
@@ -141,7 +142,7 @@ No se atribuyen cambios nuevos a versiones 0.1.17 del Launcher o 0.1.19 del Admi
 
 | Problema | Situación |
 | --- | --- |
-| Pausas/contador Discord | **Persistente en producción.** Debe respetarse el límite del proveedor. Menos consultas y cachés ayudan, pero no autorizan a ignorar retry_after. Bot no operativo aún. |
+| Pausas/contador Discord | **Persistente en producción.** Debe respetarse el límite del proveedor. Menos consultas y cachés ayudan, pero no autorizan a ignorar retry_after. Bot activo: el estado sincronizado evita esas consultas; la comprobación directa puede volver a mostrar límites si el bot no está disponible. |
 | Guarda el token después de una pausa | **Corregido localmente en Administrador 0.1.18.** La versión publicada 0.1.17 aún puede confundir fallo temporal con conexión ausente. No se acreditó un borrado periódico del token. |
 | Mundo no visible durante fallos temporales | Biblioteca persistente y mensajes implementados; requiere respuesta válida para actualizar permisos. No confundir invisibilidad/fallo de consulta con borrado de archivos. |
 | Fondo publicado no cambia tarjeta/inicio | Corregido en 0.1.16 con refresco y fallback a un recurso realmente empaquetado. Biblioteca instalada mostró ambos mundos con imagen. |
@@ -150,7 +151,7 @@ No se atribuyen cambios nuevos a versiones 0.1.17 del Launcher o 0.1.19 del Admi
 | Mods sin fuente exacta | Bloqueo deliberado, no resuelto para cualquier archivo. Buscar versión oficial exacta, volver a analizar o usar intervención admitida; no desactivar controles. |
 | Restricciones CurseForge | API disponible, pero algunos autores requieren descarga oficial asistida. No garantizar descarga automática total. |
 | Microsoft/Minecraft no autoriza la app | Pendiente de resolución/prueba real. Pruebas unitarias no acreditan aprobación de Microsoft. |
-| Bot: sincronización pendiente | Integración de producción incompleta; no anunciar como bot activo de autorización. |
+| Bot: sincronización pendiente | Corregido y comprobado: código/activación desplegados y roles sincronizados. Dependencia conocida: PC encendida/conectada. |
 | Oracle sin capacidad | Bloqueo externo confirmado para Micro/A1 en Querétaro. No se contrató Pago por uso. |
 | Renovación OAuth y actualización del snapshot D1 | Observación técnica pendiente: tras renovar el token, la comparación con el cifrado anterior puede impedir escribir el snapshot en esa petición. Falta una regresión específica y revisión. Las verificaciones sensibles siguen existiendo; no declararlo corregido. |
 
@@ -219,7 +220,7 @@ Servicio público: [villawolf-auth](https://villawolf-auth.tony-villalobos-mejia
 
 ### Falta verificar
 
-1. Bot unido al servidor oficial, lista completa sincronizada y Worker nuevo desplegado con sus tablas/configuración.
+1. Ya verificado: pertenencia, estado de sincronización y despliegue. Pendiente comprobar retirada/reposición real de roles.
 2. Retirar/reponer rol real y comprobar biblioteca, descarga, JUGAR y publicación; probar desconexión/suspensión/reinicio del bot.
 3. Medir las consultas y pausas con varios usuarios y ambos clientes simultáneos.
 4. Instalar y publicar Administrador 0.1.18; publicar interfaz real bajo una pausa para confirmar que no pide un token inexistente.
@@ -242,3 +243,6 @@ Servicio público: [villawolf-auth](https://villawolf-auth.tony-villalobos-mejia
 ## Sincronización documental
 
 Este archivo representa el estado comprobado de la fecha indicada. La copia local contiene desarrollos aún no publicados; sincronizar el informe no despliega el Worker, no publica instaladores y no activa el bot. El enlace GitHub del documento debe comprobarse después de sincronizarlo. Cada siguiente cambio importante debe actualizar esta sección y las tablas correspondientes.
+
+### Despliegue del bot, 13-10-2026
+Código activo 567cc551 y activación en Production comprobados. Guardar la configuración desde una pestaña anterior activó brevemente la versión anterior del código; se volvió a desplegar el código preparado sobre la configuración vigente. La ruta firmada rechaza solicitudes sin firma (HTTP 401), y el bot confirmó sincronización. No se publicaron instaladores nuevos en este paso.
