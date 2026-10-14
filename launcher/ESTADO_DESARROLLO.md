@@ -89,7 +89,7 @@ Publicaciones verificadas:
 | Launcher 0.1.16 | Reducción de consultas repetidas durante navegación/descargas; comprobación inicial de roles; pausa de Discord con explicación correcta; refresco de imágenes y uso del icono incluido en el paquete como respaldo; carpetas legibles y migración tolerante a carpetas ocupadas; apertura de raíz o carpeta individual según el botón. | Publicada y previamente instalada/verificada. No elimina los límites de Discord. |
 | Administrador 0.1.17 | Reutiliza brevemente la autorización para tareas locales, manteniendo comprobaciones sensibles; menús de edición directos; historial directo sin Consultar publicaciones; acciones del selector y Cerrar menú ordenadas; corrección/instalación de paquete y snapshots para recuperar el arranque. | Publicada y previamente instalada/verificada. |
 | Administrador 0.1.18 | Nuevo módulo publication-connection.cjs. Sólo una respuesta exitosa configured:false habilita el uso del token local. Los errores de Discord/red se conservan y no se convierten en token ausente. Agrupa consultas simultáneas de conexión. Mantiene verificaciones de publicación y mejora las instrucciones del paquete. | Código, pruebas e instalador local preparados; no publicado ni instalado como versión final. |
-| Bot local 0.1.0 / Worker sin nueva versión asignada | Proyecto aislado discord.js, ventana de configuración cifrada, bandeja y acceso local de escritorio. Worker local recibe actualizaciones firmadas/secuenciadas; sincronización completa, eventos de roles y control de desconexión/caducidad. Esquema D1 adicional preparado. Server Members Intent guardado en Discord. | Parcial. Aplicación local iniciada; falta completar integración en producción y prueba real. |
+| Bot local 0.1.0 / Worker sin nueva versión asignada | Proyecto aislado discord.js, ventana de configuración cifrada, bandeja y acceso local de escritorio. Worker local recibe actualizaciones firmadas/secuenciadas; sincronización completa, eventos de roles y control de desconexión/caducidad. Tablas adicionales creadas en D1; clave de conexión guardada por el propietario como Secret. Server Members Intent guardado en Discord y pertenencia del bot confirmada. | Parcial. Aplicación local iniciada; falta completar integración en producción y prueba real. |
 | Documentación, 13-10-2026 | Se crea ESTADO_DESARROLLO.md, se comprueban releases/rama/health y se ejecutan 201 pruebas existentes. Se añade una regla documental de mantenimiento para futuros cambios. | Cambio documental; no añade funciones a las aplicaciones. |
 
 No se atribuyen cambios nuevos a versiones 0.1.17 del Launcher o 0.1.19 del Administrador: no están asignadas en el código ni comprobadas como publicaciones.
@@ -104,8 +104,9 @@ No se atribuyen cambios nuevos a versiones 0.1.17 del Launcher o 0.1.19 del Admi
 - Envía al Worker datos mínimos de pertenencia/roles/avatar con HMAC, marca temporal, generación y secuencia. No transmite el token del bot a las aplicaciones.
 - El código local del Worker rechaza firmas falsas, mensajes vencidos, servidores no autorizados y repeticiones. No usa una sincronización incompleta para autorizar.
 - La comprobación del bot se invalida al informar desconexión o al superar 90 segundos sin señal. El diseño vuelve a OAuth si el bot no está disponible; no concede acceso indefinidamente por una lista antigua.
-- **No desplegado:** tablas role_bot_state/role_bot_members, clave de conexión del servicio, habilitación y código nuevo del Worker.
-- **No verificado en producción:** instalación/pertenencia del bot al servidor, sincronización completa, revocación real de roles y reducción efectiva de contadores en ambas apps.
+- **Verificado en producción:** tablas role_bot_state/role_bot_members creadas sin modificar identidades/sesiones, ROLE_BOT_KEY guardada como Secret y pertenencia del bot al servidor oficial comprobada mediante API (HTTP 200).
+- **No activado:** código nuevo preparado en el editor del Worker y ROLE_BOT_ENABLED pendiente. No se afirma que la sincronización esté operativa.
+- **No verificado en producción:** sincronización completa, revocación real de roles y reducción efectiva de contadores en ambas apps.
 - La ventana local informa sincronización pendiente. running:true significa proceso iniciado, no servicio de permisos operativo.
 - La PC debe permanecer encendida, sin suspensión y con Internet. No se ha instalado inicio automático de Windows.
 
@@ -166,7 +167,7 @@ No se atribuyen cambios nuevos a versiones 0.1.17 del Launcher o 0.1.19 del Admi
 - La firma/HMAC del bot protege los envíos, pero **no es firma digital del instalador**.
 - La autorización del launcher no expulsa una partida ya iniciada ni impide usar otro launcher. La seguridad del servidor Minecraft requiere configuración propia, aún pendiente.
 - El bot no se distribuye dentro del Launcher. Alojamiento alternado entre PCs de jugadores no implementado ni recomendado: expondría su credencial y no garantizaría disponibilidad.
-- Revisar la política de privacidad antes de activar el bot y comunidades externas: se añaden flujos de datos y reglas de pertenencia que todavía no están desplegados.
+- Política de privacidad actualizada para el bot: datos de roles en D1, almacenamiento cifrado local, retención del estado y límite de vigencia de 90 segundos. Las comunidades externas siguen pendientes.
 
 ## 8. Arquitectura y repositorio
 
@@ -182,7 +183,7 @@ No se atribuyen cambios nuevos a versiones 0.1.17 del Launcher o 0.1.19 del Admi
 | Administrador | tools/admin-modpack/main.cjs, preload.cjs, renderer.js, index.html y style.css; engine.cjs prepara/publica; módulos de token, catálogo, fuentes, confirmaciones y actualización. |
 | Bot local | auth-server/roles-bot/: proyecto aislado discord.js, bridge.cjs, Electron de configuración, renderer y archivos estáticos. Acceso local VillaWolf Bot.cmd. No es un servicio Windows instalado. |
 | Backend desplegado | auth-server/cloudflare/worker.mjs; Cloudflare Worker villawolf-auth con binding DB hacia D1 villawolf-identidades. wrangler.json contiene configuración pública; secretos se administran aparte. |
-| Base de datos | schema.sql: usuarios, reservas, flujos OAuth, sesiones y límites. roles-bot-schema.sql prepara dos tablas adicionales; no se ha aplicado a producción. |
+| Base de datos | schema.sql: usuarios, reservas, flujos OAuth, sesiones y límites. roles-bot-schema.sql añade dos tablas adicionales, creadas en producción el 13-10-2026. |
 | Distribución de modpacks | updates/catalog.json, updates/stable-v2.json e historial/versions; cada modpack adicional usa updates/packs/<id>/stable.json, history.json y versions/. |
 | Distribución de apps | Releases separadas; Launcher usa latest/download/latest.yml. Administrador usa updates/admin/latest.yml y release admin-v<versión>. |
 | Compilación | Electron, electron-builder/NSIS; tools/compilar-launcher.cjs y tools/compilar-admin.cjs. Dependencias npm y lockfiles. |
@@ -201,6 +202,7 @@ Servicio público: [villawolf-auth](https://villawolf-auth.tony-villalobos-mejia
 - **201 pruebas pasaron; 0 fallos, 0 omitidas.** Resultado de proceso: 0. Duración aproximada: 12 segundos.
 - Cobertura: autenticación/sesiones/roles, D1 simulado, publicación limitada, revocación, descargas y hashes, CurseForge, contenido privado, perfiles/Java, reparación, eliminación, carpetas, actualizadores, presentación, Microsoft simulado y conexión central.
 - Bot: **7 pruebas** de sincronización completa, cambios/revocación, caducidad/desconexión, firmas/servidores autorizados, repetición, generaciones y emisor firmado. Integradas en las 201; no sumar otra vez.
+- Tres pruebas adicionales de integración HTTP del Worker pasaron (0 fallos): autorización y revocación de jugador, revocación de Administrador/Owner y retorno a Discord al desconectar. Ejecutadas por separado de la suite de 201; total comprobado: 204 pruebas. No equivalen a una revocación real en producción.
 - Administrador 0.1.18: **5 regresiones específicas** de conexión central; integradas en las 201.
 - Se consultaron API pública de releases/HEAD y /health. No se modificaron funcionalidades para generar el informe.
 
