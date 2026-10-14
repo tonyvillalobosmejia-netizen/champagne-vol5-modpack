@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const {isDeepStrictEqual}=require('node:util');
 const { collect } = require('../crear-paquete-curseforge');
 const {officialSource,knownGithubUrl,officialRedirect}=require('../../src/champagne-official-sources');
 const { validateAssistedManifest } = require('../../src/champagne-manual-downloads');
@@ -323,18 +324,28 @@ async function publishPresentation(plan,design,{token,onProgress=()=>{},fetcher=
   const release=await json(API+'/releases/latest',options),installed=String(release.tag_name||'').replace(/^v/,'');
   if(!/^\d+\.\d+\.\d+$/.test(installed)||greater(SUPPORTED,installed))throw Error('Publica primero VillaWolf Launcher '+SUPPORTED+' para mostrar las tarjetas.');
   let ref=await json(API+'/git/ref/heads/'+BRANCH,options);
-  if(ref.object.sha!==plan.base.head)throw Error('GitHub cambió. Carga el diseño publicado de nuevo antes de publicar.');
-  const commit=await json(API+'/git/commits/'+ref.object.sha,options),raw=JSON.stringify(manifest,null,2)+'\n';
+  const baseHead=ref.object.sha;
+  if(baseHead!==plan.base.head){
+    const current=await json(RAW+'/'+baseHead+'/'+locations.channel,{fetcher,allow404:true});
+    if(!isDeepStrictEqual(current,plan.base.manifest))throw Error('Este lanzador cambió en GitHub. Carga su diseño publicado de nuevo antes de publicar; tus cambios aún no se han subido.');
+    if(pack){
+      const catalogAt=async head=>validateCatalog(await json(RAW+'/'+head+'/updates/catalog.json',{fetcher,allow404:true})||require('../../src/villawolf-catalog.json')).packs.find(p=>p.id===packId);
+      const previous=await catalogAt(plan.base.head),latest=await catalogAt(baseHead);
+      if(!previous||!latest||!latest.enabled||!isDeepStrictEqual(previous,latest))throw Error('El acceso o los datos de este lanzador cambiaron. Actualiza la lista y carga su diseño antes de publicar.');
+    }
+    onProgress('Conservando los cambios recientes de GitHub que no afectan a este lanzador…');
+  }
+  const commit=await json(API+'/git/commits/'+baseHead,options),raw=JSON.stringify(manifest,null,2)+'\n';
   onProgress('Subiendo únicamente nombre, fondo y tarjetas…');
   const blob=await json(API+'/git/blobs',{...options,method:'POST',body:{content:Buffer.from(raw).toString('base64'),encoding:'base64'}});
-  const catalogUpdate=await catalogChange(plan.base.head,manifest,options);
+  const catalogUpdate=await catalogChange(baseHead,manifest,options);
   const tree=await json(API+'/git/trees',{...options,method:'POST',body:{base_tree:commit.tree.sha,tree:[...(catalogUpdate?[catalogUpdate.node]:[]),{path:locations.channel,mode:'100644',type:'blob',sha:blob.sha}]}});
-  const next=await json(API+'/git/commits',{...options,method:'POST',body:{message:'Actualizar diseño de '+manifest.game.packName,tree:tree.sha,parents:[plan.base.head]}});
+  const next=await json(API+'/git/commits',{...options,method:'POST',body:{message:'Actualizar diseño de '+manifest.game.packName,tree:tree.sha,parents:[baseHead]}});
   await verifyCatalog(catalogUpdate,next.sha,fetcher);
   const pinned=await request(RAW+'/'+next.sha+'/'+locations.channel,{fetcher});
   if(hash(pinned)!==hash(Buffer.from(raw)))throw Error('No se pudo verificar el diseño subido. No se activó el canal.');
   ref=await json(API+'/git/ref/heads/'+BRANCH,options);
-  if(ref.object.sha!==plan.base.head)throw Error('Hubo una publicación simultánea. No se sobrescribió la rama.');
+  if(ref.object.sha!==baseHead)throw Error('Hubo una publicación simultánea. No se sobrescribió la rama.');
   await authorize();
   await json(API+'/git/refs/heads/'+BRANCH,{...options,method:'PATCH',body:{sha:next.sha,force:false}});
   onProgress('Diseño publicado. La versión y los archivos del modpack se conservan.');
