@@ -17,9 +17,9 @@
 
 | Componente | Publicada | En desarrollo local | Situación |
 | --- | --- | --- | --- |
-| Launcher Windows x64 | **0.1.16** | **0.1.17**, eliminación y compatibilidad de nombres en pruebas locales | Release pública comprobada mediante API de GitHub. Instalador probado e instalado previamente en esta PC. |
-| Administrador Windows x64 | **0.1.19** | **0.1.20**, eliminación, nombres y diagnóstico en pruebas locales | Release admin-v0.1.19 publicada; instalador y descargas comprobados, canal automático actualizado. No se instaló sobre el perfil habitual en esta entrega. |
-| Servicio Cloudflare villawolf-auth | Health informa **1.1.0** | Código local con integración opcional del bot | La versión del servicio es independiente de la de las aplicaciones. Integración del bot desplegada; versión activa 567cc551, ROLE_BOT_ENABLED=true. |
+| Launcher Windows x64 | **0.1.17** | **0.1.17** | Release publicada, descargas e integridad verificadas; arranque en perfil aislado. Instalación habitual no actualizada por este ensayo. |
+| Administrador Windows x64 | **0.1.20** | **0.1.20** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
+| Servicio Cloudflare villawolf-auth | Health informa **1.1.0** | Código local con integración opcional del bot | La versión del servicio es independiente de la de las aplicaciones. Integración del bot desplegada; versión activa 475d159f, ROLE_BOT_ENABLED=true. |
 | VillaWolf Bot local | No distribuido públicamente | **0.1.0** | Conectado en esta PC y sincronizado con producción; configuración cifrada. No distribuido como instalador. |
 
 Publicaciones verificadas:
@@ -290,3 +290,8 @@ Pruebas: tests/verificar-nombres-forge.cjs añade 13 casos, incluido el JAR exac
 
 ### Publicación autorizada en preparación, 14-10-2026
 Instaladores finales 0.1.17/0.1.20 recompilados con código 0. Integridad de fuentes empaquetadas y metadatos comprobada; Administrador arrancó en perfil aislado. Cloudflare activó el Worker 475d159f tras confirmación expresa del usuario y creación no destructiva de deleted_packs. Consulta real de Administrador: catálogo HTTP 200 con Mundo Conejil y Minecraft Extremo, publicación central configurada. No se ejecutó borrado real. Publicación de instaladores aún en preparación; no se actualizó el servidor Minecraft.
+
+### Launcher 0.1.17 / Administrador 0.1.20 — publicados, 14-10-2026
+Autorización de publicación recibida después de la investigación. Ambas releases e instaladores, blockmap y latest.yml públicos descargados y comparados por SHA-256 y tamaño. Canales activados: Launcher por releases/latest; Administrador por updates/admin/latest.yml. Código sincronizado en commit 3eb2e804377856b16d925b266c6f7b15bcb86766, rama preparacion-paso97. Compilaciones y arranque de main/preload/interfaz con perfiles aislados terminaron con código 0. Suite de 236 pruebas aprobada. Worker 475d159f activo y tabla deleted_packs creada sin borrar datos. Consulta administrativa real HTTP 200. Eliminación definitiva habilitada y probada en simulaciones, no ejecutada con mundos reales. El caso original de contenido incompleto sigue sin reproducirse porque su carpeta fue eliminada; la nueva versión ofrece diagnóstico preciso. No se actualizó el servidor Minecraft ni se sustituyó la instalación habitual durante estas pruebas.
+
+Se preparan guías visuales para Discord con la interfaz actual y datos de ejemplo; no acreditan descargas ni publicaciones reales. La descripción de VillaWolf Bot fue guardada en Discord; personalización de imagen pendiente de confirmar.
