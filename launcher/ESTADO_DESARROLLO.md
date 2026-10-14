@@ -18,14 +18,14 @@
 | Componente | Publicada | En desarrollo local | Situación |
 | --- | --- | --- | --- |
 | Launcher Windows x64 | **0.1.16** | El código sigue declarando **0.1.16**; no se ha asignado una siguiente versión | Release pública comprobada mediante API de GitHub. Instalador probado e instalado previamente en esta PC. |
-| Administrador Windows x64 | **0.1.18** | **0.1.18**, sin versión posterior asignada | Release admin-v0.1.18 publicada; instalador y descargas comprobados, canal automático activado. No se instaló sobre el perfil habitual en esta entrega. |
+| Administrador Windows x64 | **0.1.19** | **0.1.19**, sin versión posterior asignada | Release admin-v0.1.19 publicada; instalador y descargas comprobados, canal automático actualizado. No se instaló sobre el perfil habitual en esta entrega. |
 | Servicio Cloudflare villawolf-auth | Health informa **1.1.0** | Código local con integración opcional del bot | La versión del servicio es independiente de la de las aplicaciones. Integración del bot desplegada; versión activa 567cc551, ROLE_BOT_ENABLED=true. |
 | VillaWolf Bot local | No distribuido públicamente | **0.1.0** | Conectado en esta PC y sincronizado con producción; configuración cifrada. No distribuido como instalador. |
 
 Publicaciones verificadas:
 
 - [Launcher 0.1.16](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/v0.1.16).
-- [Administrador 0.1.18](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/admin-v0.1.18).
+- [Administrador 0.1.19](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/admin-v0.1.19).
 - La denominación **VillaWolf 1.1.0** aparece en propuestas y pruebas anteriores; no es la versión actual publicada del Launcher ni del Administrador.
 - Las versiones de los modpacks son independientes: la evidencia anterior corresponde a Mundo Conejil 0.1.6 y Minecraft Extremo 0.0.1. No se republicaron sus archivos para elaborar este informe.
 
@@ -90,9 +90,10 @@ Publicaciones verificadas:
 | Administrador 0.1.17 | Reutiliza brevemente la autorización para tareas locales, manteniendo comprobaciones sensibles; menús de edición directos; historial directo sin Consultar publicaciones; acciones del selector y Cerrar menú ordenadas; corrección/instalación de paquete y snapshots para recuperar el arranque. | Publicada y previamente instalada/verificada. |
 | Administrador 0.1.18 | Nuevo módulo publication-connection.cjs. Sólo una respuesta exitosa configured:false habilita el uso del token local. Los errores de Discord/red se conservan y no se convierten en token ausente. Agrupa consultas simultáneas de conexión. Mantiene verificaciones de publicación y mejora las instrucciones del paquete. | Publicada; 39 pruebas específicas pasaron, arranque del ASAR con perfil aislado e integridad local/remota/pública comprobados; canal independiente activado. Instalación sobre perfil habitual pendiente. |
 | Bot local 0.1.0 / Worker sin nueva versión asignada | Proyecto aislado discord.js, ventana de configuración cifrada, bandeja y acceso local de escritorio. Worker local recibe actualizaciones firmadas/secuenciadas; sincronización completa, eventos de roles y control de desconexión/caducidad. Tablas adicionales creadas en D1; clave de conexión guardada por el propietario como Secret. Server Members Intent guardado en Discord y pertenencia del bot confirmada. | Integración desplegada y sincronización real comprobada. Falta ensayo de retirada/reposición de roles reales y desconexión/suspensión de la PC. |
+| Administrador 0.1.19 | Publica el diseño sobre el HEAD vigente cuando el manifiesto y la entrada de catálogo del propio lanzador no cambiaron; conserva commits de documentación, aplicaciones y otros lanzadores. Mantiene rechazo de cambios del propio mundo y publicaciones simultáneas. | Publicada, 32 pruebas relacionadas y 5 regresiones nuevas; paquete y descargas verificados. |
 | Documentación, 13-10-2026 | Se crea ESTADO_DESARROLLO.md, se comprueban releases/rama/health y se ejecutan 201 pruebas existentes. Se añade una regla documental de mantenimiento para futuros cambios. | Cambio documental; no añade funciones a las aplicaciones. |
 
-No se atribuyen cambios nuevos a versiones 0.1.17 del Launcher o 0.1.19 del Administrador: no están asignadas en el código ni comprobadas como publicaciones.
+No se atribuyen cambios nuevos al Launcher 0.1.17. Administrador 0.1.19 está asignado para corregir conflictos de diseño por cambios ajenos al modpack.
 
 ## 4. Funciones en desarrollo
 
@@ -258,3 +259,11 @@ Verificación adicional en D1: ready=1, señal recibida hacía 22 segundos y 5 m
 - Código de esta corrección sincronizado mediante commit 6c34fcfe90da34718f085f76265529ccb069045e. No cambia catálogo, versiones del modpack ni archivos del juego.
 
 Comprobación del actualizador real desde 0.1.17: inicialmente el CDN de GitHub devolvió latest.yml 0.1.17 pese a que el commit contenía 0.1.18. Tras propagarse, el canal público devolvió 0.1.18 y NsisUpdater detectó correctamente la actualización desde 0.1.17. La prueba no descargó ni instaló automáticamente en el perfil habitual. El Administrador instalado comprueba al abrir, descarga la versión nueva y espera a que no haya tareas antes de reiniciarse e instalarla.
+
+### Administrador 0.1.19 — corrección del conflicto de diseño, publicada
+
+La edición de interfaz rechazaba publicar si cualquier archivo de la rama cambiaba después de cargar el diseño, incluso informes o publicaciones de las aplicaciones. Ahora compara el manifiesto del lanzador y su entrada de catálogo entre ambos commits; si son iguales, usa el HEAD y árbol vigentes para conservar los cambios ajenos. Si cambian el modpack, la presentación o su acceso, exige recargar. Se mantiene la comprobación final de publicación simultánea, force:false, verificación de bytes y autorización.
+
+32 pruebas relacionadas pasaron (0 fallos), incluyendo 5 regresiones nuevas: commit ajeno aceptado, manifiesto cambiado rechazado, rol cambiado rechazado, otros lanzadores conservados y escritura simultánea bloqueada. Compilación con código 0, arranque del paquete con perfil aislado e integridad ASAR/instalador/latest.yml comprobados. Publicación y descargas públicas verificadas. No se publicaron cambios visuales del usuario como parte de esta reparación.
+
+Publicación 0.1.19: código 8fb17403dd52dd60d9fd40fd0f168f084f41f79b, canal 7b653af63a3f3b001232fdb392a17f5494c4bc22. Instalador de 115.468.142 bytes, SHA-256 954b603e0737e18bc3fba3c8d97fd8d05ecef1c65be52313e7402f5e2574379b. No se instaló sobre el perfil habitual ni se publicó el diseño del usuario; prueba real de publicar su edición pendiente. La versión estable del Launcher sigue en 0.1.16.
