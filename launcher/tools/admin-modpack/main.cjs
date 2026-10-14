@@ -25,26 +25,28 @@ const packSourceStore=require('./pack-source-store.cjs').createPackSourceStore(a
 let win,source='',plan=null,prepared=null,busy=false,output=null;
 let background=null,designPlan=null;
 const adminAuth=createAuthClient({baseUrl:require('../../src/config').authServerUrl,provider:'discord',required:true,purpose:'admin',openBrowser:url=>shell.openExternal(url),sessionStore:createSessionStore({directory:app.getPath('userData'),safeStorage:require('electron').safeStorage,scope:'admin|'+require('../../src/config').authServerUrl,filename:'discord-admin-session.bin'})});
-let sharedGitHub=null;async function sharedConnection(refresh=false){if(refresh||sharedGitHub===null){try{sharedGitHub=!!(await adminAuth.githubStatus()).configured;}catch(error){if([401,403].includes(error.status))throw error;sharedGitHub=false;}}return sharedGitHub;}
-async function publicationToken(){return await sharedConnection(true)?'villawolf_service_connection_1234':tokenStore.resolve('');}
+let publicationConnection;
+const sharedConnection=(refresh=false)=>publicationConnection.shared(refresh);
+const publicationToken=()=>publicationConnection.token();
 async function officialFetch(url,options={}){if(require('../../src/champagne-curseforge-api').isCurseForgeFile(url))return new Response(await adminAuth.downloadCurseforge({url}),{status:200});const prefix='https://api.github.com/repos/'+engineModule.REPO;if(String(url).startsWith(prefix+'/')&&await sharedConnection()){const r=await adminAuth.githubRequest({path:String(url).slice(prefix.length),method:options.method||'GET',...(options.body?{body:JSON.parse(options.body)}:{})});return new Response(JSON.stringify(r.data),{status:r.upstreamStatus,headers:{'Content-Type':'application/json'}});}return fetch(url,options);}
 const adminCatalogAccess=require('./catalog-access.cjs').createAdminCatalogAccess(adminAuth);
 const localActions=new Set(['admin-folder','admin-source-save','admin-analyze','admin-design','admin-history','admin-restore','admin-image','admin-clear-image','admin-prepare','admin-output']);
 const publicActions=new Set(['admin-info','admin-auth-status','admin-auth-login','admin-auth-logout','admin-update-check']);
 handle('admin-auth-status',async()=>{try{if(adminAuth.status().user)await adminCatalogAccess.status();return{...adminAuth.status(),authorized:!!adminAuth.status().user};}catch(error){return{...adminAuth.status(),authorized:false,message:error.message,retryAfter:error.retryAfter||0};}});
 handle('admin-auth-login',async()=>{const result=await adminAuth.loginDiscord();if(!result.ok)throw Error(result.message);return{...result,authorized:true};});
-handle('admin-auth-logout',async()=>{sharedGitHub=null;plan=prepared=designPlan=null;background=null;output=null;adminCatalogAccess.clear();return adminAuth.logout();});
+handle('admin-auth-logout',async()=>{publicationConnection.clear();plan=prepared=designPlan=null;background=null;output=null;adminCatalogAccess.clear();return adminAuth.logout();});
 ipcMain.handle('admin-auth-cancel',event=>{guard(event);return adminAuth.cancelDiscordLogin();});
 const adminUpdates=require('./admin-updates.cjs').createAdminUpdates({app,feed:"https://raw.githubusercontent.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/preparacion-paso97/updates/admin",loadUpdater:()=>require('electron-updater').autoUpdater,isBusy:()=>busy,status:()=>{},onState:state=>{if(win&&!win.isDestroyed())win.webContents.send('admin-update-state',state);},progress:state=>{if(win&&!win.isDestroyed())win.webContents.send('admin-update-state',{phase:'downloading',message:'Descargando actualización del Administrador…',percent:state.totalBytes?Math.round(state.bytes/state.totalBytes*100):null});}});
 handle('admin-update-check',async()=>adminUpdates.check());
 const tokenStore=require('./token-store.cjs').createAdminTokenStore({directory:app.getPath('userData'),safeStorage:require('electron').safeStorage,repository:engine.REPO,branch:engine.BRANCH});
+publicationConnection=require('./publication-connection.cjs').createPublicationConnection(adminAuth,tokenStore);
 function progress(message) { if(win&&!win.isDestroyed()) win.webContents.send('admin-progress',message); }
 function guard(event) { if(!win || event.sender!==win.webContents || event.senderFrame!==win.webContents.mainFrame) throw new Error('Solicitud no autorizada.'); }
 function handle(name,action) {ipcMain.handle(name,async(event,...args)=>{
   guard(event); if(busy) return {ok:false,error:'Espera a que termine la operación actual.'};
   busy=true; try{if(name==='admin-prepare'&&plan?.unresolved?.length)throw Error('Faltan fuentes oficiales exactas de '+plan.unresolved.length+' mods. Vuelve a analizar después de resolverlas.');if(!publicActions.has(name)){if(!['admin-packs','admin-select-pack','admin-create-pack','admin-token-status'].includes(name))await (localActions.has(name)?adminCatalogAccess.authorizeLocal():adminAuth.verifiedUsername());if(!activePack&&!['admin-packs','admin-select-pack','admin-create-pack','admin-token-status','admin-token-save','admin-token-clear'].includes(name))throw Error('Selecciona un modpack antes de continuar.');}return {ok:true,...await action(...args)};}catch(error){return{ok:false,error:error.message,retryAfter:error.retryAfter||0};}finally{busy=false;}
 });}
-handle('admin-token-status',async()=>await sharedConnection(true)?{saved:true,shared:true}:tokenStore.status());
+handle('admin-token-status',()=>publicationConnection.status());
 handle('admin-token-save',async token=>tokenStore.save(token));
 handle('admin-token-clear',async()=>tokenStore.clear());
 handle('admin-info',async()=>{
@@ -106,7 +108,7 @@ handle('admin-publish-design',async({packName,news,updates})=>{
 });
 handle('admin-output',async()=>{if(!output)throw new Error('No hay paquete preparado.');await shell.openPath(output);return{};});
 handle('admin-publish',async({token,tested,reviewed})=>{
-  token=await sharedConnection(true)?'villawolf_service_connection_1234':tokenStore.resolve(token);
+  token=await publicationConnection.token(token);
   if(!prepared||!plan)throw new Error('Prepara la actualización antes de publicarla.');
   if(!tested||!reviewed)throw new Error('Confirma las pruebas y la revisión del contenido.');
   const answer=await confirmPublication(win,{type:'warning',title:'Publicar actualización del modpack',
