@@ -18,14 +18,14 @@
 | Componente | Publicada | En desarrollo local | Situación |
 | --- | --- | --- | --- |
 | Launcher Windows x64 | **0.1.16** | El código sigue declarando **0.1.16**; no se ha asignado una siguiente versión | Release pública comprobada mediante API de GitHub. Instalador probado e instalado previamente en esta PC. |
-| Administrador Windows x64 | **0.1.17** | **0.1.18** | Instalador 0.1.18 generado y comprobado; Release admin-v0.1.18 devuelve 404. No está publicado ni instalado como actualización final. |
+| Administrador Windows x64 | **0.1.18** | **0.1.18**, sin versión posterior asignada | Release admin-v0.1.18 publicada; instalador y descargas comprobados, canal automático activado. No se instaló sobre el perfil habitual en esta entrega. |
 | Servicio Cloudflare villawolf-auth | Health informa **1.1.0** | Código local con integración opcional del bot | La versión del servicio es independiente de la de las aplicaciones. Integración del bot desplegada; versión activa 567cc551, ROLE_BOT_ENABLED=true. |
 | VillaWolf Bot local | No distribuido públicamente | **0.1.0** | Conectado en esta PC y sincronizado con producción; configuración cifrada. No distribuido como instalador. |
 
 Publicaciones verificadas:
 
 - [Launcher 0.1.16](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/v0.1.16).
-- [Administrador 0.1.17](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/admin-v0.1.17).
+- [Administrador 0.1.18](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/admin-v0.1.18).
 - La denominación **VillaWolf 1.1.0** aparece en propuestas y pruebas anteriores; no es la versión actual publicada del Launcher ni del Administrador.
 - Las versiones de los modpacks son independientes: la evidencia anterior corresponde a Mundo Conejil 0.1.6 y Minecraft Extremo 0.0.1. No se republicaron sus archivos para elaborar este informe.
 
@@ -80,7 +80,7 @@ Publicaciones verificadas:
 | Retirar lanzador del catálogo | Terminado. Confirmación y conservación de manifiestos históricos y carpeta original. |
 | Token local cifrado | Terminado. Guardar, indicador de conexión y borrar la copia para reemplazarla. No retorna el token al renderer ni lo incluye en paquetes. |
 | Publicación central sin repartir tokens | Implementada y desplegada. Administrador u Owner publica mediante el Worker con el token central; no recibe la credencial. |
-| Diferenciar fallo del servicio y ausencia de token | **Corregido en desarrollo 0.1.18**, todavía no distribuido. No transforma una pausa de Discord en Guarda el token. |
+| Diferenciar fallo del servicio y ausencia de token | **Corregido y publicado en 0.1.18**. No transforma una pausa de Discord en Guarda el token. |
 
 ## 3. Cambios recientes e historial desde 0.1.16
 
@@ -88,7 +88,7 @@ Publicaciones verificadas:
 | --- | --- | --- |
 | Launcher 0.1.16 | Reducción de consultas repetidas durante navegación/descargas; comprobación inicial de roles; pausa de Discord con explicación correcta; refresco de imágenes y uso del icono incluido en el paquete como respaldo; carpetas legibles y migración tolerante a carpetas ocupadas; apertura de raíz o carpeta individual según el botón. | Publicada y previamente instalada/verificada. No elimina los límites de Discord. |
 | Administrador 0.1.17 | Reutiliza brevemente la autorización para tareas locales, manteniendo comprobaciones sensibles; menús de edición directos; historial directo sin Consultar publicaciones; acciones del selector y Cerrar menú ordenadas; corrección/instalación de paquete y snapshots para recuperar el arranque. | Publicada y previamente instalada/verificada. |
-| Administrador 0.1.18 | Nuevo módulo publication-connection.cjs. Sólo una respuesta exitosa configured:false habilita el uso del token local. Los errores de Discord/red se conservan y no se convierten en token ausente. Agrupa consultas simultáneas de conexión. Mantiene verificaciones de publicación y mejora las instrucciones del paquete. | Código, pruebas e instalador local preparados; no publicado ni instalado como versión final. |
+| Administrador 0.1.18 | Nuevo módulo publication-connection.cjs. Sólo una respuesta exitosa configured:false habilita el uso del token local. Los errores de Discord/red se conservan y no se convierten en token ausente. Agrupa consultas simultáneas de conexión. Mantiene verificaciones de publicación y mejora las instrucciones del paquete. | Publicada; 39 pruebas específicas pasaron, arranque del ASAR con perfil aislado e integridad local/remota/pública comprobados; canal independiente activado. Instalación sobre perfil habitual pendiente. |
 | Bot local 0.1.0 / Worker sin nueva versión asignada | Proyecto aislado discord.js, ventana de configuración cifrada, bandeja y acceso local de escritorio. Worker local recibe actualizaciones firmadas/secuenciadas; sincronización completa, eventos de roles y control de desconexión/caducidad. Tablas adicionales creadas en D1; clave de conexión guardada por el propietario como Secret. Server Members Intent guardado en Discord y pertenencia del bot confirmada. | Integración desplegada y sincronización real comprobada. Falta ensayo de retirada/reposición de roles reales y desconexión/suspensión de la PC. |
 | Documentación, 13-10-2026 | Se crea ESTADO_DESARROLLO.md, se comprueban releases/rama/health y se ejecutan 201 pruebas existentes. Se añade una regla documental de mantenimiento para futuros cambios. | Cambio documental; no añade funciones a las aplicaciones. |
 
@@ -111,7 +111,7 @@ No se atribuyen cambios nuevos a versiones 0.1.17 del Launcher o 0.1.19 del Admi
 - La ventana local informa sincronización pendiente. running:true significa proceso iniciado, no servicio de permisos operativo.
 - La PC debe permanecer encendida, sin suspensión y con Internet. No se ha instalado inicio automático de Windows.
 
-### Corrección Administrador 0.1.18 — terminada localmente, distribución pendiente
+### Corrección Administrador 0.1.18 — publicada y verificada
 
 - Pruebas de pausa, primera consulta fallida, respuesta incompleta, ausencia central confirmada, recuperación y peticiones simultáneas.
 - Instalador generado; se comprobó que main.cjs y publication-connection.cjs dentro del ASAR coinciden con las fuentes.
@@ -143,7 +143,7 @@ No se atribuyen cambios nuevos a versiones 0.1.17 del Launcher o 0.1.19 del Admi
 | Problema | Situación |
 | --- | --- |
 | Pausas/contador Discord | **Persistente en producción.** Debe respetarse el límite del proveedor. Menos consultas y cachés ayudan, pero no autorizan a ignorar retry_after. Bot activo: el estado sincronizado evita esas consultas; la comprobación directa puede volver a mostrar límites si el bot no está disponible. |
-| Guarda el token después de una pausa | **Corregido localmente en Administrador 0.1.18.** La versión publicada 0.1.17 aún puede confundir fallo temporal con conexión ausente. No se acreditó un borrado periódico del token. |
+| Guarda el token después de una pausa | **Corregido y publicado en Administrador 0.1.18.** Las instalaciones que permanezcan en 0.1.17 aún pueden confundir fallo temporal con conexión ausente. No se acreditó un borrado periódico del token. |
 | Mundo no visible durante fallos temporales | Biblioteca persistente y mensajes implementados; requiere respuesta válida para actualizar permisos. No confundir invisibilidad/fallo de consulta con borrado de archivos. |
 | Fondo publicado no cambia tarjeta/inicio | Corregido en 0.1.16 con refresco y fallback a un recurso realmente empaquetado. Biblioteca instalada mostró ambos mundos con imagen. |
 | Administrador no arrancaba | Reparación previa de instalación/snapshots y comprobación del paquete 0.1.17. Sigue pendiente una matriz más amplia de actualizaciones en otras PCs. |
@@ -223,7 +223,7 @@ Servicio público: [villawolf-auth](https://villawolf-auth.tony-villalobos-mejia
 1. Ya verificado: pertenencia, estado de sincronización y despliegue. Pendiente comprobar retirada/reposición real de roles.
 2. Retirar/reponer rol real y comprobar biblioteca, descarga, JUGAR y publicación; probar desconexión/suspensión/reinicio del bot.
 3. Medir las consultas y pausas con varios usuarios y ambos clientes simultáneos.
-4. Instalar y publicar Administrador 0.1.18; publicar interfaz real bajo una pausa para confirmar que no pide un token inexistente.
+4. Instalar Administrador 0.1.18 sobre el perfil habitual y publicar interfaz real bajo una pausa para confirmar que no pide un token inexistente. La publicación y canal ya están verificados.
 5. Actualización automática entre versiones en otra PC; cierre inesperado, red interrumpida, carpetas ocupadas y conservación de sesiones/mundos.
 6. Partida real y entrada a mundo de cada modpack nuevo. El análisis aislado no reemplaza esa prueba.
 7. Microsoft oficial de extremo a extremo cuando haya autorización; Forge en otras combinaciones; Fabric/NeoForge tras implementarlos.
@@ -232,7 +232,7 @@ Servicio público: [villawolf-auth](https://villawolf-auth.tony-villalobos-mejia
 ## 10. Recomendaciones y orden de trabajo
 
 1. Completar conexión/despliegue del bot y probar permisos reales, manteniendo un acceso alternativo seguro cuando la PC esté apagada.
-2. Distribuir la corrección Administrador 0.1.18 después de verificarla instalada; no cambiar archivos del modpack por esta reparación.
+2. Verificar actualización de Administrador 0.1.17 a 0.1.18 sobre perfiles reales y en otra PC; la distribución ya está activa.
 3. Implementar servidor Discord por modpack con migración compatible para los existentes y autorización central de Administrador u Owner; probar acceso cruzado antes de publicar.
 4. Añadir métricas limitadas de consultas/latencia y estados de conexión, evitando registrar cuerpos OAuth, claves o datos privados. Respetar límites de Discord y del plan gratuito de D1.
 5. Revisar el caso de renovación OAuth/snapshot y la política de privacidad del bot antes de su uso general.
@@ -248,3 +248,13 @@ Este archivo representa el estado comprobado de la fecha indicada. La copia loca
 Código activo 567cc551 y activación en Production comprobados. Guardar la configuración desde una pestaña anterior activó brevemente la versión anterior del código; se volvió a desplegar el código preparado sobre la configuración vigente. La ruta firmada rechaza solicitudes sin firma (HTTP 401), y el bot confirmó sincronización. No se publicaron instaladores nuevos en este paso.
 
 Verificación adicional en D1: ready=1, señal recibida hacía 22 segundos y 5 miembros presentes sincronizados, mediante consulta agregada sin mostrar identidades ni roles individuales. Código/pruebas/privacidad sincronizados en preparacion-paso97, commit fb581aebe684ab95098433679fc75ebf789ed582.
+
+### Publicación Administrador 0.1.18, 13-10-2026
+
+- Se recompiló el instalador con la política de privacidad vigente. 39 pruebas del Administrador pasaron (0 fallos, 0 omitidas); son regresiones ya incluidas en pruebas anteriores, no 39 pruebas nuevas adicionales.
+- Arranque de main/preload/interfaz del paquete ASAR verificado con perfil aislado, sin usar ni modificar la sesión habitual. El primer criterio del ensayo buscaba un menú oculto antes de autenticar; se corrigió el criterio a la pantalla inicial y la prueba pasó.
+- ASAR verificado: versión 0.1.18, main y módulo de conexión iguales al código local, sin almacenes privados empaquetados. Instalador de 115.467.886 bytes; SHA-512 y tamaño coinciden con latest.yml.
+- Instalador, blockmap y latest.yml descargados desde GitHub y comparados mediante SHA-256 y tamaño. Release admin-v0.1.18 publicada; canal updates/admin/latest.yml activado mediante commit f40e1c901479c09cd974eb02956b56372ccaf83b. El latest general de GitHub sigue siendo v0.1.16 del Launcher.
+- Código de esta corrección sincronizado mediante commit 6c34fcfe90da34718f085f76265529ccb069045e. No cambia catálogo, versiones del modpack ni archivos del juego.
+
+Comprobación del actualizador real desde 0.1.17: inicialmente el CDN de GitHub devolvió latest.yml 0.1.17 pese a que el commit contenía 0.1.18. Tras propagarse, el canal público devolvió 0.1.18 y NsisUpdater detectó correctamente la actualización desde 0.1.17. La prueba no descargó ni instaló automáticamente en el perfil habitual. El Administrador instalado comprueba al abrir, descarga la versión nueva y espera a que no haya tareas antes de reiniciarse e instalarla.
