@@ -12,7 +12,7 @@
       "id": "pack-1686e2b84fd253dc",
       "name": "Minecraft Extremo",
       "roleId": "1558938399300390952",
-      "enabled": true,
+      "enabled": false,
       "manifestPath": "updates/packs/pack-1686e2b84fd253dc/stable.json"
     }
   ]
