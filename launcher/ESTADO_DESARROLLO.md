@@ -435,3 +435,14 @@ Se añade auditoría de cambios confirmados sólo en catálogo (rol, servidor o 
 - **Cierre de mantenimiento:** retiradas además 15 preparaciones locales obsoletas de Mundo Conejil 0.1.5/0.1.6 (450153697 bytes), compuestas sólo por manifiestos y metadatos de revisión/publicación. No contenían mundos. Total local retirado: 6541477836 bytes.
 - **Pendiente concreto:** los dos canales oficiales de avisos de aplicaciones niegan Enviar mensajes al bot. Discord rechazó que el propio bot cambie esos permisos (HTTP 403); se requiere sesión del propietario en el navegador para habilitar el envío exclusivamente en esos canales. La cola conserva los avisos para reintento. Registro privado de publicaciones sí se ha entregado.
 - **Servicio activo:** Worker 1.2.2, despliegue 39e003ab confirmado en Cloudflare; bot reiniciado con la credencial cifrada existente y plantilla de eliminación actualizada. 7/7 pruebas de releases/cola aprobadas tras el ajuste de sondeo. Administrador 0.1.25 y Launcher 0.1.18 confirmados también en los paquetes instalados de esta PC.
+
+
+## VillaWolf Bot 0.2.1 — instalador y acceso administrativo (en desarrollo)
+
+- Interfaz oscura con acentos amarillos y logos existentes de VillaWolf.
+- Instalador Windows x64 independiente en preparación; todavía no se declara publicado.
+- Autenticación Discord reutiliza el servicio central con propósito `admin`: exige Administrador u Owner del Discord oficial. Antes de guardar el token, copiar la clave de conexión e iniciar se comprueba acceso en el servidor. La sesión administrativa se guarda cifrada separadamente.
+- El token del bot se conserva cifrado en la PC; nunca se incorpora al instalador ni se descarga automáticamente por iniciar sesión. Las cuentas autorizadas de esta PC pueden utilizarlo. No existe sincronización de tokens entre computadoras.
+- Pruebas automatizadas del control de acceso: 5 casos aprobados (sin sesión, permiso rechazado, autorizado, revocación y cierre). Inicio OAuth real de esta versión pendiente de comprobar con el propietario.
+- Repositorio: `tonyvillalobosmejia-netizen/champagne-vol5-modpack`, rama `preparacion-paso97`, código bajo `launcher/`. Esta copia local no contiene `.git`.
+- Los resultados manuales propuestos previamente por el propietario siguen pendientes de autorización documental; no se han agregado como pruebas propias.
