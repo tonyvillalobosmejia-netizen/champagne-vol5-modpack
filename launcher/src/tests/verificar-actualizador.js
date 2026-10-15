@@ -6,6 +6,7 @@ const os = require("node:os");
 const vm = require("node:vm");
 const crypto = require("node:crypto");
 const { test } = require("node:test");
+const { EventEmitter } = require("node:events");
 const guards = require("../champagne-update-paths");
 const hash = data => crypto.createHash("sha256").update(data).digest("hex");
 const entry = (name, bytes = "new") => ({ path: "mods/" + name, url: "https://example.invalid/" + name, sha256: hash(bytes) });
@@ -14,6 +15,10 @@ const manifest = files => ({ packId: "champagne-vol5", version: "0.1.0", expecte
 function sandbox(t, document, options = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "champagne99-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const app = new EventEmitter();
+  app.getPath = () => root;
+  app.whenReady = () => ({ then() {} });
+  t.after(() => app.emit('quit'));
   const appRoot = path.join(root, "MiLauncher");
   let instance = path.join(appRoot, "instances", "principal");
   const metadata = path.join(appRoot, "metadata");
@@ -23,7 +28,7 @@ function sandbox(t, document, options = {}) {
   const context = vm.createContext({
     require: name => {
       if (name === "electron") return {
-        app: { getPath: () => root, whenReady: () => ({ then() {} }), on() {} },
+        app,
         BrowserWindow: { getAllWindows: () => [] }, ipcMain: {}, shell: {}
       };
       if (name === "./config") return { ...require("../config"), catalogEnabled:false, manifestUrl: options.disabled ? "" : "https://example.invalid/manifest" };
@@ -54,6 +59,7 @@ function sandbox(t, document, options = {}) {
       if (name === "./champagne-official-sources") return require("../champagne-official-sources");
       if (name === "node:fs") return disk;
       if(name==='./champagne-session-store')return require('../champagne-session-store');
+      if(name.startsWith('./'))return require(path.resolve(__dirname,'..',name));
       return require(name);
     }, Buffer, process, console, __dirname: path.resolve(__dirname, "..")
   });
