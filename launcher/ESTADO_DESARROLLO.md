@@ -11,7 +11,7 @@
 - **Administrador 0.1.21:** formulario oscuro de cuatro pestañas, borradores locales, imagen inicial, validaciones reales y comprobación de comunidades externas. Crear borrador no publica ni anuncia.
 - **Launcher 0.1.18:** cuenta renovada, Discord obligatorio/Microsoft opcional, código de dispositivo copiado automáticamente y avatar de Discord o skin oficial Premium.
 - **Worker 1.2.0 desplegado:** migraciones aditivas 0004–0006 ejecutadas, ROLE_BOT_MULTI_GUILD=true y ADMIN_RELEASE_CHANNEL_ID configurado y verificado por UI. Roles, cola y auditoría implementados. No se cambiaron secretos ni tablas anteriores.
-- **Bot 0.2.0 actualizado localmente, bloqueado:** el token existente sigue guardado cifrado pero Discord devuelve HTTP 401 al comprobar su identidad. Requiere un token válido introducido por el propietario. No declarar sincronización ni anuncios automáticos operativos hasta reconectarlo. La comprobación directa de Discord sigue disponible como respaldo.
+- **Bot 0.2.0 conectado:** el propietario reemplazó la credencial; comprobación de identidad por Discord aprobada y estado local «Bot conectado. Roles sincronizados». Los dos canales privados de Racoon mantienen los cinco permisos necesarios. La comprobación directa de Discord sigue disponible como respaldo.
 - **Racoon Team:** bot y mensajes reales comprobados anteriormente en ambos canales privados, sin Administrador; la credencial dejó de ser aceptada al retomar el 15 de octubre. Canales y rol de pruebas se conservan.
 - **Pendiente de integración real:** cola completa, auditoría de una publicación y filtrado externo con el bot reconectado. Automatizados aprobados; no presentar como ensayo real completo.
 
@@ -52,7 +52,7 @@ El propietario aportó el 14 de octubre de 2026 una captura del correo «AppID R
 | Launcher Windows x64 | **0.1.18** | **0.1.18** | Release publicada, descargas e integridad verificadas; arranque en perfil aislado. Instalación habitual no actualizada por este ensayo. |
 | Administrador Windows x64 | **0.1.21** | **0.1.21** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
 | Servicio Cloudflare villawolf-auth | **1.2.0** | **1.2.0** | Health confirmado; comunidades externas, auditoría y cola desplegados. ROLE_BOT_ENABLED y ROLE_BOT_MULTI_GUILD activos. |
-| VillaWolf Bot local | No distribuido como instalador | **0.2.0** | Código actualizado, token persistido cifrado; Discord rechaza la credencial actual con 401. Pendiente reconectar. |
+| VillaWolf Bot local | No distribuido como instalador | **0.2.0** | Código actualizado, token persistido cifrado; identidad y conexión verificadas el 15 de octubre. Roles sincronizados. |
 
 Publicaciones verificadas:
 
@@ -358,3 +358,7 @@ NsisUpdater real confirmó Launcher 0.1.17 desde 0.1.16 y Administrador 0.1.20 d
 - Código publicado en preparacion-paso97, commit ccede4e65f629238ad9e396c08e305e221439cae. Canales activados por commit posterior, sin sobrescribir historial.
 - No se modificaron modpacks publicados, mundos ni carpetas originales de CurseForge para esta actualización de aplicaciones.
 - El token del bot no se borra al reiniciar ni actualizar: se restaura desde bot-credentials.bin mediante safeStorage. No puede autorrenovarse si Discord lo revoca; el propietario debe reemplazarlo de forma privada.
+
+### Reconexión del bot — 15 de octubre de 2026
+
+El propietario reemplazó el token de forma privada. Discord users/@me y las comprobaciones de pertenencia/permisos de Racoon responden correctamente. El estado del bot confirma conexión y roles sincronizados. El bloqueo HTTP 401 anterior queda corregido. No se repitió la batería de pruebas ni una publicación de modpack real; la cola completa y auditoría de una publicación siguen pendientes de ensayo real.
