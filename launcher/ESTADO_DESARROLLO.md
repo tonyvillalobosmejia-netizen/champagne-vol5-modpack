@@ -6,7 +6,7 @@
 
 ## Publicación actual — 15 de octubre de 2026
 
-- **Publicados y verificados:** Launcher 0.1.18 y Administrador 0.1.23. Descarga pública de instaladores, blockmaps y latest.yml comprobada por SHA-256/tamaño; canales de actualización activados.
+- **Publicados y verificados:** Launcher 0.1.18 y Administrador 0.1.24. Descarga pública de instaladores, blockmaps y latest.yml comprobada por SHA-256/tamaño; canales de actualización activados.
 - **Pruebas:** 268 aprobadas, 0 fallos; arranque de ambos paquetes en perfiles aislados aprobado. No se repitieron todas las combinaciones de Minecraft ni la instalación habitual de esta PC.
 - **Administrador 0.1.23:** formulario oscuro de cuatro pestañas, borradores locales, imagen inicial, validaciones reales y comprobación de comunidades externas. Crear borrador no publica ni anuncia.
 - **Launcher 0.1.18:** cuenta renovada, Discord obligatorio/Microsoft opcional, código de dispositivo copiado automáticamente y avatar de Discord o skin oficial Premium.
@@ -50,7 +50,7 @@ El propietario aportó el 14 de octubre de 2026 una captura del correo «AppID R
 | Componente | Publicada | En desarrollo local | Situación |
 | --- | --- | --- | --- |
 | Launcher Windows x64 | **0.1.18** | **0.1.18** | Release publicada, descargas e integridad verificadas; arranque en perfil aislado. Instalación habitual no actualizada por este ensayo. |
-| Administrador Windows x64 | **0.1.23** | **0.1.24** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
+| Administrador Windows x64 | **0.1.24** | **0.1.24** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
 | Servicio Cloudflare villawolf-auth | **1.2.0** | **1.2.0** | Health confirmado; comunidades externas, auditoría y cola desplegados. ROLE_BOT_ENABLED y ROLE_BOT_MULTI_GUILD activos. |
 | VillaWolf Bot local | No distribuido como instalador | **0.2.0** | Código actualizado, token persistido cifrado; identidad y conexión verificadas el 15 de octubre. Roles sincronizados. |
 
@@ -386,7 +386,7 @@ El propietario reemplazó el token de forma privada. Discord users/@me y las com
 
 ## Administrador 0.1.24 — flujo de publicación simplificado
 
-**Estado: implementado y probado localmente; publicación pendiente.** Repositorio `tonyvillalobosmejia-netizen/champagne-vol5-modpack`, rama `preparacion-paso97` (código remoto bajo `launcher/`; checkout local sin .git).
+**Estado: publicado y verificado.** Repositorio `tonyvillalobosmejia-netizen/champagne-vol5-modpack`, rama `preparacion-paso97` (código remoto bajo `launcher/`; checkout local sin .git).
 
 - El botón inferior ejecuta «Analizar y continuar», «Preparar y comprobar» y «Revisar publicación» según la etapa. Se retiran de la vista los botones de análisis/preparación duplicados. Se conservan selección de contenido, hashes, fuentes oficiales, prueba del juego y confirmación final.
 - Después del éxito, el estado queda «Publicado», el botón se desactiva y no se vuelve a invocar publicación. Un análisis/paquete nuevo reinicia el estado. Cancelaciones y fallos permiten reintentar sin perder la preparación.
@@ -394,3 +394,10 @@ El propietario reemplazó el token de forma privada. Discord users/@me y las com
 - Anuncio y auditoría figuraban en cola según el registro del propietario; entrega en Discord no verificada en esta corrección.
 - Pruebas específicas: 19 aprobadas, 0 fallos, incluyendo secuencia analizar/preparar/publicar, bloqueo del segundo envío, nueva preparación y reintentos tras cancelación/error. Los ensayos de servicios usan fixtures; no son una publicación real de modpack.
 - Sin cambios en Launcher, Bot, Cloudflare, mundos, historial, sesiones ni archivos originales de CurseForge.
+
+### Evidencia de publicación 0.1.24
+
+- Release pública: https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/admin-v0.1.24 . Código: `374c547312471a24e32e16cde6eb8e47624f7b58`; canal Administrador: `5f3a6dcc14af25447dca8a89e9762690c7baddc8`.
+- Instalador, blockmap y latest.yml descargados públicamente y verificados por tamaño/SHA-256. Instalador: `a93b569b3b0743de47a40325a218398a5f0cdc02240fbc42b87df9da24dcc0fe` (115482367 bytes). ASAR: 357 archivos, fuentes coincidentes, sin almacenes privados. Arranque del paquete aprobado en perfil aislado. No se ha ejecutado el instalador sobre el perfil habitual del propietario.
+- El canal latest del Launcher sigue en v0.1.18. No se desplegó Cloudflare ni se republicaron modpacks.
+- Crear y continuar a publicación usa la misma activación de manifiesto y catálogo: el ensayo integrado verifica que el lanzador pasa de no estar publicado a aparecer al consultar la biblioteca para su rol, permite descargar/arrancar con fixtures y rechaza al retirar el rol. No requiere otra publicación manual del catálogo. Un Launcher abierto debe consultar la biblioteca para recibir el cambio; no se implementó envío en tiempo real a ventanas abiertas.
