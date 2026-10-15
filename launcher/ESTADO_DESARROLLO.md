@@ -1,18 +1,19 @@
 # Estado de desarrollo de VillaWolf
 
-**Actualizado:** 14 de octubre de 2026 (America/Mexico_City).
+**Actualizado:** 15 de octubre de 2026 (America/Mexico_City).
 **Alcance:** VillaWolf Launcher, VillaWolf Administrador, autenticación/publicación central y bot de roles.
 **Propósito:** compartir avances y pendientes con otra persona o ChatGPT sin conceder permisos para modificar código.
 
-## Actualización en preparación: Launcher 0.1.18 / Administrador 0.1.21 (14 de octubre de 2026)
+## Publicación actual — 15 de octubre de 2026
 
-- **Parcial, no publicado:** formulario de cuatro pestañas, guardado compacto de borradores, imagen inicial y diseño avanzado local. El borrador no publica ni anuncia.
-- **Verificado automáticamente:** seis pruebas del modelo y almacenamiento del borrador; veinte pruebas de catálogo/autenticación, incluida pertenencia al servidor externo sin exigir Gestionar servidor y comprobación de roles/canales/permisos; tres pruebas de seguridad de plantillas de anuncios.
-- **Parcial:** bot prepara metadatos firmados y sincronización por comunidad. Migración aditiva 0004_communities.sql preparada localmente; no aplicada a producción.
-- **Implementado localmente y probado automáticamente:** cola persistente de anuncios, seguimiento de releases y auditoría central con cambios reales. Pendiente activar el servicio y verificar la integración real. El canal elegido por el propietario es registro del Discord oficial.
-- **Prueba visual:** cuatro pestañas revisadas en navegador aislado con API ficticia y comprobaciones pendientes explícitas. No es evidencia de preparación, publicación ni arranque del juego.
-- **Racoon Team:** se creó una categoría privada de pruebas, dos canales privados y un rol verde sin permisos administrativos. Se conservarán al terminar. Bot presente y envío/lectura reales confirmados en ambos canales privados; sin Administrador. La cola completa todavía no verificada en producción.
-- Versiones publicadas sin cambios: Launcher 0.1.17, Administrador 0.1.20. No se desplegó Cloudflare ni se reinició el bot de producción.
+- **Publicados y verificados:** Launcher 0.1.18 y Administrador 0.1.21. Descarga pública de instaladores, blockmaps y latest.yml comprobada por SHA-256/tamaño; canales de actualización activados.
+- **Pruebas:** 268 aprobadas, 0 fallos; arranque de ambos paquetes en perfiles aislados aprobado. No se repitieron todas las combinaciones de Minecraft ni la instalación habitual de esta PC.
+- **Administrador 0.1.21:** formulario oscuro de cuatro pestañas, borradores locales, imagen inicial, validaciones reales y comprobación de comunidades externas. Crear borrador no publica ni anuncia.
+- **Launcher 0.1.18:** cuenta renovada, Discord obligatorio/Microsoft opcional, código de dispositivo copiado automáticamente y avatar de Discord o skin oficial Premium.
+- **Worker 1.2.0 desplegado:** migraciones aditivas 0004–0006 ejecutadas, ROLE_BOT_MULTI_GUILD=true y ADMIN_RELEASE_CHANNEL_ID configurado y verificado por UI. Roles, cola y auditoría implementados. No se cambiaron secretos ni tablas anteriores.
+- **Bot 0.2.0 actualizado localmente, bloqueado:** el token existente sigue guardado cifrado pero Discord devuelve HTTP 401 al comprobar su identidad. Requiere un token válido introducido por el propietario. No declarar sincronización ni anuncios automáticos operativos hasta reconectarlo. La comprobación directa de Discord sigue disponible como respaldo.
+- **Racoon Team:** bot y mensajes reales comprobados anteriormente en ambos canales privados, sin Administrador; la credencial dejó de ser aceptada al retomar el 15 de octubre. Canales y rol de pruebas se conservan.
+- **Pendiente de integración real:** cola completa, auditoría de una publicación y filtrado externo con el bot reconectado. Automatizados aprobados; no presentar como ensayo real completo.
 
 ### Compatibilidad con Minecraft
 
@@ -31,9 +32,9 @@ El propietario aportó el 14 de octubre de 2026 una captura del correo «AppID R
 
 ### Registro de cambios de cada publicación
 
-**Implementado localmente; no desplegado:** el evento de publicación confirmada compara el manifiesto del commit con su padre y añade a la auditoría privada versión anterior/nueva, cantidades de mods y archivos añadidos/modificados/retirados y cambios de nombre, Minecraft/Forge, fondo, noticias, tarjeta de actualizaciones y notas. No copia rutas locales, credenciales ni contenido de configuraciones. Una publicación sólo de diseño no afirma haber cambiado mods ni versión. El mensaje divide resúmenes largos para respetar los límites de Discord.
+**Desplegado en Worker 1.2.0; entrega pendiente de reconectar el bot:** el evento de publicación confirmada compara el manifiesto del commit con su padre y añade a la auditoría privada versión anterior/nueva, cantidades de mods y archivos añadidos/modificados/retirados y cambios de nombre, Minecraft/Forge, fondo, noticias, tarjeta de actualizaciones y notas. No copia rutas locales, credenciales ni contenido de configuraciones. Una publicación sólo de diseño no afirma haber cambiado mods ni versión. El mensaje divide resúmenes largos para respetar los límites de Discord.
 
-**Verificación:** 11 pruebas de resumen, plantillas y cola pasaron el 14 de octubre de 2026 (3 nuevas para el resumen real y sus límites). Falta verificar este registro contra una publicación y un envío reales en Discord, tras la autorización de despliegue.
+**Verificación:** 11 pruebas de resumen, plantillas y cola pasaron el 14 de octubre de 2026 (3 nuevas para el resumen real y sus límites). Falta verificar este registro contra una publicación y un envío reales en Discord con el bot reconectado.
 
 ## Cómo leer y mantener este informe
 
@@ -48,12 +49,15 @@ El propietario aportó el 14 de octubre de 2026 una captura del correo «AppID R
 
 | Componente | Publicada | En desarrollo local | Situación |
 | --- | --- | --- | --- |
-| Launcher Windows x64 | **0.1.17** | **0.1.18** | Release publicada, descargas e integridad verificadas; arranque en perfil aislado. Instalación habitual no actualizada por este ensayo. |
-| Administrador Windows x64 | **0.1.20** | **0.1.21** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
-| Servicio Cloudflare villawolf-auth | Health informa **1.1.0** | Código local con integración opcional del bot | La versión del servicio es independiente de la de las aplicaciones. Integración del bot desplegada; versión activa 475d159f, ROLE_BOT_ENABLED=true. |
-| VillaWolf Bot local | No distribuido públicamente | **0.1.0** | Conectado en esta PC y sincronizado con producción; configuración cifrada. No distribuido como instalador. |
+| Launcher Windows x64 | **0.1.18** | **0.1.18** | Release publicada, descargas e integridad verificadas; arranque en perfil aislado. Instalación habitual no actualizada por este ensayo. |
+| Administrador Windows x64 | **0.1.21** | **0.1.21** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
+| Servicio Cloudflare villawolf-auth | **1.2.0** | **1.2.0** | Health confirmado; comunidades externas, auditoría y cola desplegados. ROLE_BOT_ENABLED y ROLE_BOT_MULTI_GUILD activos. |
+| VillaWolf Bot local | No distribuido como instalador | **0.2.0** | Código actualizado, token persistido cifrado; Discord rechaza la credencial actual con 401. Pendiente reconectar. |
 
 Publicaciones verificadas:
+
+- [Launcher 0.1.18](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/v0.1.18).
+- [Administrador 0.1.21](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/admin-v0.1.21).
 
 - [Launcher 0.1.16](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/v0.1.16).
 - [Administrador 0.1.19](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/admin-v0.1.19).
@@ -117,6 +121,9 @@ Publicaciones verificadas:
 
 | Componente / versión | Cambios reales | Estado |
 | --- | --- | --- |
+| Launcher 0.1.18 | Cuenta con botones de plataformas, Microsoft guiado, código automático y avatares Discord/skin oficial; compatibilidad de catálogo por servidor. | Publicada; paquete y arranque verificados |
+| Administrador 0.1.21 | Creación visual de cuatro pestañas en oscuro, borradores compactos y comunidades con anuncios opcionales. | Publicada; 268 pruebas y arranque aislado aprobados |
+| Servicio 1.2.0 / Bot 0.2.0 | Metadatos por comunidad, cola persistente, anuncios de releases y auditoría con cambios reales. | Worker desplegado; bot pendiente por token 401 |
 | Launcher 0.1.16 | Reducción de consultas repetidas durante navegación/descargas; comprobación inicial de roles; pausa de Discord con explicación correcta; refresco de imágenes y uso del icono incluido en el paquete como respaldo; carpetas legibles y migración tolerante a carpetas ocupadas; apertura de raíz o carpeta individual según el botón. | Publicada y previamente instalada/verificada. No elimina los límites de Discord. |
 | Administrador 0.1.17 | Reutiliza brevemente la autorización para tareas locales, manteniendo comprobaciones sensibles; menús de edición directos; historial directo sin Consultar publicaciones; acciones del selector y Cerrar menú ordenadas; corrección/instalación de paquete y snapshots para recuperar el arranque. | Publicada y previamente instalada/verificada. |
 | Administrador 0.1.18 | Nuevo módulo publication-connection.cjs. Sólo una respuesta exitosa configured:false habilita el uso del token local. Los errores de Discord/red se conservan y no se convierten en token ausente. Agrupa consultas simultáneas de conexión. Mantiene verificaciones de publicación y mejora las instrucciones del paquete. | Publicada; 39 pruebas específicas pasaron, arranque del ASAR con perfil aislado e integridad local/remota/pública comprobados; canal independiente activado. Instalación sobre perfil habitual pendiente. |
@@ -345,3 +352,9 @@ NsisUpdater real confirmó Launcher 0.1.17 desde 0.1.16 y Administrador 0.1.20 d
 - Versiones locales: Launcher 0.1.18, Administrador 0.1.21, Bot 0.2.0, Worker 1.2.0. Instaladores en compilación; todavía no publicados en el momento de este registro.
 - Migraciones aditivas 0004, 0005 y 0006 ejecutadas correctamente en D1; no modifican tablas de sesiones existentes. Punto de recuperación previo guardado.
 - El propietario pidió priorizar la publicación: se limita el cierre a arranque, permisos e integridad, sin otra ronda exhaustiva.
+
+### Cierre de publicación — 15 de octubre de 2026
+
+- Código publicado en preparacion-paso97, commit ccede4e65f629238ad9e396c08e305e221439cae. Canales activados por commit posterior, sin sobrescribir historial.
+- No se modificaron modpacks publicados, mundos ni carpetas originales de CurseForge para esta actualización de aplicaciones.
+- El token del bot no se borra al reiniciar ni actualizar: se restaura desde bot-credentials.bin mediante safeStorage. No puede autorrenovarse si Discord lo revoca; el propietario debe reemplazarlo de forma privada.
