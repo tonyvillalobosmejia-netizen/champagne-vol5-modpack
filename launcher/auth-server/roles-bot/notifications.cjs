@@ -1,5 +1,5 @@
 'use strict';
-const crypto=require('node:crypto'),{message,auditMessage}=require('./announcement.cjs');
+const crypto=require('node:crypto'),{message,auditMessage,diagnosticMessage}=require('./announcement.cjs');
 function createNotificationClient({endpoint,key,fetcher=fetch,clock=Date.now}){
  const url=new URL(endpoint);if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash||!/^[a-f0-9]{64}$/.test(key||''))throw Error('Conexión de anuncios inválida.');
  async function request(action,fields){
@@ -9,9 +9,10 @@ function createNotificationClient({endpoint,key,fetcher=fetch,clock=Date.now}){
    if(!r.ok)throw Error('Sincronización de anuncios pendiente (HTTP '+r.status+').');
    return r.json();
  }
- return{poll:async guildIds=>(await request('poll',{guildIds})).job,ack:result=>request('ack',{result})};
+ return{problem:report=>request('problem',{report}),diagnostic:id=>request('diagnostic',{id}),poll:async guildIds=>(await request('poll',{guildIds})).job,ack:result=>request('ack',{result})};
 }
-async function deliver(job,{client,ack,fetcher=fetch}){
+async function deliver(job,{client,ack,fetcher=fetch,onProblem=()=>{}}){
+ const problem=error=>{if(job.payload.kind!=='diagnostic')onProblem(error,'announcement-delivery');};
  const marker='Ref '+job.id.slice(0,24);
  const report=(outcome,extra={})=>ack({id:job.id,claimToken:job.claimToken,outcome,...extra});
  let channel;
@@ -26,10 +27,10 @@ async function deliver(job,{client,ack,fetcher=fetch}){
      const oldest=Math.min(...[...messages.values()].map(m=>m.createdTimestamp));
      if(messages.size===100&&oldest>job.createdAt)return report('uncertain',{retryAfterMs:300000});
    }
- }catch{return report('uncertain',{retryAfterMs:300000});}
+ }catch(error){problem(error);return report('uncertain',{retryAfterMs:300000});}
  let payload;
  try{
-   payload=job.payload.kind==='audit'?auditMessage(job.payload):message(job.payload);
+   payload=job.payload.kind==='diagnostic'?{...diagnosticMessage(job.payload),components:require('./diagnostics.cjs').diagnosticButtons(job.id)}:job.payload.kind==='audit'?auditMessage(job.payload):message(job.payload);
    for(const embed of payload.embeds)embed.footer={text:embed.footer.text+' · '+marker};
    if(job.payload.kind==='modpack'&&job.payload.manifestPath&&job.payload.commit){
      if(!/^[a-f0-9]{40}$/.test(job.payload.commit)||!/^updates\/(?:stable-v2\.json|packs\/[a-z0-9][a-z0-9-]{0,63}\/stable\.json)$/.test(job.payload.manifestPath))throw Error('Ruta de imagen inválida.');
@@ -45,20 +46,20 @@ async function deliver(job,{client,ack,fetcher=fetch}){
        payload.embeds[0].image={url:'attachment://portada.jpg'};
      }
    }
- }catch{return report('retry',{retryAfterMs:300000});}
+ }catch(error){problem(error);return report('retry',{retryAfterMs:300000});}
  try{
    const sent=await channel.send({...payload,nonce:job.id.slice(0,24),enforceNonce:true});
    return report('sent',{messageId:sent.id});
  }catch(error){
-   const status=Number(error.status);
+   problem(error);const status=Number(error.status);
    // A response explicitly rejecting the send is safe to retry. Network failures are ambiguous.
    if([400,401,403,404,429].includes(status))return report('retry',{retryAfterMs:status===429?Math.max(30000,Number(error.retry_after||60)*1000):300000});
    return report('uncertain',{retryAfterMs:300000});
  }
 }
-function startNotifications({client,endpoint,key,onStatus=()=>{},fetcher=fetch}){
- const service=createNotificationClient({endpoint,key,fetcher});let stopped=false,busy=false;
- async function tick(){if(stopped||busy||!client.isReady())return;busy=true;try{const guildIds=[...client.guilds.cache.keys()].slice(0,50),job=await service.poll(guildIds);if(job)await deliver(job,{client,ack:service.ack,fetcher});}catch{onStatus('Anuncios pendientes. Se reintentará sin duplicar publicaciones.');}finally{busy=false;}}
- const timer=setInterval(tick,15000);timer.unref?.();return{tick,stop:()=>{stopped=true;clearInterval(timer);}};
+function startNotifications({client,endpoint,key,onStatus=()=>{},onProblem=()=>{},fetcher=fetch}){
+ const service=createNotificationClient({endpoint,key,fetcher});const onInteraction=i=>require('./diagnostics.cjs').diagnosticInteraction(i,{service}).catch(()=>{});client.on('interactionCreate',onInteraction);let stopped=false,busy=false,lastAnnouncement='unknown';
+ async function tick(){if(stopped||busy||!client.isReady())return;busy=true;try{const guildIds=[...client.guilds.cache.keys()].slice(0,50),job=await service.poll(guildIds);if(job)await deliver(job,{client,fetcher,onProblem,ack:async result=>{const value=await service.ack(result);lastAnnouncement=result.outcome==='sent'?'sent':'pending';onStatus(lastAnnouncement==='sent'?'Anuncio entregado.':'Anuncio pendiente; se reintentará sin duplicarlo.',{domain:'announcements'});return value;}});else if(lastAnnouncement!=='pending')onStatus('Cola consultada; sin envíos disponibles ahora.',{domain:'announcements'});}catch(error){onProblem(error,'announcements');onStatus('Anuncios pendientes. Se reintentará sin duplicar publicaciones.',{domain:'announcements'});}finally{busy=false;}}
+ const timer=setInterval(tick,15000);timer.unref?.();return{tick,stop:()=>{stopped=true;clearInterval(timer);client.off?.('interactionCreate',onInteraction);}};
 }
 module.exports={createNotificationClient,deliver,startNotifications};

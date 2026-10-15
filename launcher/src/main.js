@@ -54,6 +54,10 @@ let selectedJava = null;
 let forgeInstallBusy = false;
 let repairController = null;
 const recentActivity = [];
+const appActivity=[];
+const problemReporter=require('./champagne-problem-reporter').createProblemReporter({app:'launcher',version:config.launcherVersion,store:createSessionStore({directory:app.getPath('userData'),safeStorage:require('electron').safeStorage,scope:'launcher-errors',filename:'application-errors.bin'}),account:()=>authClient.status().user,send:report=>authClient.reportProblem(report)});
+require('./champagne-problem-monitor').monitorProblems({app,reporter:problemReporter,activity:()=>appActivity.join('\n')});
+const handleLauncher=require('./champagne-problem-monitor').reportingHandler(ipcMain,problemReporter,()=>appActivity.join('\n'));
 let progressTime = 0;
 let lastProblem = "";
 // CONFIGURACIÓN DEL LAUNCHER
@@ -154,31 +158,37 @@ function hideDeletedPacks(){const ids=new Set(deletionQueue.ids());authorizedCat
 function publishCatalog(){for(const win of BrowserWindow.getAllWindows())win.webContents.send('pack-catalog',{ok:true,packs:authorizedCatalog,selectedId:selectedPack?.id||null});}
 async function verifySelectedPack(browseOnly=false){if(!config.catalogEnabled)return;if(!selectedPack)throw Error('Elige un modpack autorizado en tu biblioteca.');const result=browseOnly?{pack:(await authClient.catalogForDownloads()).catalog.packs.find(p=>p.id===selectedPack.id)}:await authClient.verifyPack(selectedPack.id);if(!result.pack)throw Error('No tienes el rol de este modpack.');const pack=validateCatalog({schemaVersion:1,packs:[result.pack]}).packs[0];if(pack.id!==selectedPack.id)throw Error('Acceso a modpack inválido.');config.manifestUrl=channelFor(pack);return pack;}
 async function selectPack(id,fromLibrary=false,verifiedCatalogPack=null){
+ const selectionUserId=authClient.status().user?.id;
  if(libraryOperationBusy&&!fromLibrary)throw Error("Espera a que termine la operación de la biblioteca.");
  if(!config.catalogEnabled)throw Error('La biblioteca todavía no está disponible.');
  if(deletionQueue.ids().includes(id))throw Error('Este lanzador fue eliminado por la administración.');
  if(minecraftProcess||launchBusy||accountLaunchBusy||repairController?.busy||packUpdateBusy||automaticPreparation.busy||gamePreparationPending||manualDialogBusy)throw Error('Cierra Minecraft y espera a que termine la tarea antes de cambiar de modpack.');
  const available=verifiedCatalogPack||(catalogUserId===authClient.status().user?.id?authorizedCatalog.find(p=>p.id===id):null);const result=available?{pack:available}:await authClient.verifyPack(id),pack=validateCatalog({schemaVersion:1,packs:[result.pack]}).packs[0];
  const manifest=validateAssistedManifest(JSON.parse((await requestBuffer(channelFor(pack))).toString('utf8')));
+ if(authClient.status().user?.id!==selectionUserId||deletionQueue.ids().includes(id)||available&&!authorizedCatalog.some(p=>p.id===id))throw Error('La cuenta o los permisos de la biblioteca cambiaron durante la selección.');
  if(manifest.packId!==pack.id||manifest.game?.serverId!==pack.id)throw Error('El manifiesto no corresponde al modpack seleccionado.');
  selectGame(manifest);selectedPack=pack;config.manifestUrl=channelFor(pack);downloadInboxSession=null;packPresentation={packName:manifest.game.packName,version:manifest.version,presentation:validatePresentation(manifest.presentation)};
  presentationCache=path.join(app.getPath('userData'),'pack-presentations',pack.id+'.json');writeAtomic(selectedPackFile,Buffer.from(JSON.stringify({id:pack.id})));
  publishCatalog();return {ok:true,selectedId:pack.id};
 }
-const packCardImages=new Map();
-async function packCardImage(pack){const cached=packCardImages.get(pack.id);try{const manifest=JSON.parse((await requestBuffer(channelFor(pack))).toString('utf8'));if(manifest.packId!==pack.id||manifest.game?.serverId!==pack.id)throw Error('Imagen de otro modpack.');const presentation=validatePresentation(manifest.presentation),background=viewPresentation(presentation)?.background;const native=background?nativeImage.createFromDataURL(background):nativeImage.createFromBuffer(fs.readFileSync(path.join(__dirname,'assets','villawolf-icon.png')));if(native.isEmpty())throw Error('Fondo inválido.');const image='data:image/jpeg;base64,'+native.resize({width:512}).toJPEG(82).toString('base64');packCardImages.set(pack.id,{time:Date.now(),image,game:manifest.game});if(selectedPack?.id===pack.id){packPresentation={packName:manifest.game.packName,version:manifest.version,presentation};}return image;}catch{return cached?.image||null;}}
+const packCardImages=new Map(),packCardPending=new Map();
+const libraryHydrator=require('./champagne-library-hydrator').createLibraryHydrator();
+async function packCardImage(pack){const cached=packCardImages.get(pack.id);if(cached&&cached.url===channelFor(pack)&&Date.now()-cached.time<45000)return cached.image;if(packCardPending.has(pack.id))return packCardPending.get(pack.id);const pending=packCardImageNow(pack);packCardPending.set(pack.id,pending);try{return await pending;}finally{packCardPending.delete(pack.id);}}
+async function packCardImageNow(pack){const cached=packCardImages.get(pack.id);try{const manifest=JSON.parse((await requestBuffer(channelFor(pack))).toString('utf8'));if(manifest.packId!==pack.id||manifest.game?.serverId!==pack.id)throw Error('Imagen de otro modpack.');const presentation=validatePresentation(manifest.presentation),background=viewPresentation(presentation)?.background;const native=background?nativeImage.createFromDataURL(background):nativeImage.createFromBuffer(fs.readFileSync(path.join(__dirname,'assets','villawolf-icon.png')));if(native.isEmpty())throw Error('Fondo inválido.');const image='data:image/jpeg;base64,'+native.resize({width:512}).toJPEG(82).toString('base64');packCardImages.set(pack.id,{time:Date.now(),url:channelFor(pack),image,game:manifest.game,presentation,version:manifest.version});return image;}catch(error){problemReporter.capture(error,{operation:'library-image',log:appActivity.join('\n')});return cached?.image||null;}}
 function packInstalled(pack){try{const game=validateGame(packCardImages.get(pack.id)?.game,{},'9999.0.0');if(game.serverId!==pack.id)return false;const dirs=pathsForGame(appRoot,game,{named:true,migrate:false});return fs.existsSync(path.join(dirs.metadataDir,'installed.json'))&&fs.existsSync(path.join(dirs.instanceDir,'mods'));}catch{return false;}}
 let catalogPending=null;
 async function refreshCatalog(){if(catalogPending)return catalogPending;catalogPending=refreshCatalogNow();try{return await catalogPending;}finally{catalogPending=null;}}
 async function refreshCatalogNow(){
  if(!config.catalogEnabled)return {ok:true,packs:[],selectedId:null,disabled:true};
  const userId=authClient.status().user?.id;
- if(!userId){authorizedCatalog=[];selectedPack=null;catalogUserId=null;openingVerifiedUserId=null;publishCatalog();return{ok:false,packs:[],selectedId:null,message:'Inicia sesión con Discord para ver tus mundos.'};}
+ if(!userId){libraryHydrator.cancel();authorizedCatalog=[];selectedPack=null;catalogUserId=null;openingVerifiedUserId=null;publishCatalog();return{ok:false,packs:[],selectedId:null,message:'Inicia sesión con Discord para ver tus mundos.'};}
  if(catalogUserId!==userId){authorizedCatalog=libraryCache.read(userId);catalogUserId=userId;selectedPack=null;hideDeletedPacks();}
- try{if(openingVerifiedUserId!==userId){await authClient.verifiedUsername();if(authClient.status().user?.id!==userId)throw Error('La cuenta cambió durante la comprobación.');openingVerifiedUserId=userId;}const result=await authClient.catalog();const validated=validateCatalog(result.catalog);deletionQueue.receive(validated.deletedPacks||[]);hideDeletedPacks();try{deletionQueue.flush();}catch(error){sendStatus('La limpieza del lanzador eliminado está pendiente: '+error.message,'error');}authorizedCatalog=await Promise.all(validated.packs.filter(p=>!deletionQueue.ids().includes(p.id)).map(async pack=>({...pack,background:await packCardImage(pack),installed:packInstalled(pack)})));libraryCache.save(userId,authorizedCatalog);if(selectedPack&&!authorizedCatalog.some(p=>p.id===selectedPack.id))selectedPack=null;
-  if(!selectedPack&&authorizedCatalog.length&&!minecraftProcess&&!launchBusy&&!libraryOperationBusy){let prior;try{prior=JSON.parse(fs.readFileSync(selectedPackFile,'utf8')).id;}catch{}const pack=authorizedCatalog.find(p=>p.id===prior)||authorizedCatalog[0];await selectPack(pack.id,false,pack);}
-  publishCatalog();return {ok:true,packs:authorizedCatalog,selectedId:selectedPack?.id||null};
- }catch(error){if(error.code==='LAUNCHER_UPDATE_REQUIRED'){const result=await launchProblem(error);publishCatalog();return {...result,packs:authorizedCatalog,selectedId:selectedPack?.id||null};}if(error.status===401||error.status===403||!authClient.status().user){authorizedCatalog=[];libraryCache.clear();if(!minecraftProcess)selectedPack=null;}hideDeletedPacks();publishCatalog();return {ok:false,packs:authorizedCatalog,message:error.message+(authorizedCatalog.length?' Tus mundos siguen visibles; el permiso para jugar se comprobará al iniciarlos.':''),retryAfter:error.retryAfter||0,selectedId:selectedPack?.id||null,stale:authorizedCatalog.length>0};}
+ try{const result=await authClient.catalog();if(authClient.status().user?.id!==userId)throw Error('La cuenta cambió durante la comprobación.');openingVerifiedUserId=userId;const validated=validateCatalog(result.catalog);deletionQueue.receive(validated.deletedPacks||[]);hideDeletedPacks();try{deletionQueue.flush();}catch(error){sendStatus('La limpieza del lanzador eliminado está pendiente: '+error.message,'error');}const previous=new Map(authorizedCatalog.map(p=>[p.id,p]));authorizedCatalog=validated.packs.filter(p=>!deletionQueue.ids().includes(p.id)).map(pack=>({...pack,background:packCardImages.get(pack.id)?.image||previous.get(pack.id)?.background||null,installed:packCardImages.has(pack.id)?packInstalled(pack):!!previous.get(pack.id)?.installed}));libraryCache.save(userId,authorizedCatalog);if(selectedPack&&!authorizedCatalog.some(p=>p.id===selectedPack.id))selectedPack=null;
+  publishCatalog();
+  const snapshot=authorizedCatalog;
+  setImmediate(()=>libraryHydrator.run(snapshot,{isCurrent:()=>authClient.status().user?.id===userId&&authorizedCatalog===snapshot,hydrate:packCardImage,onPatch:(pack,background)=>{const item=snapshot.find(p=>p.id===pack.id);if(!item||deletionQueue.ids().includes(pack.id))return;item.background=background;item.installed=packInstalled(pack);const cached=packCardImages.get(pack.id);if(selectedPack?.id===pack.id&&cached)packPresentation={packName:cached.game.packName,version:cached.version,presentation:cached.presentation};publishCatalog();}}).then(async current=>{if(!current)return;libraryCache.save(userId,authorizedCatalog);if(!selectedPack&&authorizedCatalog.length&&!minecraftProcess&&!launchBusy&&!libraryOperationBusy){let prior;try{prior=JSON.parse(fs.readFileSync(selectedPackFile,'utf8')).id;}catch{}const pack=authorizedCatalog.find(p=>p.id===prior)||authorizedCatalog[0];await selectPack(pack.id,false,pack);}}).catch(error=>problemReporter.capture(error,{operation:'library-background',log:appActivity.join('\n')})));
+  return {ok:true,packs:authorizedCatalog,selectedId:selectedPack?.id||null};
+ }catch(error){if(error.code==='LAUNCHER_UPDATE_REQUIRED'){const result=await launchProblem(error);publishCatalog();return {...result,packs:authorizedCatalog,selectedId:selectedPack?.id||null};}if(error.status===401||error.status===403||authClient.status().user?.id!==userId){libraryHydrator.cancel();authorizedCatalog=[];libraryCache.clear();if(!minecraftProcess||authClient.status().user?.id!==userId)selectedPack=null;}hideDeletedPacks();publishCatalog();return {ok:false,packs:authorizedCatalog,message:error.message+(authorizedCatalog.length?' Tus mundos siguen visibles; el permiso para jugar se comprobará al iniciarlos.':''),retryAfter:error.retryAfter||0,selectedId:selectedPack?.id||null,stale:authorizedCatalog.length>0};}
 }
 function selectGame(manifest, fromRepair = false) {
   const game = validateGame(manifest.game,defaultGame,config.launcherVersion || "0.1.4");
@@ -198,7 +208,8 @@ function selectGame(manifest, fromRepair = false) {
   ensureDirs();
 }
 
-function sendStatus(message, kind = "info") {
+function sendStatus(message, kind = "info",source='application') {
+  if(source==='application'){appActivity.push(require('./champagne-diagnostic').clean(message,600));if(appActivity.length>100)appActivity.shift();if(kind==='error')problemReporter.capture(Error(message),{operation:'launcher',log:appActivity.join('\n')});}
   recentActivity.push(`[${new Date().toISOString()}] ${redact(message)}`);
   if (recentActivity.length > 150) recentActivity.shift();
   if (kind === "success") sendProgress({ phase: "complete", label: message, done: 1, total: 1 }, true);
@@ -1048,7 +1059,7 @@ async function launchForgePrepared() {
     child.on("close", code => {
       minecraftProcess = null; publishPlayState();
       stream.end();
-      sendStatus(code === 0 ? "Minecraft se cerró normalmente." : `Minecraft terminó con código ${code}. Revisa logs/champagne-launcher.log. ${tail.slice(-450)}`, code === 0 ? "info" : "error");
+      sendStatus(code === 0 ? "Minecraft se cerró normalmente." : `Minecraft terminó con código ${code}. Revisa logs/champagne-launcher.log. ${tail.slice(-450)}`, code === 0 ? "info" : "error", "minecraft");
     });
   });
 }
@@ -1134,7 +1145,7 @@ repairController = createRepair({
   status: sendStatus, progress: sendProgress
 });
 app.whenReady().then(() => {
-  ipcMain.handle('uninstall-launcher', async event => {
+  handleLauncher('uninstall-launcher', async event => {
     if (!app.isPackaged) return {ok:false,message:'La desinstalación está disponible en la aplicación instalada.'};
     const busy=()=>minecraftProcess || accountLaunchBusy || launchBusy || gamePreparationPending || repairController?.busy || packUpdateBusy || automaticPreparation.busy || manualDialogBusy || libraryOperationBusy || forgeInstallBusy || nativePrepBusy || gameDownloadBusy || launcherUpdates.ready || ['checking','downloading','waiting','restarting'].includes(launcherUpdates.getState().phase);
     if (busy()) return {ok:false,message:'Cierra Minecraft y espera a que terminen las descargas o actualizaciones antes de desinstalar.'};
@@ -1152,25 +1163,25 @@ app.whenReady().then(() => {
     await new Promise((resolve,reject)=>{child.once('spawn',resolve);child.once('error',reject);});child.unref();setImmediate(()=>app.quit());
     return {ok:true,message:'Desinstalando VillaWolf…'};
   });
-  ipcMain.handle("open-discord", async () => { const guildId=selectedPack?.guildId;const url=typeof guildId==='string'&&/^\d{17,20}$/.test(guildId)&&guildId!=='1007732653035880589'?'https://discord.com/channels/'+guildId:'https://discord.gg/K2uWjjEJu';await shell.openExternal(url); return { ok: true, message: 'Discord de esta comunidad abierto.' }; });
-  ipcMain.handle("close-launcher", () => { setImmediate(() => app.quit()); return { ok: true }; });
-  ipcMain.handle("memory-profiles", () => memoryProfiles(os.totalmem()));
-  ipcMain.handle("diagnostics", (_event, message) => { lastProblem = typeof message === "string" ? message.slice(0, 8000) : ""; return { ...explainError(lastProblem), log: diagnostics() }; });
-  ipcMain.handle("copy-diagnostics", () => { clipboard.writeText(diagnostics()); return { ok: true, message: "Registro copiado." }; });
-  ipcMain.handle('open-error-log',async()=>{const dir=path.join(instanceDir,'logs');fs.mkdirSync(dir,{recursive:true});const file=path.join(dir,'villawolf-diagnostico.txt');writeAtomic(file,Buffer.from(diagnostics(),'utf8'));const error=await shell.openPath(file);return {ok:!error,message:error||'Registro abierto.'};});
-  ipcMain.handle("open-logs", async () => { const dir = path.join(instanceDir, "logs"); fs.mkdirSync(dir, { recursive: true }); const error = await shell.openPath(dir); return { ok: !error, message: error || "Carpeta de registros abierta." }; });
-  ipcMain.handle("repair-installation", async () => {
+  handleLauncher("open-discord", async () => { const guildId=selectedPack?.guildId;const url=typeof guildId==='string'&&/^\d{17,20}$/.test(guildId)&&guildId!=='1007732653035880589'?'https://discord.com/channels/'+guildId:'https://discord.gg/K2uWjjEJu';await shell.openExternal(url); return { ok: true, message: 'Discord de esta comunidad abierto.' }; });
+  handleLauncher("close-launcher", () => { setImmediate(() => app.quit()); return { ok: true }; });
+  handleLauncher("memory-profiles", () => memoryProfiles(os.totalmem()));
+  handleLauncher("diagnostics", (_event, message) => { lastProblem = typeof message === "string" ? message.slice(0, 8000) : ""; return { ...explainError(lastProblem), log: diagnostics() }; });
+  handleLauncher("copy-diagnostics", () => { clipboard.writeText(diagnostics()); return { ok: true, message: "Registro copiado." }; });
+  handleLauncher('open-error-log',async()=>{const dir=path.join(instanceDir,'logs');fs.mkdirSync(dir,{recursive:true});const file=path.join(dir,'villawolf-diagnostico.txt');writeAtomic(file,Buffer.from(diagnostics(),'utf8'));const error=await shell.openPath(file);return {ok:!error,message:error||'Registro abierto.'};});
+  handleLauncher("open-logs", async () => { const dir = path.join(instanceDir, "logs"); fs.mkdirSync(dir, { recursive: true }); const error = await shell.openPath(dir); return { ok: !error, message: error || "Carpeta de registros abierta." }; });
+  handleLauncher("repair-installation", async () => {
     try { return await repairController.run(); }
     catch (error) { sendStatus(error.message, "error"); return { ok: false, message: error.message }; }
   });
   ensureDirs();
     // Leer configuración del launcher
-  ipcMain.handle("get-settings", () => {
+  handleLauncher("get-settings", () => {
     return getSettings();
   });
 
   // Guardar configuración del launcher
-  ipcMain.handle("save-settings", (_event, settings) => {
+  handleLauncher("save-settings", (_event, settings) => {
     try {
       return saveSettings(settings);
     } catch (error) {
@@ -1180,7 +1191,7 @@ app.whenReady().then(() => {
       };
     }
   });
-  ipcMain.handle("account-avatar", async () => {
+  handleLauncher("account-avatar", async () => {
     const user=microsoftClient.status().user,username=avatarUsername(),discord=authClient.status().user,source=avatarChoice.get(discord?.id,!!user);
     if(source==='discord'){
       try{const url=new URL(discord?.avatarUrl);if(url.origin!=='https://cdn.discordapp.com'||!/^\/(?:avatars\/\d{17,20}\/(?:a_)?[a-f0-9]{32}\.png|embed\/avatars\/[0-5]\.png)$/.test(url.pathname)||url.username||url.password||url.hash)throw Error();const cacheKey=discord.id+'|'+url.href;let image=discordAvatarCache.get(cacheKey);if(!image){const response=await fetch(url,{redirect:'error',signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error();const chunks=[];let bytes=0;for await(const chunk of response.body){bytes+=chunk.length;if(bytes>256*1024)throw Error();chunks.push(Buffer.from(chunk));}const decoded=nativeImage.createFromBuffer(Buffer.concat(chunks));if(decoded.isEmpty())throw Error();image=decoded.resize({width:128,height:128}).toDataURL();if(discordAvatarCache.size>10)discordAvatarCache.clear();discordAvatarCache.set(cacheKey,image);}if(authClient.status().user?.id!==discord.id)return{ok:true,image:null,source:'discord'};return{ok:true,image,kind:'image',source:'discord'};}catch{return{ok:true,image:null,source:'discord'};}
@@ -1198,29 +1209,29 @@ app.whenReady().then(() => {
     }
     return {ok:true,image:null};
   });
-  ipcMain.handle("set-account-avatar-source",(_event,source)=>{try{return{ok:true,source:avatarChoice.set(authClient.status().user?.id,source,!!microsoftClient.status().user)};}catch(error){return{ok:false,message:error.message};}});
-  ipcMain.handle("auth-status", () => ({...authClient.status(),microsoft:microsoftClient.status()}));
+  handleLauncher("set-account-avatar-source",(_event,source)=>{try{return{ok:true,source:avatarChoice.set(authClient.status().user?.id,source,!!microsoftClient.status().user)};}catch(error){return{ok:false,message:error.message};}});
+  handleLauncher("auth-status", () => ({...authClient.status(),microsoft:microsoftClient.status()}));
   const accountOperation = action => {
     if (microsoftOperationBusy || microsoftClient.status().busy) return {ok:false,message:"Espera o cancela la solicitud Microsoft."};
     if (minecraftProcess || accountLaunchBusy) return { ok: false, message: "Espera a que termine el inicio y cierra Minecraft antes de cambiar de cuenta." };
     return action();
   };
   const microsoftOperation=action=>accountOperation(async()=>{microsoftOperationBusy=true;try{return await action();}finally{microsoftOperationBusy=false;}});
-  ipcMain.handle("auth-register", (_event, input) => accountOperation(() => authClient.register(input)));
-  ipcMain.handle("auth-login", (_event, input) => accountOperation(() => authClient.login(input)));
-  ipcMain.handle("auth-discord-login", () => accountOperation(() => authClient.loginDiscord()));
-  ipcMain.handle("auth-discord-cancel", () => authClient.cancelDiscordLogin());
-  ipcMain.handle('microsoft-open-verification',async()=>{if(!microsoftDeviceState||microsoftDeviceState.expiresAt<=Date.now())return{ok:false,message:'Genera un código nuevo para continuar.'};await shell.openExternal('https://microsoft.com/devicelogin');return{ok:true};});
-  ipcMain.handle('microsoft-copy-code',()=>{if(!microsoftDeviceState||microsoftDeviceState.expiresAt<=Date.now())return{ok:false,message:'El código venció. Genera uno nuevo.'};const copied=require('./champagne-microsoft-device').copyDeviceCode(microsoftDeviceState,clipboard);return{ok:copied.copied,message:copied.copied?'Código copiado. Pégalo en Microsoft.':'No se pudo copiar; selecciona el código y cópialo.'};});
-  ipcMain.handle('microsoft-status',()=>microsoftClient.status());
-  ipcMain.handle('microsoft-login',()=>microsoftOperation(async()=>{
+  handleLauncher("auth-register", (_event, input) => accountOperation(() => authClient.register(input)));
+  handleLauncher("auth-login", (_event, input) => accountOperation(() => authClient.login(input)));
+  handleLauncher("auth-discord-login", () => accountOperation(() => authClient.loginDiscord()));
+  handleLauncher("auth-discord-cancel", () => authClient.cancelDiscordLogin());
+  handleLauncher('microsoft-open-verification',async()=>{if(!microsoftDeviceState||microsoftDeviceState.expiresAt<=Date.now())return{ok:false,message:'Genera un código nuevo para continuar.'};await shell.openExternal('https://microsoft.com/devicelogin');return{ok:true};});
+  handleLauncher('microsoft-copy-code',()=>{if(!microsoftDeviceState||microsoftDeviceState.expiresAt<=Date.now())return{ok:false,message:'El código venció. Genera uno nuevo.'};const copied=require('./champagne-microsoft-device').copyDeviceCode(microsoftDeviceState,clipboard);return{ok:copied.copied,message:copied.copied?'Código copiado. Pégalo en Microsoft.':'No se pudo copiar; selecciona el código y cópialo.'};});
+  handleLauncher('microsoft-status',()=>microsoftClient.status());
+  handleLauncher('microsoft-login',()=>microsoftOperation(async()=>{
    await authClient.verifiedUsername();
    const result=await dialog.showMessageBox({type:'info',title:'Cuenta Minecraft Java',message:'Usar tu identidad oficial de Minecraft',detail:'Al vincular Microsoft, Minecraft usará tu nombre y UUID oficiales. Podrías aparecer con otro inventario en mundos que usaban tu identidad local. Tus mundos se conservarán.',buttons:['Continuar','Cancelar'],defaultId:1,cancelId:1});
    return result.response===0?microsoftClient.login():{ok:true,cancelled:true,...microsoftClient.status()};
   }));
-  ipcMain.handle('microsoft-cancel',()=>microsoftClient.cancel());
-  ipcMain.handle('microsoft-logout',()=>accountOperation(()=>microsoftClient.logout()));
-  ipcMain.handle('microsoft-skin',(_event,variant)=>microsoftOperation(async()=>{
+  handleLauncher('microsoft-cancel',()=>microsoftClient.cancel());
+  handleLauncher('microsoft-logout',()=>accountOperation(()=>microsoftClient.logout()));
+  handleLauncher('microsoft-skin',(_event,variant)=>microsoftOperation(async()=>{
    try{
     if(!['classic','slim'].includes(variant))throw Error('Elige el tipo de brazos.');
     if(!microsoftClient.status().user)throw Error('Inicia sesión con Microsoft.');
@@ -1235,54 +1246,54 @@ app.whenReady().then(() => {
     return await microsoftClient.uploadSkin(image.toPNG(),variant);
    }catch(e){return {ok:false,message:e.message};}
   }));
-  ipcMain.handle("auth-logout", () => accountOperation(async()=>{microsoftClient.logout();selectedPack=null;authorizedCatalog=[];catalogUserId=null;libraryCache.clear();publishCatalog();return {...await authClient.logout(),microsoft:microsoftClient.status()};}));
-  ipcMain.handle("get-local-profile", () => getLocalProfile());
-  ipcMain.handle("save-local-profile", (_event, username) => saveLocalProfile(username));
-  ipcMain.handle("play-state",()=>playState());
-  ipcMain.handle("launch-forge", async () => {
+  handleLauncher("auth-logout", () => accountOperation(async()=>{microsoftClient.logout();selectedPack=null;authorizedCatalog=[];catalogUserId=null;libraryCache.clear();publishCatalog();return {...await authClient.logout(),microsoft:microsoftClient.status()};}));
+  handleLauncher("get-local-profile", () => getLocalProfile());
+  handleLauncher("save-local-profile", (_event, username) => saveLocalProfile(username));
+  handleLauncher("play-state",()=>playState());
+  handleLauncher("launch-forge", async () => {
     if (accountLaunchBusy) return { ok: false, message: "Minecraft se está iniciando." };
     accountLaunchBusy = true; publishPlayState();
     try { return await launchForge(); }
     catch (e) { return await launchProblem(e); }
     finally { accountLaunchBusy = false; publishPlayState(); }
   });
-  ipcMain.handle("prepare-game", async () => {
+  handleLauncher("prepare-game", async () => {
     try { await prepareSelectedGame(); return {ok:true,message:"Java, Minecraft y Forge preparados."}; }
     catch (e) { return await launchProblem(e); }
   });
-  ipcMain.handle("prepare-windows-natives", async () => {
+  handleLauncher("prepare-windows-natives", async () => {
     try { return await manualPreparation(prepareWindowsNatives); }
     catch (e) { sendStatus(e.message, "error"); return {ok:false,message:e.message}; }
   });
-  ipcMain.handle("download-game-files", async () => {
+  handleLauncher("download-game-files", async () => {
     try { return await manualPreparation(downloadGameFiles); }
     catch (e) { sendStatus(e.message, "error"); return { ok: false, message: e.message }; }
   });
-  ipcMain.handle("prepare-minecraft", async () => {
+  handleLauncher("prepare-minecraft", async () => {
     try { return await manualPreparation(prepareMinecraftMetadata); }
     catch (e) { sendStatus(e.message, "error"); return { ok: false, message: e.message }; }
   });
-  ipcMain.handle('pack-download',async(_event,id)=>{
+  handleLauncher('pack-download',async(_event,id)=>{
     if(libraryOperationBusy||minecraftProcess||launchBusy||accountLaunchBusy||manualDialogBusy||packUpdateBusy||repairController?.busy)return{ok:false,message:'Espera a que termine la tarea o cierra Minecraft.'};libraryOperationBusy=true;publishPlayState();
     try{await selectPack(id,true);const manifest=await prepareSelectedGame();const result=await verifyPackBeforePlay(manifest);return{...result,selectedId:id};}catch(error){return launchProblem(error);}finally{libraryOperationBusy=false;publishPlayState();}
   });
-  ipcMain.handle('pack-remove-local',async(event,id)=>{
+  handleLauncher('pack-remove-local',async(event,id)=>{
     if(libraryOperationBusy||minecraftProcess||launchBusy||accountLaunchBusy||manualDialogBusy||packUpdateBusy||automaticPreparation.busy||repairController?.busy)return{ok:false,message:'Cierra Minecraft y espera a que termine la tarea.'};libraryOperationBusy=true;publishPlayState();
     try{if(typeof id!=='string'||!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id))throw Error('Lanzador inválido.');const localPack=authorizedCatalog.find(p=>p.id===id),name=localPack?.name||(currentGame.serverId===id?currentGame.packName:id);const {confirmPublication}=require('./champagne-pack-confirmation');const answer=await confirmPublication(BrowserWindow.fromWebContents(event.sender),{title:'Borrar instalación y mundos',message:'¿Eliminar la instalación local de '+name+'?',detail:'Se borrarán permanentemente los mods, configuraciones, mundos, capturas y archivos de este lanzador en esta PC. No se puede deshacer desde VillaWolf. No cambia el catálogo ni las instalaciones de otros jugadores.',buttons:['Cancelar','Eliminar definitivamente']});if(answer.response!==1)return{ok:true,cancelled:true};const result=require('./champagne-pack-purge').purgePack({root:appRoot,userData:app.getPath('userData'),id});downloadInboxSession=null;packCardImages.delete(id);const item=authorizedCatalog.find(p=>p.id===id);if(item)item.installed=false;publishCatalog();return{ok:true,...result,message:'Instalación, mundos y configuraciones locales eliminados.'};}catch(error){return{ok:false,message:error.message};}finally{libraryOperationBusy=false;publishPlayState();}
   });
-  ipcMain.handle('pack-open-folder',async(_event,id)=>{try{await selectPack(id);ensureDirs();await shell.openPath(instanceDir);return{ok:true};}catch(error){return{ok:false,message:error.message};}});
+  handleLauncher('pack-open-folder',async(_event,id)=>{try{await selectPack(id);ensureDirs();await shell.openPath(instanceDir);return{ok:true};}catch(error){return{ok:false,message:error.message};}});
   const deletionTimer=setInterval(()=>{try{hideDeletedPacks();deletionQueue.flush();}catch(error){sendStatus('Limpieza pendiente: '+error.message,'error');}},5000);deletionTimer.unref();
   const catalogTimer=setInterval(()=>{if(authClient.status().user&&!minecraftProcess&&!launchBusy&&!libraryOperationBusy&&!packUpdateBusy)refreshCatalog().catch(()=>{});},60000);catalogTimer.unref();
-  ipcMain.handle("pack-catalog",()=>refreshCatalog());
-  ipcMain.handle("select-pack",async(_event,id)=>{try{return await selectPack(id);}catch(error){if(error.code==='LAUNCHER_UPDATE_REQUIRED')return launchProblem(error);return {ok:false,message:error.message};}});
-  ipcMain.handle("get-info", () => ({
+  handleLauncher("pack-catalog",()=>refreshCatalog());
+  handleLauncher("select-pack",async(_event,id)=>{try{return await selectPack(id);}catch(error){if(error.code==='LAUNCHER_UPDATE_REQUIRED')return launchProblem(error);return {ok:false,message:error.message};}});
+  handleLauncher("get-info", () => ({
     catalogEnabled:config.catalogEnabled,selectedPackId:selectedPack?.id||null,
     packName: config.catalogEnabled&&!selectedPack?"Tus modpacks":packPresentation?.packName || config.packName, subtitle: config.packSubtitle,
     presentation:config.catalogEnabled&&!selectedPack?null:viewPresentation(packPresentation?.presentation),packVersion:selectedPack||!config.catalogEnabled?packPresentation?.version:null,
     minecraftVersion: config.minecraftVersion, forgeVersion: config.forgeVersion,
     javaMajor:config.javaMajor || 17, launcherVersion:config.launcherVersion, instanceDir, appRoot
   }));
-  ipcMain.handle('refresh-presentation',async()=>{
+  handleLauncher('refresh-presentation',async()=>{
     try{
       const manifest=await assistedManifest();
       const game=validateGame(manifest.game,defaultGame,config.launcherVersion);
@@ -1297,22 +1308,22 @@ app.whenReady().then(() => {
       packPresentation=next;return{ok:true};
     }catch(error){return{ok:false,message:error.message};}
   });
-  ipcMain.handle("launcher-update-status",()=>launcherUpdates.getState());
-  ipcMain.handle("check-launcher-update",()=>launcherUpdates.check());
-  ipcMain.handle("install-forge", async () => {
+  handleLauncher("launcher-update-status",()=>launcherUpdates.getState());
+  handleLauncher("check-launcher-update",()=>launcherUpdates.check());
+  handleLauncher("install-forge", async () => {
     try { return await manualPreparation(installForge); }
     catch (e) { sendStatus(e.message, "error"); return { ok: false, message: e.message }; }
   });
-  ipcMain.handle("update-pack", async () => {
+  handleLauncher("update-pack", async () => {
     if (repairController?.busy) return { ok: false, message: "Espera a que termine la reparación." };
     try { const manifest=await assistedManifest({freshPermission:true});selectGame(manifest);return await applyUpdates(manifest); }
     catch (e) { sendStatus(e.message, "error"); return { ok: false, message: e.message }; }
   });
-  ipcMain.handle("assisted-status", async () => {
+  handleLauncher("assisted-status", async () => {
     try { return await assistedStatus(); }
     catch (error) { return { ok: false, message: error.message }; }
   });
-  ipcMain.handle('assisted-download-all',async()=>{
+  handleLauncher('assisted-download-all',async()=>{
     if(minecraftProcess||manualDialogBusy||packUpdateBusy||automaticPreparation.busy||repairController?.busy||accountLaunchBusy)return{ok:false,message:'Espera a que termine la preparación o cierra Minecraft.'};
     manualDialogBusy=true;
     try{const manifest=await assistedManifest({freshPermission:true});selectGame(manifest);const manual=manualDownloads(manifest),pending=new Set(manual.pending().map(e=>e.path)),entries=manifest.files.filter(e=>pending.has(e.path));const rejected=[],accepted=[];
@@ -1321,7 +1332,7 @@ app.whenReady().then(() => {
       return{ok:true,accepted,rejected,missing:manual.pending(),version:manifest.version,expectedFiles:manifest.expectedFiles,remote:!!config.manifestUrl,message:accepted.length+' mods verificados.'};
     }catch(error){return{ok:false,message:error.message};}finally{manualDialogBusy=false;}
   });
-  ipcMain.handle("assisted-open-page", async (_event, relative) => {
+  handleLauncher("assisted-open-page", async (_event, relative) => {
     try {
       const manifest = await assistedManifest({freshPermission:true});
       const entry = manifest.files.find(e => e.path === relative);
@@ -1330,7 +1341,7 @@ app.whenReady().then(() => {
       return { ok: true, message: "Versión exacta abierta. Descarga el JAR en Descargas; el launcher lo detectará y verificará automáticamente." };
     } catch (error) { return { ok: false, message: error.message }; }
   });
-  ipcMain.handle("assisted-import", async event => {
+  handleLauncher("assisted-import", async event => {
     if (repairController?.busy || manualDialogBusy || packUpdateBusy) return { ok: false, message: "Espera a que termine la operación actual." };
     manualDialogBusy = true;
     try {
@@ -1347,7 +1358,7 @@ app.whenReady().then(() => {
     } catch (error) { return { ok: false, message: error.message }; }
     finally { manualDialogBusy = false; }
   });
-  ipcMain.handle("assisted-scan-downloads", async () => {
+  handleLauncher("assisted-scan-downloads", async () => {
     try {
       if (!downloadInboxSession || downloadInboxSession.game !== gameKey(currentGame)) return { ok: false, message: "Vuelve a revisar el modpack para detectar descargas." };
       if (manualDialogBusy || packUpdateBusy) return { ok: true, busy: true };
@@ -1357,13 +1368,13 @@ app.whenReady().then(() => {
         canInstall: !minecraftProcess && !repairController?.busy && !launchBusy && !automaticPreparation.busy && !forgeInstallBusy && !nativePrepBusy && !gameDownloadBusy };
     } catch (error) { return { ok: false, message: error.message }; }
   });
-  ipcMain.handle("assisted-install", async () => {
+  handleLauncher("assisted-install", async () => {
     if (repairController?.busy) return { ok: false, message: "Espera a que termine la reparación." };
     if (manualDialogBusy) return { ok: false, message: "Termina de importar los archivos antes de instalar." };
     try { const manifest=await assistedManifest({freshPermission:true});selectGame(manifest);return await applyUpdates(manifest); }
     catch (error) { sendStatus(error.message, "error"); return { ok: false, message: error.message }; }
   });
-  ipcMain.handle("open-folder", async () => {
+  handleLauncher("open-folder", async () => {
     ensureDirs();
     await shell.openPath(path.join(appRoot,"instances"));
     return { ok: true };

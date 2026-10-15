@@ -1,3 +1,4 @@
+import {createApplicationReports} from './application-reports.mjs';
 import {publicationMetadata} from './publication-metadata.mjs';
 // Servicio gratuito Workers + D1. Sin contraseñas, bot ni permisos de administrador.
 const catalogUrl='https://raw.githubusercontent.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/preparacion-paso97/updates/catalog.json';
@@ -487,6 +488,15 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
     await outbox.enqueue(env,{eventId:id,guildId:env.DISCORD_GUILD_ID,channelId:'1414678783679795425',payload:{kind:'audit',action:input.action,actorName:session.user.discordName||session.user.username,name:input.name,...(version?{version}:{})}});
     return{ok:true,recorded:true};
   }
+  const applicationReports=createApplicationReports({clock,digest,outbox});
+  async function applicationProblem(env,token,input){
+    if(!validNonce(token))throw new AuthError(401,'Inicia sesión con Discord.');
+    const row=await env.DB.prepare('SELECT * FROM discord_sessions WHERE token_hash=? AND expires_at>?').bind(await digest(token),clock()).first();if(!row)throw new AuthError(401,'La sesión venció.');
+    let bundle;try{bundle=JSON.parse(await decrypt(env,row.encrypted_access_token));}catch{throw new AuthError(403,'Se requiere una sesión actual de VillaWolf.');}
+    if(!['launcher','admin'].includes(input.app)||!['launcher-v2','admin'].includes(bundle.purpose)||input.app==='admin'&&bundle.purpose!=='admin'||input.app==='bot')throw new AuthError(403,'Aplicación de diagnóstico no autorizada.');
+    const reportBucket=await digest('application-errors:'+row.discord_id+':'+Math.floor(clock()/300000));const budget=await env.DB.prepare('INSERT INTO discord_limits VALUES(?,1,?) ON CONFLICT(bucket) DO UPDATE SET count=count+1 RETURNING count').bind(reportBucket,clock()+300000).all();if(budget.results[0].count>5)throw new AuthError(429,'Diagnósticos pendientes. Se reintentará más tarde.');
+    return applicationReports.record(env,input,{id:row.discord_id,name:row.discord_name||row.username});
+  }
   async function notifications(request,env){
     if(env.ROLE_BOT_ENABLED!=='true'||!/^[a-f0-9]{64}$/.test(env.ROLE_BOT_KEY||''))throw new AuthError(503,'El bot no está habilitado.');
     const input=await body(request,8192),signature=request.headers.get('x-villawolf-signature');
@@ -495,6 +505,8 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
     if(!await crypto.subtle.verify('HMAC',key,Uint8Array.from(signature.match(/../g),b=>parseInt(b,16)),encoder.encode(JSON.stringify(input))))throw new AuthError(401,'Firma inválida.');
     const consumed=await env.DB.prepare('INSERT INTO bot_requests(nonce,expires_at) VALUES(?,?) ON CONFLICT(nonce) DO NOTHING RETURNING nonce').bind(input.nonce,clock()+120000).all();if(!consumed.results.length)throw new AuthError(409,'Solicitud ya atendida.');
     if(input.action==='poll'){const releases=await releaseAnnouncements.check(env).catch(error=>({ok:false,message:error instanceof AuthError?error.message:'Comprobación de avisos pendiente.'}));return{ok:true,releases,job:await outbox.claim(env,input.guildIds)};}
+    if(input.action==='problem'){if(input.report?.app!=='bot')throw new AuthError(403,'Aplicación inválida.');return applicationReports.record(env,input.report,{id:'bot',name:'VillaWolf Bot'});}
+    if(input.action==='diagnostic')return applicationReports.read(env,input.id);
     if(input.action==='ack')return outbox.acknowledge(env,input.result||{});
     throw new AuthError(400,'Acción de bot inválida.');
   }
@@ -513,6 +525,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
       if(request.method==='POST'&&url.pathname==='/v1/discord/start')return reply(200,await start(env,await body(request)));
       if(request.method==='POST'&&url.pathname==='/v1/discord/finish')return reply(200,await finish(env,await body(request)));
       const authorization=request.headers.get('authorization'),token=authorization?.startsWith('Bearer ')?authorization.slice(7):null;
+      if(request.method==='POST'&&url.pathname==='/v2/application/problem')return reply(200,await applicationProblem(env,token,await body(request,8192)));
       if(request.method==='POST'&&url.pathname==='/v2/admin/audit/event')return reply(200,await auditEvent(env,token,await body(request)));
       if(request.method==='POST'&&url.pathname==='/v2/admin/publication/event')return reply(200,await publicationEvent(env,token,await body(request)));
       if(request.method==='POST'&&url.pathname==='/v2/admin/community/check')return reply(200,await communityCheck(env,token,await body(request)));
@@ -526,7 +539,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
       if(request.method==='GET'&&url.pathname==='/v1/session')return reply(200,await session(env,token));
       if(request.method==='POST'&&url.pathname==='/v1/logout'){if(validNonce(token))await env.DB.prepare('DELETE FROM discord_sessions WHERE token_hash=?').bind(await digest(token)).run();return reply(200,{ok:true});}
       throw new AuthError(404,'Ruta no encontrada.');
-    }catch(error){return reply(error.status||503,{ok:false,message:error.status?error.message:'El servicio no pudo comprobar el acceso. Intenta nuevamente.',...(error.retryAfter?{retryAfter:error.retryAfter}:{})});}
+    }catch(error){if((!error.status||error.status>=500)&&env.DB&&snowflake(env.DISCORD_GUILD_ID)){try{await applicationReports.record(env,{id:crypto.randomUUID(),app:'service',version:'1.2.2',operation:request.method+' '+new URL(request.url).pathname,error:error.message||'Error interno',log:error.stack||'',occurredAt:new Date(clock()).toISOString()},{id:'service',name:'Servicio VillaWolf'});}catch{}}return reply(error.status||503,{ok:false,message:error.status?error.message:'El servicio no pudo comprobar el acceso. Intenta nuevamente.',...(error.retryAfter?{retryAfter:error.retryAfter}:{})});}
   }
   async function cleanup(env){return env.DB.batch(['discord_flows','discord_sessions','discord_limits','bot_requests'].map(table=>env.DB.prepare(`DELETE FROM ${table} WHERE expires_at<=?`).bind(clock())));}
   return {fetch:handle,scheduled:(_event,env,ctx)=>ctx.waitUntil(Promise.all([cleanup(env),releaseAnnouncements.check(env)]))};

@@ -454,3 +454,146 @@ Versión visible y botón Buscar actualizaciones. Consulta exclusivamente releas
 
 ## VillaWolf Bot 0.2.3 (publicado)
 Iconos amarillos propios separados de los iconos verdes del Administrador. Se aplican a ventana, bandeja, ejecutable, instalador y accesos directos; el logo interior utiliza la misma imagen amarilla sin filtro CSS. Icono multirresolución comprobado y arranque aislado correcto. Instalador publicado: https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/bot-v0.2.3. Descargas verificadas mediante SHA-256.
+
+
+### Limpieza local posterior a Bot 0.2.3
+Se eliminaron instaladores y compilaciones locales 0.2.1/0.2.2, etapas de empaquetado y perfiles aislados de pruebas: 1126676462 bytes. Se conservan el Bot instalado 0.2.3 y su distribución actual, el código, token y sesión cifrados. El paquete instalado coincide por SHA-256 con el actual y los archivos cifrados permanecieron sin cambios.
+También se retiró la copia descomprimida de empaquetado de 0.2.3, ya instalada y verificada. Total de limpieza del Bot: 1526345305 bytes; se conserva el instalador 0.2.3 y sus hashes.
+
+
+### Limpieza local Launcher y Administrador
+Se verificó por SHA-256 que las instalaciones corresponden al Launcher 0.1.18 y Administrador 0.1.25. Se eliminaron las distribuciones antiguas locales Launcher 0.1.11/0.1.12, la etapa de compilación del Administrador y las copias descomprimidas de los paquetes actuales. Espacio retirado: 1810570038 bytes. Se conservan instaladores actuales, código, mundos, instancias, modpacks, historial, sesiones y carpetas originales de CurseForge. No se modificaron las instalaciones ni los archivos de sus perfiles.
+
+
+### Limpieza de la carpeta de programación
+Se retiraron 83 respaldos antiguos de código, auxiliares de releases anteriores, configuraciones generadas obsoletas, capturas antiguas y logs de prueba (11055724 bytes). Antes se comprobaron referencias desde src/tools/auth-server/tests y se conservaron las herramientas vigentes. Se verificaron 132 archivos de código: contenido sin cambios. Permanecen dependencias, pruebas, herramientas de compilación, scripts de publicación actuales, historial de resultados y datos de trabajo. No se modificaron funciones ni versiones.
+
+
+### Organización de archivos externos de desarrollo
+Se trasladaron 907 archivos de documentación, capturas y herramientas históricas a `.champagne-admin/archivo-local/`, verificando hashes antes y después. El índice es `docs/ARCHIVOS_LOCALES.md`. Se preservaron 16 archivos originales del RAR en un ZIP ligero y se retiraron sus dependencias antiguas, 12 perfiles temporales sin mundos y el acceso de desarrollo del Bot. Espacio neto liberado: 199451612 bytes. Se conservaron perfiles con posibles mundos. No se modificaron las funciones ni versiones, ni se trasladaron instalaciones o credenciales activas. Los archivos importados permanecen excluidos de GitHub.
+
+
+## Estabilización 005, 003, 002, 001 y 006 — 15/10/2026 (preparado localmente)
+
+Versiones publicadas e instaladas conservadas: Launcher 0.1.18, Administrador 0.1.25, Bot 0.2.3 y servicio 1.2.2. Desarrollo: correcciones locales sobre esas bases; no se asignó una versión nueva. Repositorio de referencia: tonyvillalobosmejia-netizen/champagne-vol5-modpack, rama preparacion-paso97, código remoto bajo launcher/. Esta copia no contiene .git; no se hizo commit, push, publicación ni despliegue.
+
+- 005 — Corregido localmente: reutilización acotada de contenido remoto verificado y comprobantes recientes de SHA-256; cachés separadas por transporte, subida reutilizable de blobs por contenido y credencial; reintentos sólo para GET y blobs idempotentes, sin reintentar permisos, límites 429 o activación de rama. Conserva validación final, cambios de la carpeta, hashes, fuentes oficiales e historial. Un avance de rama ajeno puede conservarse; cambios del mismo modpack o sus permisos bloquean la activación. No cambia el formato del manifiesto ni excluye recursos. La reducción de descargas se verificó con transportes simulados; no se midió un ahorro real de red ni un tiempo de publicación en producción.
+- 003 — Corregido localmente: colas cifradas y acotadas de errores de Launcher/Administrador/Bot, deduplicación local e idempotencia remota por evento, diagnósticos saneados en la cola existente y avisos breves con botones privados. Consulta/copia exige Administrador u Owner del servidor central. Copiar abre texto seleccionable; Discord no copia directamente al portapapeles. Los fallos de ejecución de Minecraft no se envían. Los fallos internos 5xx del servicio se registran cuando su base de datos está disponible. Los diagnósticos no provocan consultas extra a Discord ni bloquean la biblioteca por sus propios límites.
+- 002 — Corregido localmente: después del catálogo autorizado devuelve las tarjetas sin esperar imágenes. Las imágenes se hidratan en segundo plano con concurrencia limitada y caché breve; resultados de cuentas anteriores no se aplican. Se conserva la comprobación de permisos al descargar y jugar.
+- 001 — Corregido localmente: estado Discord real separado de roles y anuncios, latencia únicamente cuando está disponible, historial acotado saneado y persistido cifrado, consultable y copiable. No se cambió el protocolo ni los intervalos de sincronización de Discord.
+- 006 — Corregido localmente: vista principal/edición/perfil/asistente determinan visibilidad. Se retira el botón redundante Subir carpetas y archivos. Crear nuevo lanzador se oculta al editar y reaparece al cerrar. Perfil oculta selector y herramientas, conservando Cerrar menú. Se conservan las operaciones reales de creación, eliminación y publicación.
+- 004 — Continúa en observación. No se reprodujeron publicaciones ni se investigaron por separado los registros históricos.
+
+### Validación automatizada de esta tanda
+
+108 pruebas relevantes aprobadas, 0 fallidas, en 16 archivos de pruebas. Se comprobaron rutas, integridad, conflictos, cachés, autorización, revocación de roles, colas, saneamiento, estados, navegación, sesiones y creación/publicación simuladas. Una prueba integral tenía un entorno VM sin temporizadores y asumía selección síncrona; se adaptó al nuevo contrato conservando sus comprobaciones de permisos y archivos. Además, 6 comprobaciones de interfaces/estados en Chromium aislado con datos ficticios y sin servicios de producción. Comprobación de sintaxis: 33 archivos JavaScript. Evidencia local privada: .champagne-admin/qa-estabilizacion/.
+
+### Comprobaciones pendientes y límites
+
+Preparado para una actualización de prueba, con autorización posterior. No se generaron instaladores ni se desplegó Cloudflare; las aplicaciones instaladas siguen sin estas correcciones. Falta comprobar con cuentas reales los botones privados de Discord y su latencia, reconexión real del Bot y rendimiento con modpacks grandes. Un fallo de D1 impide guardar diagnósticos remotos mientras dure la avería; no se añadió infraestructura alternativa. No se modificaron originales de CurseForge, mundos, sesiones o credenciales reales. Los resultados manuales propuestos anteriormente por el propietario siguen separados y pendientes de su autorización documental; no se presentan como pruebas ejecutadas aquí.
+
+### Archivos de esta tanda
+
+- tools/admin-modpack/engine.cjs
+- tools/admin-modpack/reliable-request.cjs
+- tools/admin-modpack/verified-content-cache.cjs
+- tools/admin-modpack/main.cjs
+- tools/admin-modpack/navigation-state.js
+- tools/admin-modpack/index.html
+- tools/admin-modpack/renderer.js
+- tools/admin-modpack/wizard.js
+- tools/preparar-admin-instalador.cjs
+- tools/compilar-bot.cjs
+- src/main.js
+- src/champagne-auth.js
+- src/champagne-diagnostic.js
+- src/champagne-problem-reporter.js
+- src/champagne-problem-monitor.js
+- src/champagne-library-hydrator.js
+- auth-server/cloudflare/worker.mjs
+- auth-server/cloudflare/application-reports.mjs
+- auth-server/roles-bot/main.cjs
+- auth-server/roles-bot/state.cjs
+- auth-server/roles-bot/bridge.cjs
+- auth-server/roles-bot/notifications.cjs
+- auth-server/roles-bot/announcement.cjs
+- auth-server/roles-bot/diagnostics.cjs
+- auth-server/roles-bot/preload.cjs
+- auth-server/roles-bot/index.html
+- auth-server/roles-bot/renderer.js
+- auth-server/roles-bot/style.css
+- tests/verificar-optimizacion-publicacion.cjs
+- tests/verificar-diagnosticos-aplicaciones.cjs
+- tests/verificar-biblioteca-progresiva.cjs
+- tests/verificar-estados-bot.cjs
+- tests/verificar-navegacion-admin.cjs
+- tests/verificar-admin-modpack.cjs
+- tests/verificar-catalogo-discord.cjs
+- tests/verificar-crear-lanzador-e2e.cjs
+- tests/fixtures/estabilizacion-preload.cjs
+- tests/fixtures/estabilizacion-ui.cjs
+- ESTADO_DESARROLLO.md
+
+
+## 2026-10-15 — Instalación local de prueba de las correcciones 005, 003, 002, 001 y 006
+
+**Estado: instalado localmente; no publicado ni desplegado.** Autorización del propietario limitada a compilar, instalar y realizar comprobaciones básicas. Se reutilizó el trabajo previamente validado (108 pruebas automatizadas y 6 comprobaciones de interfaz); no se repitió el diagnóstico ni se reimplementaron las correcciones. Repositorio de referencia: tonyvillalobosmejia-netizen/champagne-vol5-modpack, rama preparacion-paso97, prefijo remoto launcher/. Esta carpeta no dispone de metadatos Git locales.
+
+- Launcher: base 0.1.18, Administrador: base 0.1.25, Bot: base 0.2.3. Cada paquete instalado contiene localTestBuild=20261015.1 y muestra «PRUEBA LOCAL 20261015.1» en el título. Los números públicos y los archivos fuente de versión permanecen sin cambios. Se mantuvo la versión numérica base para conservar la validación estricta de compatibilidad de manifiestos.
+- Compilaciones e instaladores privados en .champagne-admin/prueba-local-20261015-1/. La protección de actualización de la propia aplicación sólo se añadió a las copias de empaquetado: no consulta ni instala versiones públicas durante la prueba. No se cambiaron los feeds públicos ni se deshabilitaron actualizaciones de modpacks.
+- Las tres instalaciones NSIS finalizaron con código 0. Se comprobó el marcador de prueba y los módulos corregidos dentro de los app.asar instalados; se verificaron 10 módulos clave contra los fuentes locales y ausencia de archivos privados de sesión/credenciales en los paquetes.
+- Recuperación: copias completas de los binarios anteriores en restauracion/<aplicación>/instalacion; copias privadas de datos sin cachés ni preparados en restauracion/<aplicación>/datos. Se compararon los archivos protegidos antes y después de instalar, antes de abrir las aplicaciones: 6 Launcher, 5 Administrador y 4 Bot, idénticos. No se restauraron ni cambiaron credenciales. RESTAURAR.md indica los tres instaladores públicos anteriores conservados y el procedimiento de recuperación. Los respaldos privados no deben sincronizarse con GitHub.
+
+**Comprobaciones básicas realizadas en las aplicaciones instaladas (distintas de las automatizadas anteriores):**
+
+- Launcher abre correctamente con identidad e iconos conservados. La biblioteca muestra el requisito de iniciar sesión. Antes de instalar no existían account-session.bin ni microsoft-session.bin en su carpeta habitual de datos; por eso no se da por aprobada la persistencia de sesiones de Discord/Microsoft ni la biblioteca con permisos e imágenes reales en esta instalación. Quedan para la inspección del propietario con sesión iniciada. No se iniciaron sesiones nuevas ni Minecraft.
+- Administrador abre, recupera su cuenta Discord y muestra conexión central de GitHub disponible. Se abrieron Perfil, Crear nuevo lanzador (con su borrador existente), edición de Mundo Conejil y Carpetas y archivos. Se observó separación de vistas y disponibilidad del flujo Nueva actualización/Historial y sus etapas. No se preparó ni publicó ningún modpack ni se modificaron los campos del borrador.
+- Bot abre, conserva acceso administrativo y clave cifrada. Conectó con Discord y mostró Roles sincronizados. Se verificaron estados independientes de conexión, roles y anuncios, e historial de actividad legible. «Anuncio pendiente» permanece visible sin convertir la conexión en desconectada; no se da por verificado el envío de ese anuncio. La latencia apareció sin medición; no se forzaron desconexiones para probarla.
+- Ninguna instalación falló. Las comprobaciones con sesión del Launcher y el envío de diagnósticos privados completo son pendientes, no aprobadas. No se probó la renovación de tokens vencidos ni instalación en otra computadora.
+
+**Dependencia de Cloudflare (parcial):** la cola cifrada, saneamiento, integración cliente y estados/historial están incluidos localmente. La nueva ruta /v2/application/problem, persistencia en la cola del Worker y lectura firmada para botones privados de diagnóstico requieren desplegar el Worker preparado. No se desplegó: recepción, entrega y consulta/copia en Discord no se presentan como verificadas de extremo a extremo. No se cambiaron permisos, roles ni canales de Discord.
+
+No se publicaron releases, modpacks ni cambios en GitHub. No se modificaron originales de CurseForge, mundos, instancias, tokens ni claves. Los datos de usuario se conservaron en sus rutas anteriores. Instalación completada; la siguiente inspección manual queda a cargo del propietario.
+
+
+## 2026-10-15 — Error 007: reintentos de integridad del Administrador
+
+**Terminado y probado localmente; no compilado, instalado, publicado ni desplegado.** Se conserva el diagnóstico previo: los SHA-256 recibidos en los fallos reales de Mundo Conejil 0.1.8 no se registraron y no se atribuye su origen al proveedor, red o servicio sin evidencia. La versión publicada 0.1.8 no se modificó.
+
+- Las descargas verificadas del Administrador comparten un presupuesto de hasta tres intentos totales por archivo entre fallos HTTP transitorios y discrepancias SHA-256; se desactiva el reintento HTTP interno sólo en estas llamadas para evitar multiplicación. Esperas: 400 y 800 ms. Fuentes autorizadas y redirecciones conservan las reglas existentes. Los errores permanentes de autorización y fuentes no admitidas no obtienen nuevos reintentos.
+- Sólo se reintenta el archivo afectado. Los comprobantes aprobados mantienen sus claves y caducidad del Error 005; las descargas fallidas no se almacenan y no se retienen sus buffers en el error. El contenido remoto sólo entra en caché tras validar hash y tamaño. No cambian hashes esperados ni formatos de manifiesto.
+- Tras tres discrepancias, el error muestra nombre de archivo, intentos, SHA-256 esperado y recibido, tamaño recibido y aviso de publicación detenida por integridad. No incluye URL ni parámetros de credenciales. El progreso anuncia cada nuevo intento.
+- Se mantienen comprobaciones de cambios de archivos, conflictos del mismo modpack, verificación de bytes publicados antes de activar y activación sin sobrescribir el historial. No se modificaron Launcher, Bot, Cloudflare, mundos, archivos originales, sesiones, claves ni configuraciones personales.
+
+**Pruebas ejecutadas con simulaciones: 38 aprobadas, 0 fallidas.** Primera ejecución: 37 pruebas en verificar-integridad-admin.cjs, verificar-optimizacion-publicacion.cjs y verificar-admin-modpack.cjs. Después se añadió y ejecutó únicamente una prueba adicional de publicación simulada recuperada, aprobada. Cubren éxito al primer/segundo/tercer intento, diagnóstico terminal, bloqueo sin activar, descarte de fallos, caché aprobada y caducidad, archivos posteriores, presupuesto mixto HTTP/hash, fuentes/redirecciones rechazadas y protecciones del Error 005. No hubo solicitudes de red reales ni publicación de modpacks.
+
+Archivos modificados: engine.cjs, reliable-request.cjs, verified-content-cache.cjs, verificar-integridad-admin.cjs, verificar-optimizacion-publicacion.cjs, verificar-admin-modpack.cjs y ESTADO_DESARROLLO.md. Los tres primeros pertenecen exclusivamente al Administrador. Versiones públicas y aplicaciones de prueba instaladas permanecen sin cambios; para probar esta corrección en la aplicación instalada se requiere autorización posterior para compilar e instalar.
+
+Limitaciones: una discrepancia permanente sigue bloqueando la publicación; los intentos agregan como máximo 1,2 segundos de espera además del tiempo de descarga. Los comprobantes pueden caducar según sus plazos existentes. Los reintentos no prueban ni resuelven por sí solos la causa histórica de los bytes diferentes.
+
+
+## 2026-10-15 — Administrador PRUEBA LOCAL 20261015.2 instalado
+
+**Instalación local completada, no publicada.** Sólo se compiló y actualizó VillaWolf Administrador, base 0.1.25, localTestBuild=20261015.2. El título identifica PRUEBA LOCAL 20261015.2. Se verificó que engine.cjs, reliable-request.cjs y verified-content-cache.cjs dentro del app.asar generado e instalado son idénticos a los fuentes corregidos del Error 007. El paquete no contiene archivos privados de sesión.
+
+- Se respaldaron binarios de PRUEBA LOCAL 20261015.1 y datos privados necesarios en .champagne-admin/prueba-local-20261015-2/restauracion/instalacion y restauracion/datos. Los seis archivos protegidos de configuración y sesión resultaron idénticos antes y después de instalar, antes de abrir la nueva aplicación. Se preservan los preparados y archivos originales sin reemplazarlos. El procedimiento RESTAURAR.md permite reinstalar la compilación anterior sin desinstalar ni borrar datos.
+- Instalador NSIS terminó con código 0. Se abrió el ejecutable instalado y se observó la cuenta Discord autorizada y la conexión central de GitHub disponible en Perfil. El actualizador muestra que está desactivado para la prueba 20261015.2; el bloqueo reside en la copia de empaquetado y no modifica el canal público.
+- Comprobaciones controladas: 16 pruebas seleccionadas aprobadas, 0 fallidas (11 de integridad y 5 de publicación/protecciones simuladas). Además se probaron cuatro escenarios directamente con los módulos preparados para el paquete: éxito en intento 1, 2 y 3 con reutilización de comprobante, y tres discrepancias con bloqueo sin comprobante. Se cubrió continuidad hacia archivos posteriores, presupuesto HTTP/hash compartido, fuentes rechazadas, conservación de caché y protecciones de cambios de archivos/conflictos del Error 005. No hubo publicaciones reales ni descargas masivas.
+- Launcher y Bot no se compilaron ni reinstalaron; se compararon sus app.asar antes y después y permanecen idénticos. No se desplegó Cloudflare ni se publicaron cambios en GitHub. Mundo Conejil 0.1.8 no fue republicado, revertido ni modificado. No se alteraron originales de CurseForge, mundos, credenciales, sesiones ni configuraciones personales.
+
+La inspección manual del nuevo reintento en uso real queda a cargo del propietario. Las pruebas simuladas no confirman la causa histórica de las discrepancias. No hay fallos de instalación pendientes. Evidencia local: .champagne-admin/prueba-local-20261015-2/resultado-instalacion.json.
+
+Comprobación visual adicional de 20261015.2: se abrió y cerró Perfil y se seleccionó Mundo Conejil; se mostraron Edición de interfaz, Carpetas y archivos, Información del servidor y Configuración de Discord. No se ejecutó ninguna operación de modificación/publicación.
+
+
+## 2026-10-15 — Preparación de distribución 0.x de desarrollo
+
+**En preparación; todavía no publicado en esta entrada.** Numeración disponible comprobada en GitHub: Launcher 0.1.19, Administrador 0.1.26 y Bot 0.2.4. Todas las versiones 0.x son de desarrollo/pruebas; 1.0.0 queda reservada para el lanzamiento definitivo. Se usan los canales existentes, sin canal beta ni prerelease separado.
+
+Launcher incluye 002 y parte local de 003. Administrador incluye 005, 006, 007 y parte local de 003. Bot incluye 001, historial cifrado/saneado/copiable y parte local de 003. No se añaden rediseños. Fuentes e instaladores de distribución excluyen las marcas y bloqueos PRUEBA LOCAL: vuelven a usar sus actualizadores habituales sin alterar sus URLs.
+
+Validaciones de distribución seleccionadas: 9 pruebas de actualizador Bot/Administrador y persistencia de sesión aprobadas; una prueba adicional de desconexión/reanudación, resincronización y fallo temporal de roles del Bot aprobada con clientes simulados, sin interrumpir el bot real. El primer intento de esta nueva simulación falló por ausencia de Buffer en su entorno VM; se corrigió únicamente el entorno de prueba y pasó. No se repitió la auditoría general ni las 38 pruebas de integridad ya aprobadas.
+
+Los fuentes pendientes del Error 003 del Worker se sincronizan con el repositorio para conservar sus pruebas y dependencias; **no se despliega Cloudflare**. El envío y consulta de diagnósticos de extremo a extremo siguen pendientes de autorización y despliegue. La firma pública Windows continúa pendiente según CODE_SIGNING_POLICY.md; se conserva el estado de distribución anterior sin desactivar controles.
+
+Validaciones previas a distribución: los tres paquetes arrancaron en Electron con datos temporales y red desactivada. Se verificaron versiones, módulos corregidos, ausencia de credenciales/rutas privadas y de bloqueos PRUEBA LOCAL. Los tres instaladores PE son válidos; SHA-512 y tamaños coinciden con latest.yml de Launcher y Administrador, y se generaron SHA256SUMS.txt para las tres aplicaciones. Los paquetes aún esperan publicación al registrar esta comprobación.

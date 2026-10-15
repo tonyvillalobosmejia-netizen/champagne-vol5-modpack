@@ -73,7 +73,7 @@ test('publica un commit completo y verifica los bytes antes de activar, sin subi
 });
 for(const scenario of ['conflict','badDownload','badUpload','existing'])test('no activa el canal si falla '+scenario,async t=>{
   const f=fixture(t),s=service(f,{[scenario]:true}),m=e.buildManifest(f.plan,'0.1.5',['config/safe.toml']);
-  await assert.rejects(e.publish(f.plan,m,{token:'test_token_not_real_12345678',tested:true,reviewed:true,fetcher:s.fetcher}));assert.ok(!s.calls.some(c=>c.method==='PATCH'));
+  await assert.rejects(e.publish(f.plan,m,{token:'test_token_not_real_12345678',tested:true,reviewed:true,fetcher:s.fetcher}));assert.ok(!s.calls.some(c=>c.method==='PATCH'));if(scenario==='badDownload')assert.equal(s.calls.filter(c=>c.url.includes('cdn.modrinth')).length,3);
 });
 test('exige prueba y revisión antes de cualquier escritura',async t=>{
   const f=fixture(t),s=service(f),m=e.buildManifest(f.plan,'0.1.5',['config/safe.toml']);await assert.rejects(e.publish(f.plan,m,{token:'test_token_not_real_12345678',fetcher:s.fetcher}));assert.equal(s.calls.length,0);
@@ -124,3 +124,19 @@ test('restaurar usa una versión nueva y retira mods nuevos sin acceder a CurseF
 test('edición de presentación conserva todos los archivos y bloquea tarjetas en launcher anterior',async t=>{const f=fixture(t);f.plan.mode='presentation';f.plan.design={packName:'Nuevo nombre',news:{title:'Noticia',text:'Descripción'},updates:{title:'Actualización',text:'Otra descripción'}};e.assertSourceUnchanged(f.plan);const manifest=e.buildManifest(f.plan,'0.1.5',['config/safe.toml']);assert.deepEqual(manifest.files,f.manifest.files);assert.deepEqual(manifest.content.files,f.manifest.content.files);assert.equal(manifest.game.minLauncherVersion,'0.1.12');assert.equal(manifest.game.serverId,f.manifest.game.serverId);assert.throws(()=>e.buildManifest(f.plan,'0.1.5',[]),/analizar CurseForge/);const remote=service(f);await assert.rejects(e.publish(f.plan,manifest,{token:'test_token_not_real_12345678',tested:true,reviewed:true,fetcher:remote.fetcher}),/0.1.12/);assert(!remote.calls.some(c=>c.method==='PATCH'));});
 
 test('API convierte la versión manual exacta en automática y exige el Launcher compatible',async t=>{const f=fixture(t);f.manifest.files[0]={path:'mods/test.jar',sha256:e.hash(bytes),acquisition:'user_official_download',pageUrl:'https://www.curseforge.com/minecraft/mc-mods/test/files/1234567'};const url='https://edge.forgecdn.net/files/1234/567/test.jar';const fetcher=async u=>u.includes('/git/ref/')?Response.json({object:{sha:'old'}}):u.endsWith('/stable-v2.json')?Response.json(f.manifest):new Response('{}',{status:404});let called=false;const plan=await e.analyze(f.dir,()=>{},fetcher,async files=>{called=true;assert.equal(files[0].sha1,e.hash(bytes,'sha1'));return{matches:[{sha1:e.hash(bytes,'sha1'),bytes:bytes.length,url}]};});assert.equal(called,true);assert.equal(plan.files[0].acquisition,'official_direct');assert.equal(e.buildManifest(plan,'0.1.5',['config/safe.toml']).game.minLauncherVersion,'0.1.15');const mismatched=await e.analyze(f.dir,()=>{},fetcher,async()=>({matches:[{sha1:e.hash(bytes,'sha1'),bytes:bytes.length+1,url}]}));assert.equal(mismatched.files[0].acquisition,'user_official_download');});
+
+test('cambio ajeno de rama conserva el análisis; un cambio del mismo modpack bloquea la activación',async t=>{for(const changed of [false,true]){const f=fixture(t),s=service(f),m=e.buildManifest(f.plan,'0.1.5',['config/safe.toml']);f.plan.base.head='older';const fetcher=async(url,opts)=>url.endsWith('/old/updates/stable-v2.json')?Response.json(changed?{...f.manifest,version:'9.0.0'}:f.manifest):s.fetcher(url,opts);if(changed){await assert.rejects(e.publish(f.plan,m,{token:'test_token_not_real_12345678',tested:true,reviewed:true,fetcher}),/cambió/);assert.ok(!s.calls.some(c=>c.method==='PATCH'));}else{await e.publish(f.plan,m,{token:'test_token_not_real_12345678',tested:true,reviewed:true,fetcher});assert.deepEqual(s.calls.find(c=>c.url.endsWith('/git/commits')).body.parents,['old']);}}});
+test('contenido URL se descarga una vez entre preparación y verificación; mods verificados se reutilizan en reintento',async t=>{const f=fixture(t),m=structuredClone(f.manifest),url='https://cdn.modrinth.com/data/test/versions/exact/content.txt';delete m.content.files[0].base64;m.content.files[0].url=url;let contents=0,mods=0;const fetcher=async raw=>{if(raw===url){contents++;return new Response(config);}mods++;return new Response(bytes);};const engine=e.createEngine();await engine.validatePackage(m,()=>{},fetcher);await engine.verifyDirect(m,()=>{},fetcher);assert.equal(contents,1);assert.equal(mods,1);await engine.verifyDirect(m,()=>{},fetcher);assert.equal(contents,1);assert.equal(mods,1);});
+
+test('007 publicación simulada continúa tras recuperar el hash y sólo activa después de verificar',async t=>{
+ const f=fixture(t),s=service(f),m=e.buildManifest(f.plan,'0.1.5',['config/safe.toml']);let downloads=0;
+ const fetcher=async(url,options)=>{
+  if(url===m.files[0].url){downloads++;if(downloads===1)return new Response('wrong');}
+  if(options?.method==='PATCH')assert.equal(downloads,2);
+  return s.fetcher(url,options);
+ };
+ const result=await e.publish(f.plan,m,{token:'test_token_not_real_12345678',tested:true,reviewed:true,fetcher});
+ assert.equal(downloads,2);assert.equal(result.commit,'new');assert.equal(s.calls.filter(c=>c.method==='PATCH').length,1);
+ assert.equal(fs.readFileSync(path.join(f.dir,'mods','test.jar')).equals(bytes),true);
+ assert.equal(fs.readFileSync(path.join(f.dir,'saves','world.dat'),'utf8'),'world');
+});

@@ -28,4 +28,5 @@ function auditMessage(event){
   }
   return{embeds:[{...(event.occurredAt?{timestamp:new Date(event.occurredAt).toISOString()}:{}),color:event.action==='publication_error'?0xe2a84b:0x27ae60,title:'📋 '+action,fields,footer:{text:'VillaWolf · Registro privado · Sin credenciales'}}],allowedMentions:{parse:[],roles:[],users:[],repliedUser:false}};
 }
-module.exports={message,auditMessage};
+function diagnosticMessage(event){const {diagnostic}=require('../../src/champagne-diagnostic'),value=diagnostic(event);return{embeds:[{color:0xe2a84b,title:value.app==='admin'&&/publish|public/i.test(value.operation)?'⚠️ Publicación no completada':'⚠️ Error de aplicación VillaWolf',fields:[{name:'Aplicación',value:value.app+' '+value.version,inline:true},{name:'Operación',value:value.operation||'application',inline:true},{name:'Usuario',value:text(event.actorName||'Usuario verificado',80),inline:true}],timestamp:value.occurredAt,footer:{text:'VillaWolf · Registro privado · Detalle disponible en los botones'}}],allowedMentions:{parse:[],roles:[],users:[],repliedUser:false}};}
+module.exports={message,auditMessage,diagnosticMessage};

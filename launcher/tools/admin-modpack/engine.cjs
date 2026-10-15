@@ -21,6 +21,10 @@ const BRANCH = 'preparacion-paso97';
 const API = `https://api.github.com/repos/${REPO}`;
 const RAW = `https://raw.githubusercontent.com/${REPO}`;
 const hash = (b, algorithm = 'sha256') => crypto.createHash(algorithm).update(b).digest('hex');
+const uploadedBlobs=new WeakMap();
+const contentCaches=new WeakMap(),verificationReceipts=new WeakMap();
+function retryProgress(entry,onProgress=()=>{}){return ({nextAttempt,integrity})=>onProgress((integrity?'SHA-256 incorrecto; volviendo a descargar: ':'Reintentando descarga: ')+entry.path+' (intento '+nextAttempt+'/3).');}
+function verifiedContent(entry,fetcher,onProgress){let cache=contentCaches.get(fetcher);if(!cache){cache=require('./verified-content-cache.cjs').createVerifiedContentCache();contentCaches.set(fetcher,cache);}return cache(entry,url=>request(url,{fetcher,limit:128*1024*1024,retry:false}),retryProgress(entry,onProgress));}
 const clone = v => JSON.parse(JSON.stringify(v));
 function nextVersion(v) { const n = v.split('.').map(Number); n[2]++; return n.join('.'); }
 function greater(a, b) { return a.split('.').map(Number).some((v,i,aa) => aa.slice(0,i).every((x,j)=>x===Number(b.split('.')[j])) && v>Number(b.split('.')[i])); }
@@ -32,7 +36,7 @@ function safeRoot(root) {
   }
   return root;
 }
-async function request(url, { method='GET', token, body, limit=48*1024*1024, fetcher=fetch, allow404=false, allowOfficialRedirects=false }={}) {
+async function requestOnce(url, { method='GET', token, body, limit=48*1024*1024, fetcher=fetch, allow404=false, allowOfficialRedirects=false }={}) {
   if(allowOfficialRedirects && (token || method!=='GET' || body)) throw new Error('Las redirecciones de descarga no pueden llevar credenciales.');
   const options = { method, redirect:allowOfficialRedirects?'manual':'error', signal:AbortSignal.timeout(120000),
     headers:{ 'User-Agent':'VillaWolf-Modpack-Admin/1.0', ...(token ? {Authorization:'Bearer '+token} : {}),
@@ -53,12 +57,13 @@ async function request(url, { method='GET', token, body, limit=48*1024*1024, fet
     if(github && response.status===401) throw new Error('GitHub rechazó el token (401). Puede estar caducado, revocado o copiado incorrectamente. Abre Perfil, pulsa Borrar token y guarda uno nuevo.');
     if(github && (response.status===429 || (response.status===403 && (response.headers.get('x-ratelimit-remaining')==='0' || response.headers.has('retry-after'))))) throw new Error('GitHub alcanzó su límite de consultas. Espera antes de reintentar; no cambies el token por este error.');
     if(github && response.status===403) throw new Error('GitHub denegó el acceso (403). Revisa que el token incluya este repositorio y Contents: Read and write; también puede haber una restricción de la cuenta.');
-    throw new Error('El servicio respondió '+response.status+'. Reintenta; no actives una actualización incompleta.');
+    throw Object.assign(new Error('El servicio respondió '+response.status+'. Reintenta; no actives una actualización incompleta.'),{status:response.status});
   }
   const chunks=[]; let count=0;
   for await (const chunk of response.body) { count+=chunk.length; if(count>limit) throw new Error('La respuesta supera el límite permitido.'); chunks.push(Buffer.from(chunk)); }
   return Buffer.concat(chunks);
 }
+async function request(url,options={}){const method=options.method||'GET',blob=method==='POST'&&url===API+'/git/blobs',fetcher=options.fetcher||fetch;let cache=uploadedBlobs.get(fetcher);if(!cache){cache=new Map();uploadedBlobs.set(fetcher,cache);}const key=blob?hash(Buffer.from(JSON.stringify(options.body)+'|'+(options.token||''))):null;if(key&&cache.has(key))return Buffer.from(cache.get(key));const value=await (options.retry===false?requestOnce(url,options):require('./reliable-request.cjs').reliableRequest(()=>requestOnce(url,options),{safe:method==='GET'||blob}));if(key){if(cache.size>=16)cache.delete(cache.keys().next().value);cache.set(key,Buffer.from(value));}return value;}
 async function json(url, options) { const b=await request(url,options); return b===null ? null : JSON.parse(b.toString('utf8')); }
 async function baseline(fetcher=fetch) {
   const ref=await json(API+'/git/ref/heads/'+BRANCH,{fetcher});
@@ -210,7 +215,7 @@ async function validatePackage(manifest,onProgress=()=>{},fetcher=fetch) {
   const directory=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'villawolf-admin-validation-'));
   try {
     onProgress('Verificando el contenido de '+manifest.packId+' '+manifest.version+'…');
-    await prepareContent(manifest.content,path.join(directory,'bundle'),url=>request(url,{fetcher,limit:128*1024*1024}));
+    await prepareContent(manifest.content,path.join(directory,'bundle'),url=>verifiedContent(manifest.content.files.find(e=>e.url===url),fetcher,onProgress));
     const result=syncBundledConfigs({instanceDir:path.join(directory,'client'),metadataDir:path.join(directory,'metadata'),bundleDir:path.join(directory,'bundle')});
     onProgress('Contenido verificado en una instalación aislada: '+result.installed+' archivos.');
   } catch(error) {
@@ -228,8 +233,7 @@ async function verifyDirect(manifest,onProgress,fetcher=fetch) {
       (['https://edge.forgecdn.net','https://mediafilez.forgecdn.net'].includes(url.origin) && /^\/files\/[0-9]+\/[0-9]+\/[^/]+\.jar$/.test(url.pathname));
     if(!allowed || url.username || url.password || url.search || url.hash) throw new Error('Fuente de descarga no autorizada: '+entry.path);
     onProgress(`Verificando descarga ${i+1}/${entries.length}: ${entry.path}`);
-    const bytes=await request(entry.url,{fetcher,limit:128*1024*1024,allowOfficialRedirects:true});
-    if(hash(bytes)!==entry.sha256) throw new Error('La descarga no coincide: '+entry.path);
+    if(manifest.content.files.includes(entry)){await verifiedContent(entry,fetcher,onProgress);}else{let verify=verificationReceipts.get(fetcher);if(!verify){verify=require('./verified-content-cache.cjs').createVerificationReceipts();verificationReceipts.set(fetcher,verify);}const reused=await verify(entry,url=>request(url,{fetcher,limit:128*1024*1024,allowOfficialRedirects:true,retry:false}),retryProgress(entry,onProgress));if(reused)onProgress('Verificación reciente por SHA-256 reutilizada: '+entry.path);}
   }
 }
 
@@ -257,30 +261,36 @@ async function publish(plan,manifest,{token,tested,reviewed,onProgress=()=>{},fe
   }
   await validatePackage(manifest,onProgress,fetcher); await verifyDirect(manifest,onProgress,fetcher);
   let ref=await json(API+'/git/ref/heads/'+BRANCH,options);
-  if(ref.object.sha!==plan.base.head) throw new Error('GitHub cambió desde el análisis. Analiza de nuevo para conservar esos cambios.');
+  const baseHead=ref.object.sha;
+  if(baseHead!==plan.base.head){
+    const latest=await json(RAW+'/'+baseHead+'/'+locations.channel,{fetcher,allow404:!!pack});
+    if(plan.base.unpublished?latest!==null:!isDeepStrictEqual(latest,plan.base.manifest))throw Error('Este modpack cambió desde el análisis. Analiza de nuevo para conservar esos cambios.');
+    if(pack){const read=async head=>validateCatalog(await json(RAW+'/'+head+'/updates/catalog.json',{fetcher,allow404:true})||require('../../src/villawolf-catalog.json')).packs.find(p=>p.id===packId);if(!isDeepStrictEqual(await read(plan.base.head),await read(baseHead)))throw Error('Los permisos o datos de este lanzador cambiaron. Actualiza su análisis.');}
+    onProgress('Conservando cambios de otros lanzadores sin repetir el análisis…');
+  }
   const commit=await json(API+'/git/commits/'+ref.object.sha,options);
   const snapshotPath=locations.versions+'/modpack-'+manifest.version+'.json';
-  const existing=await json(API+'/contents/'+snapshotPath+'?ref='+plan.base.head,{...options,allow404:true});
+  const existing=await json(API+'/contents/'+snapshotPath+'?ref='+baseHead,{...options,allow404:true});
   if(existing) throw new Error('Esta versión ya existe en el historial; elige otra versión.');
   const raw=JSON.stringify(manifest,null,2)+'\n';
   if(Buffer.byteLength(raw)>48*1024*1024) throw new Error('Paquete demasiado grande para este canal. Reduce el contenido o utiliza descargas oficiales.');
   onProgress('Subiendo el manifiesto y su copia de recuperación…');
   const blob=await json(API+'/git/blobs',{...options,method:'POST',body:{content:Buffer.from(raw).toString('base64'),encoding:'base64'}});
-  const previousHistory=await json(RAW+'/'+plan.base.head+'/'+locations.history,{fetcher,allow404:true})||[];
+  const previousHistory=await json(RAW+'/'+baseHead+'/'+locations.history,{fetcher,allow404:true})||[];
   if(!Array.isArray(previousHistory)||previousHistory.length>500)throw Error('Historial de publicaciones inválido.');
   const record={version:manifest.version,packName:manifest.game.packName,publishedAt:new Date().toISOString(),notes:manifest.presentation?.notes?.text||'',mods:manifest.files.length,content:manifest.content.files.length,
     changes:plan.modChanges,restoredFrom:plan.restoredFrom||null};
   const historyBlob=await json(API+'/git/blobs',{...options,method:'POST',body:{content:Buffer.from(JSON.stringify([record,...previousHistory],null,2)+'\n').toString('base64'),encoding:'base64'}});
-  const catalogUpdate=await catalogChange(plan.base.head,manifest,options);
+  const catalogUpdate=await catalogChange(baseHead,manifest,options);
   const tree=await json(API+'/git/trees',{...options,method:'POST',body:{base_tree:commit.tree.sha,tree:[...(catalogUpdate?[catalogUpdate.node]:[]),...[snapshotPath,locations.channel].map(p=>({path:p,mode:'100644',type:'blob',sha:blob.sha})),{path:locations.history,mode:'100644',type:'blob',sha:historyBlob.sha}]}});
-  const next=await json(API+'/git/commits',{...options,method:'POST',body:{message:'Actualizar '+manifest.game.packName+' a '+manifest.version,tree:tree.sha,parents:[plan.base.head]}});
+  const next=await json(API+'/git/commits',{...options,method:'POST',body:{message:'Actualizar '+manifest.game.packName+' a '+manifest.version,tree:tree.sha,parents:[baseHead]}});
   // Verify exact public bytes in the immutable new commit BEFORE activating it.
   await verifyCatalog(catalogUpdate,next.sha,fetcher);
   const pinned=await request(RAW+'/'+next.sha+'/'+locations.channel,{fetcher});
   if(hash(pinned)!==hash(Buffer.from(raw))) throw new Error('No se pudo verificar la subida. No se activó el canal.');
   assertSourceUnchanged(plan);
   ref=await json(API+'/git/ref/heads/'+BRANCH,options);
-  if(ref.object.sha!==plan.base.head) throw new Error('Hubo una publicación simultánea; no se sobrescribió la rama. Analiza de nuevo.');
+  if(ref.object.sha!==baseHead) throw new Error('Hubo una publicación simultánea; no se sobrescribió la rama. Analiza de nuevo.');
   await authorize();
   await json(API+'/git/refs/heads/'+BRANCH,{...options,method:'PATCH',body:{sha:next.sha,force:false}});
   onProgress('Actualización activada. Los jugadores la recibirán al pulsar JUGAR.');

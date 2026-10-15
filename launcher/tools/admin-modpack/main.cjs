@@ -29,6 +29,10 @@ const community=require('../../src/champagne-community');
 let win,source='',plan=null,prepared=null,busy=false,output=null;
 let background=null,designPlan=null;
 const adminAuth=createAuthClient({baseUrl:require('../../src/config').authServerUrl,provider:'discord',required:true,purpose:'admin',openBrowser:url=>shell.openExternal(url),sessionStore:createSessionStore({directory:app.getPath('userData'),safeStorage:require('electron').safeStorage,scope:'admin|'+require('../../src/config').authServerUrl,filename:'discord-admin-session.bin'})});
+const adminActivity=[];
+const problemReporter=require('../../src/champagne-problem-reporter').createProblemReporter({app:'admin',version:require('./version.json').version,store:createSessionStore({directory:app.getPath('userData'),safeStorage:require('electron').safeStorage,scope:'admin-errors',filename:'application-errors.bin'}),account:()=>adminAuth.status().user,send:report=>adminAuth.reportProblem(report)});
+require('../../src/champagne-problem-monitor').monitorProblems({app,reporter:problemReporter,activity:()=>adminActivity.join('\n')});
+
 let publicationConnection;
 const sharedConnection=(refresh=false)=>publicationConnection.shared(refresh);
 const publicationToken=()=>publicationConnection.token();
@@ -44,11 +48,11 @@ const adminUpdates=require('./admin-updates.cjs').createAdminUpdates({app,feed:"
 handle('admin-update-check',async()=>adminUpdates.check());
 const tokenStore=require('./token-store.cjs').createAdminTokenStore({directory:app.getPath('userData'),safeStorage:require('electron').safeStorage,repository:engine.REPO,branch:engine.BRANCH});
 publicationConnection=require('./publication-connection.cjs').createPublicationConnection(adminAuth,tokenStore);
-function progress(message) { if(win&&!win.isDestroyed()) win.webContents.send('admin-progress',message); }
+function progress(message) { adminActivity.push(require('../../src/champagne-diagnostic').clean(message,600));if(adminActivity.length>100)adminActivity.shift(); if(win&&!win.isDestroyed()) win.webContents.send('admin-progress',message); }
 function guard(event) { if(!win || event.sender!==win.webContents || event.senderFrame!==win.webContents.mainFrame) throw new Error('Solicitud no autorizada.'); }
 function handle(name,action) {ipcMain.handle(name,async(event,...args)=>{
   guard(event); if(busy) return {ok:false,error:'Espera a que termine la operación actual.'};
-  busy=true; try{if(name==='admin-prepare'&&plan?.unresolved?.length)throw Error('Faltan fuentes oficiales exactas de '+plan.unresolved.length+' mods. Vuelve a analizar después de resolverlas.');if(!publicActions.has(name)){if(!['admin-packs','admin-select-pack','admin-create-pack','admin-token-status'].includes(name))await (localActions.has(name)?adminCatalogAccess.authorizeLocal():adminAuth.verifiedUsername());if(!activePack&&!name.startsWith('admin-wizard-')&&!['admin-packs','admin-select-pack','admin-create-pack','admin-token-status','admin-token-save','admin-token-clear'].includes(name))throw Error('Selecciona un modpack antes de continuar.');}return {ok:true,...await action(...args)};}catch(error){if(activePack&&['admin-publish','admin-publish-design'].includes(name))auditSaved('publication_error',activePack.name,prepared?.version);return{ok:false,error:error.message,retryAfter:error.retryAfter||0,...(error.fields?{fields:error.fields}:{})};}finally{busy=false;}
+  busy=true; try{if(name==='admin-prepare'&&plan?.unresolved?.length)throw Error('Faltan fuentes oficiales exactas de '+plan.unresolved.length+' mods. Vuelve a analizar después de resolverlas.');if(!publicActions.has(name)){if(!['admin-packs','admin-select-pack','admin-create-pack','admin-token-status'].includes(name))await (localActions.has(name)?adminCatalogAccess.authorizeLocal():adminAuth.verifiedUsername());if(!activePack&&!name.startsWith('admin-wizard-')&&!['admin-packs','admin-select-pack','admin-create-pack','admin-token-status','admin-token-save','admin-token-clear'].includes(name))throw Error('Selecciona un modpack antes de continuar.');}return {ok:true,...await action(...args)};}catch(error){problemReporter.capture(error,{operation:name,log:adminActivity.join('\n')});return{ok:false,error:error.message,retryAfter:error.retryAfter||0,...(error.fields?{fields:error.fields}:{})};}finally{busy=false;}
 });}
 
 function completeDraft(input){const v=wizardModel.validate(input,{complete:true});if(!v.valid)throw Object.assign(Error('Revisa los campos del lanzador.'),{fields:v.errors});return v.value;}
