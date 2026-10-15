@@ -1,5 +1,21 @@
 [
   {
+    "version": "0.1.7",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-15T07:20:50.294Z",
+    "notes": "Mod para hacer zoom\npueba",
+    "mods": 91,
+    "content": 182,
+    "changes": {
+      "added": [
+        "mods/justzoom_forge_3.0.1_MC_1.20.1.jar"
+      ],
+      "changed": [],
+      "removed": []
+    },
+    "restoredFrom": null
+  },
+  {
     "version": "0.1.6",
     "packName": "Mundo Conejil",
     "publishedAt": "2026-10-12T21:45:41.026Z",
