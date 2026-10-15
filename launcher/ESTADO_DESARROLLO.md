@@ -401,3 +401,7 @@ El propietario reemplazó el token de forma privada. Discord users/@me y las com
 - Instalador, blockmap y latest.yml descargados públicamente y verificados por tamaño/SHA-256. Instalador: `a93b569b3b0743de47a40325a218398a5f0cdc02240fbc42b87df9da24dcc0fe` (115482367 bytes). ASAR: 357 archivos, fuentes coincidentes, sin almacenes privados. Arranque del paquete aprobado en perfil aislado. No se ha ejecutado el instalador sobre el perfil habitual del propietario.
 - El canal latest del Launcher sigue en v0.1.18. No se desplegó Cloudflare ni se republicaron modpacks.
 - Crear y continuar a publicación usa la misma activación de manifiesto y catálogo: el ensayo integrado verifica que el lanzador pasa de no estar publicado a aparecer al consultar la biblioteca para su rol, permite descargar/arrancar con fixtures y rechaza al retirar el rol. No requiere otra publicación manual del catálogo. Un Launcher abierto debe consultar la biblioteca para recibir el cambio; no se implementó envío en tiempo real a ventanas abiertas.
+
+### Incidencia de actualización automática tras 0.1.24
+
+El 15 de octubre se comprobó que la API de GitHub contenía 0.1.24 mientras la URL raw habitual aún devolvía 0.1.23; el servidor anuncia caché max-age=300. La variante refs/heads ya devolvía 0.1.24. Se instaló directamente en esta PC el mismo instalador publicado, tras cotejar SHA-256; salida 0 y versión del ASAR instalado 0.1.24. No se cambiaron los datos de usuario ni se creó otra release. La propagación del endpoint original no queda confirmada por esta instalación directa.
