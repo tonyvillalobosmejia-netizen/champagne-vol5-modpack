@@ -437,10 +437,10 @@ Se añade auditoría de cambios confirmados sólo en catálogo (rol, servidor o 
 - **Servicio activo:** Worker 1.2.2, despliegue 39e003ab confirmado en Cloudflare; bot reiniciado con la credencial cifrada existente y plantilla de eliminación actualizada. 7/7 pruebas de releases/cola aprobadas tras el ajuste de sondeo. Administrador 0.1.25 y Launcher 0.1.18 confirmados también en los paquetes instalados de esta PC.
 
 
-## VillaWolf Bot 0.2.1 — instalador y acceso administrativo (en desarrollo)
+## VillaWolf Bot 0.2.1 — instalador y acceso administrativo (publicado)
 
 - Interfaz oscura con acentos amarillos y logos existentes de VillaWolf.
-- Instalador Windows x64 independiente en preparación; todavía no se declara publicado.
+- Instalador Windows x64 independiente publicado en https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/bot-v0.2.1. Descargas públicas verificadas por SHA-256. Arranque aislado del paquete correcto; interfaz y bloqueo inicial sin sesión comprobados. No se ha instalado en otra computadora.
 - Autenticación Discord reutiliza el servicio central con propósito `admin`: exige Administrador u Owner del Discord oficial. Antes de guardar el token, copiar la clave de conexión e iniciar se comprueba acceso en el servidor. La sesión administrativa se guarda cifrada separadamente.
 - El token del bot se conserva cifrado en la PC; nunca se incorpora al instalador ni se descarga automáticamente por iniciar sesión. Las cuentas autorizadas de esta PC pueden utilizarlo. No existe sincronización de tokens entre computadoras.
 - Pruebas automatizadas del control de acceso: 5 casos aprobados (sin sesión, permiso rechazado, autorizado, revocación y cierre). Inicio OAuth real de esta versión pendiente de comprobar con el propietario.
