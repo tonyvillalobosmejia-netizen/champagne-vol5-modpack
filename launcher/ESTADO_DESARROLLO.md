@@ -6,14 +6,14 @@
 
 ## Publicación actual — 15 de octubre de 2026
 
-- **Publicados y verificados:** Launcher 0.1.18 y Administrador 0.1.24. Descarga pública de instaladores, blockmaps y latest.yml comprobada por SHA-256/tamaño; canales de actualización activados.
+- **Publicados y verificados:** Launcher 0.1.18 y Administrador 0.1.25. Descarga pública de instaladores, blockmaps y latest.yml comprobada por SHA-256/tamaño; canales de actualización activados.
 - **Pruebas:** 268 aprobadas, 0 fallos; arranque de ambos paquetes en perfiles aislados aprobado. No se repitieron todas las combinaciones de Minecraft ni la instalación habitual de esta PC.
 - **Administrador 0.1.23:** formulario oscuro de cuatro pestañas, borradores locales, imagen inicial, validaciones reales y comprobación de comunidades externas. Crear borrador no publica ni anuncia.
 - **Launcher 0.1.18:** cuenta renovada, Discord obligatorio/Microsoft opcional, código de dispositivo copiado automáticamente y avatar de Discord o skin oficial Premium.
-- **Worker 1.2.0 desplegado:** migraciones aditivas 0004–0006 ejecutadas, ROLE_BOT_MULTI_GUILD=true y ADMIN_RELEASE_CHANNEL_ID configurado y verificado por UI. Roles, cola y auditoría implementados. No se cambiaron secretos ni tablas anteriores.
+- **Worker 1.2.2 desplegado:** migraciones aditivas 0004–0006 ejecutadas, ROLE_BOT_MULTI_GUILD=true y ADMIN_RELEASE_CHANNEL_ID configurado y verificado por UI. Roles, cola y auditoría implementados. No se cambiaron secretos ni tablas anteriores.
 - **Bot 0.2.0 conectado:** el propietario reemplazó la credencial; comprobación de identidad por Discord aprobada y estado local «Bot conectado. Roles sincronizados». Los dos canales privados de Racoon mantienen los cinco permisos necesarios. La comprobación directa de Discord sigue disponible como respaldo.
 - **Racoon Team:** bot y mensajes reales comprobados anteriormente en ambos canales privados, sin Administrador; la credencial dejó de ser aceptada al retomar el 15 de octubre. Canales y rol de pruebas se conservan.
-- **Pendiente de integración real:** cola completa, auditoría de una publicación y filtrado externo con el bot reconectado. Automatizados aprobados; no presentar como ensayo real completo.
+- **Integración real comprobada:** catálogo y verificación con sesión guardada; reportes recuperados y mensajes reales en registro (incluye Mundo Conejil 0.1.7 y resumen de cambios). Cola local de eventos vacía. No se repitió todo el arranque de Minecraft en esta corrección.
 
 ### Compatibilidad con Minecraft
 
@@ -32,9 +32,9 @@ El propietario aportó el 14 de octubre de 2026 una captura del correo «AppID R
 
 ### Registro de cambios de cada publicación
 
-**Desplegado en Worker 1.2.0; entrega pendiente de reconectar el bot:** el evento de publicación confirmada compara el manifiesto del commit con su padre y añade a la auditoría privada versión anterior/nueva, cantidades de mods y archivos añadidos/modificados/retirados y cambios de nombre, Minecraft/Forge, fondo, noticias, tarjeta de actualizaciones y notas. No copia rutas locales, credenciales ni contenido de configuraciones. Una publicación sólo de diseño no afirma haber cambiado mods ni versión. El mensaje divide resúmenes largos para respetar los límites de Discord.
+**Desplegado en Worker 1.2.2; entrega real comprobada en registro:** el evento de publicación confirmada compara el manifiesto del commit con su padre y añade a la auditoría privada versión anterior/nueva, cantidades de mods y archivos añadidos/modificados/retirados y cambios de nombre, Minecraft/Forge, fondo, noticias, tarjeta de actualizaciones y notas. No copia rutas locales, credenciales ni contenido de configuraciones. Una publicación sólo de diseño no afirma haber cambiado mods ni versión. El mensaje divide resúmenes largos para respetar los límites de Discord.
 
-**Verificación:** 11 pruebas de resumen, plantillas y cola pasaron el 14 de octubre de 2026 (3 nuevas para el resumen real y sus límites). Falta verificar este registro contra una publicación y un envío reales en Discord con el bot reconectado.
+**Verificación:** 11 pruebas de resumen, plantillas y cola pasaron el 14 de octubre de 2026 (3 nuevas para el resumen real y sus límites). El 15 de octubre se verificó la entrega real de la publicación Mundo Conejil 0.1.7 con su resumen de cambios.
 
 ## Cómo leer y mantener este informe
 
@@ -420,3 +420,14 @@ Servicio 1.2.1 desplegado en Cloudflare (ce784964); Administrador 0.1.25 en desa
 ### Ajustes finales del servicio 1.2.2
 
 Se añade auditoría de cambios confirmados sólo en catálogo (rol, servidor o anuncios) aunque el manifiesto conserve los mismos bytes; se comprueba el cambio real del mismo lanzador contra el catálogo padre. La última publicación pendiente correspondía a ese caso. Revalidación automatizada aprobada. El instalador 0.1.25 pasó integridad, exclusión de almacenes privados y arranque aislado (358 archivos, SHA-256 7130dded136fda94815f9da1bfb0818bcd505934cb340f8673f200154d9193d9).
+
+## Mantenimiento y auditoría — 15 de octubre de 2026
+
+- **Administrador 0.1.25 publicado e instalado:** instalador de 115482627 bytes; SHA-256 7130dded136fda94815f9da1bfb0818bcd505934cb340f8673f200154d9193d9. Arranque aislado e integridad del paquete aprobados. Launcher permanece en 0.1.18.
+- **Corregido:** la lectura del catálogo usa la API GitHub para evitar la copia raw obsoleta. El lanzador de prueba juaaaaaannnn sí fue verificado; después fue eliminado por una acción independiente registrada en el repositorio. No se recreó.
+- **Corregido:** el manifiesto de Mundo Conejil 0.1.7 ocupa 34870427 bytes; la respuesta base64 de GitHub excedía el límite de lectura del servicio y bloqueaba auditorías posteriores. Se leen metadatos mediante stream con límites, conservando hashes y sin alterar el paquete. La cola continúa con eventos posteriores si uno falla y conserva los pendientes.
+- **Auditoría de eliminación:** registra nombre e ID del administrador autenticado, nombre del lanzador y fecha, sólo tras confirmar el commit de borrado. No genera una eliminación ficticia para probarlo en producción. Ocho pruebas de eliminación central y cinco de mensajes aprobadas (13/13), incluyendo ausencia de reporte cuando el borrado falla y ausencia de duplicados al repetirlo.
+- **Avisos de aplicaciones:** breves, con versión y enlace; no copian el detalle de las notas. Comprobación idempotente de releases durante el sondeo firmado del bot, máximo una vez por minuto. La entrega de estos dos avisos se está verificando; no debe confundirse con los registros de modpacks ya comprobados.
+- **Limpieza autorizada PC y GitHub:** eliminadas 12 carpetas de compilaciones antiguas, 6091324139 bytes (6,09 GB). Conservados los instaladores actuales del Launcher y Administrador. En GitHub se eliminaron 21 releases antiguas y sus tags, con 2467506050 bytes en assets; también cuatro archivos de snapshots antiguos de Mundo Conejil y sus entradas antiguas del índice. Se conserva 0.1.7, el manifiesto estable y el historial de commits. No se reescribió Git: sus blobs históricos siguen en commits anteriores.
+- **Preservado:** mundos, instalaciones actuales, sesiones, originales de CurseForge y código fuente. No se purgaron carpetas de datos o backups sin clasificar.
+- **Pruebas específicas previas a 0.1.25:** 51 casos de catálogos, permisos, publicación central, manifiestos grandes, colas y anuncios aprobados; el conjunto histórico de 268 corresponde a una publicación anterior y no se presenta como repetido ahora.

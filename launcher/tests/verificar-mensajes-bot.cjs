@@ -14,3 +14,5 @@ test('auditoría distingue borrador, cambios, publicación y error sin datos pri
    assert.equal(r.embeds[0].fields.find(x=>x.name==='Estado').value,action==='published'?'Publicado':action==='publication_error'?'Error · Revisar publicación':'Guardado · No publicado');
  }
 });
+
+test('registro de eliminación identifica administrador, lanzador y fecha sin menciones',()=>{const {auditMessage}=require('../auth-server/roles-bot/announcement.cjs');const r=auditMessage({action:'deleted',actorName:'Administrador de prueba',actorId:'1000000000000000001',name:'Mundo prueba',occurredAt:'2026-10-15T15:00:00Z'});assert.equal(r.embeds[0].title,'📋 Lanzador eliminado');assert.equal(r.embeds[0].fields.find(x=>x.name==='Administrador').value,'Administrador de prueba');assert.equal(r.embeds[0].fields.find(x=>x.name==='ID del administrador').value,'1000000000000000001');assert.equal(r.embeds[0].timestamp,'2026-10-15T15:00:00.000Z');assert.deepEqual(r.allowedMentions.parse,[]);});

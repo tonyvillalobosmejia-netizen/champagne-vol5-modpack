@@ -122,17 +122,17 @@ export function createReleaseAnnouncements({fetchImpl=fetch,clock=Date.now,outbo
   const newer=(a,b)=>{const x=versionParts(a),y=versionParts(b);if(!x||!y)return false;for(let i=0;i<3;i++){if(x[i]!==y[i])return x[i]>y[i];}return false;};
   async function check(env){
     const cursors=await env.DB.prepare('SELECT * FROM release_cursors').all();
-    if(cursors.results.length===2&&cursors.results.every(r=>r.checked_at>clock()-900000))return{ok:true,cached:true};
+    if(cursors.results.length===2&&cursors.results.every(r=>r.checked_at>clock()-60000))return{ok:true,cached:true,versions:cursors.results.map(r=>({kind:r.kind,version:r.version}))};
     const response=await fetchImpl('https://api.github.com/repos/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases?per_page=30',{redirect:'manual',signal:AbortSignal.timeout(15000),headers:{Accept:'application/vnd.github+json','User-Agent':'VillaWolf-Release-Announcements',...(env.GITHUB_TOKEN?{Authorization:'Bearer '+env.GITHUB_TOKEN}:{})}});
     if(!response.ok)throw new AuthError(503,'Los anuncios de versiones esperan a GitHub.');
     const raw=await response.text();if(encoder.encode(raw).length>4*1024*1024)throw new AuthError(503,'Lista de versiones demasiado grande.');
     let releases;try{releases=JSON.parse(raw);}catch{throw new AuthError(503,'Lista de versiones inválida.');}
     if(!Array.isArray(releases))throw new AuthError(503,'Lista de versiones inválida.');
-    const catalog=await loadCatalog(env);let queued=0;
+    const catalog=await loadCatalog(env);let queued=0;const observed=[];
     for(const kind of ['launcher','admin']){
       const prefix=kind==='launcher'?'v':'admin-v',current=cursors.results.find(c=>c.kind===kind)?.version|| (kind==='launcher'?'0.1.17':'0.1.20');
       const candidates=releases.filter(r=>r.draft===false&&r.prerelease===false&&typeof r.tag_name==='string'&&r.tag_name.startsWith(prefix)&&versionParts(r.tag_name.slice(prefix.length))&&Number.isFinite(Date.parse(r.published_at))&&Date.parse(r.published_at)<=clock()&&Array.isArray(r.assets)&&r.assets.some(a=>a.name===('VillaWolf.'+(kind==='launcher'?'Launcher':'Administrador')+'.Setup.'+r.tag_name.slice(prefix.length)+'.exe'))).sort((a,b)=>newer(a.tag_name.slice(prefix.length),b.tag_name.slice(prefix.length))?-1:1);
-      const release=candidates[0],version=release?.tag_name.slice(prefix.length);
+      const release=candidates[0],version=release?.tag_name.slice(prefix.length);observed.push({kind,current,latest:version||null});
       if(release&&(newer(version,current)||version===current&&newer(version,kind==='launcher'?'0.1.17':'0.1.20'))){
         const notes='Ya está disponible la versión '+version+'. Actualiza la aplicación para utilizarla.';
         if(/(?:github_pat_|ghp_|access_token|client_secret)/i.test(notes))throw new AuthError(400,'Las notas oficiales contienen texto no publicable.');
@@ -141,7 +141,7 @@ export function createReleaseAnnouncements({fetchImpl=fetch,clock=Date.now,outbo
         for(const d of destinations){await outbox.enqueue(env,{eventId:'release:'+kind+':'+version+':'+(d.mentionRole?d.roleId:'silent'),guildId:d.guildId,channelId:d.channelId,payload:{kind,name:kind==='launcher'?'VillaWolf Launcher':'VillaWolf Administrador',version,notes,...(d.roleId?{roleId:d.roleId}:{}),mentionRole:d.mentionRole}});queued++;}
         await env.DB.prepare('INSERT INTO release_cursors(kind,version,checked_at) VALUES(?,?,?) ON CONFLICT(kind) DO UPDATE SET version=excluded.version,checked_at=excluded.checked_at').bind(kind,version,clock()).run();
       }else await env.DB.prepare('UPDATE release_cursors SET checked_at=? WHERE kind=?').bind(clock(),kind).run();
-    }return{ok:true,queued};
+    }return{ok:true,queued,observed};
   }return{check};
 }
 
@@ -389,7 +389,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
 
   async function deletePublishedPack(env,token,input){
     if(!/^[a-z0-9][a-z0-9-]{0,63}$/.test(input.packId||'')||typeof input.confirmName!=='string')throw new AuthError(400,'Confirma el lanzador que deseas eliminar.');
-    await accessSession(env,token,'/v2/admin/session');
+    const deletionSession=await accessSession(env,token,'/v2/admin/session');
     const release=await ghRequired(env,'/releases/latest'),version=String(release.tag_name||'').replace(/^v/,'').split('.').map(Number);if(version.length!==3||version.some(n=>!Number.isInteger(n)||n<0)||version[0]===0&&(version[1]===0||version[1]===1&&version[2]<17))throw new AuthError(412,'Publica primero Launcher 0.1.17 para distribuir la limpieza a los jugadores.');
     const id=input.packId,head=(await ghRequired(env,'/git/ref/heads/'+ghBranch)).object?.sha;if(!ghSha(head))throw new AuthError(503,'Referencia de GitHub inválida.');
     const commit=await ghRequired(env,'/git/commits/'+head),snapshot=await ghRequired(env,'/git/trees/'+commit.tree.sha+'?recursive=1');if(snapshot.truncated||!Array.isArray(snapshot.tree))throw new AuthError(503,'No se pudo obtener el árbol completo del repositorio.');
@@ -408,6 +408,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
     const verifiedCatalog=await ghRequired(env,'/contents/updates/catalog.json?ref='+next);if(decoder.decode(decodeBase64(verifiedCatalog.content.replace(/\s/g,'')))!==raw)throw new AuthError(503,'No se pudo verificar el catálogo preparado.');
     if((await ghRequired(env,'/git/ref/heads/'+ghBranch)).object?.sha!==head)throw new AuthError(409,'Hubo una publicación simultánea; vuelve a intentar la eliminación.');await accessSession(env,token,'/v2/admin/session');
     const activated=await ghApi(env,'/git/refs/heads/'+ghBranch,'PATCH',{sha:next,force:false});if(activated.status!==200)throw new AuthError(503,'No se activó la eliminación.');
+    await outbox.enqueue(env,{eventId:'deleted:'+id+':'+next,guildId:env.DISCORD_GUILD_ID,channelId:'1414678783679795425',payload:{kind:'audit',action:'deleted',actorName:deletionSession.user.discordName||deletionSession.user.username,actorId:deletionSession.user.discordId,name:entry.name,occurredAt:new Date(clock()).toISOString(),changes:['Lanzador eliminado del catálogo y sus archivos publicados.','Instalaciones VillaWolf, mundos y configuraciones se eliminarán al sincronizar los clientes.','La carpeta original de CurseForge se conserva.']}});
     await env.DB.prepare('INSERT INTO deleted_packs(pack_id,deleted_at) VALUES(?,?) ON CONFLICT(pack_id) DO NOTHING').bind(id,clock()).run();return{ok:true,deleted:true,packId:id,commit:next,removedFiles:paths.length};
   }
 
@@ -493,7 +494,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
     const key=await crypto.subtle.importKey('raw',Uint8Array.from(env.ROLE_BOT_KEY.match(/../g),b=>parseInt(b,16)),{name:'HMAC',hash:'SHA-256'},false,['verify']);
     if(!await crypto.subtle.verify('HMAC',key,Uint8Array.from(signature.match(/../g),b=>parseInt(b,16)),encoder.encode(JSON.stringify(input))))throw new AuthError(401,'Firma inválida.');
     const consumed=await env.DB.prepare('INSERT INTO bot_requests(nonce,expires_at) VALUES(?,?) ON CONFLICT(nonce) DO NOTHING RETURNING nonce').bind(input.nonce,clock()+120000).all();if(!consumed.results.length)throw new AuthError(409,'Solicitud ya atendida.');
-    if(input.action==='poll')return{ok:true,job:await outbox.claim(env,input.guildIds)};
+    if(input.action==='poll'){const releases=await releaseAnnouncements.check(env).catch(error=>({ok:false,message:error instanceof AuthError?error.message:'Comprobación de avisos pendiente.'}));return{ok:true,releases,job:await outbox.claim(env,input.guildIds)};}
     if(input.action==='ack')return outbox.acknowledge(env,input.result||{});
     throw new AuthError(400,'Acción de bot inválida.');
   }
