@@ -89,15 +89,15 @@
   <div id="accountOverlay" class="settings-overlay" hidden>
       <section class="panel account-dialog" id="accountPanel" role="dialog" aria-modal="true" aria-labelledby="accountTitle" tabindex="-1">
         <div class="panel-heading"><div><span class="eyebrow">CUENTA</span><h2 id="accountTitle">Tu cuenta</h2></div><button id="closeAccountBtn" class="account-close" type="button" aria-label="Cerrar cuenta">×</button></div>
-        <p id="authStatus" aria-live="polite">Comprobando el servicio de cuentas…</p>
-        <button id="discordLoginBtn" class="outline" type="button" hidden>INICIAR SESIÓN CON DISCORD</button>
+        <div class="account-identity"><img id="accountIdentityAvatar" src="./assets/avatar-default.svg" alt="Tu imagen de perfil"><div><h3 id="accountIdentityName">Tu perfil</h3><span id="accountPremiumBadge" class="premium-badge" hidden>✦ Minecraft Java Premium</span></div></div><p id="authStatus" aria-live="polite">Comprobando el servicio de cuentas…</p>
+        <div class="platform-requirement"><span class="required-label">Obligatorio</span><p>Inicia sesión con Discord para acceder a tus modpacks. Tu rol en el servidor determina cuáles puedes descargar y jugar.</p></div><button id="discordLoginBtn" class="platform-signin discord-signin" type="button" hidden><img src="./assets/discord-signin.svg" alt="" aria-hidden="true"><span>Continuar con Discord</span><span aria-hidden="true">→</span></button>
         <button id="cancelDiscordLoginBtn" class="text-button" type="button" hidden>CANCELAR INICIO DE SESIÓN</button>
         <section class="microsoft-account" aria-labelledby="microsoftTitle">
-          <h3 id="microsoftTitle">Minecraft Java Premium</h3>
+          <div class="platform-section-title"><h3 id="microsoftTitle">Minecraft Java Premium</h3><span class="optional-label">Opcional</span></div>
           <p id="microsoftStatus" aria-live="polite">Comprobando Microsoft…</p>
           <p>Discord comprueba tu acceso a la comunidad. Microsoft verifica Minecraft Java y usa tu nombre, UUID y skin oficiales. Cambiar de identidad puede cambiar tu inventario.</p>
-          <div id="microsoftDevice" hidden><p>Escribe este código en la página oficial de Microsoft:</p><strong id="microsoftCode"></strong><button id="microsoftCancelBtn" class="text-button" type="button">CANCELAR</button></div>
-          <div class="account-actions"><button id="microsoftLoginBtn" class="outline" type="button">VINCULAR MICROSOFT</button><button id="microsoftLogoutBtn" class="text-button" type="button" hidden>DESVINCULAR MICROSOFT</button></div>
+          <div id="microsoftDevice" hidden><h4>Conecta tu cuenta en 3 pasos</h4><ol class="microsoft-steps"><li>El código se copia automáticamente.</li><li>Abre Microsoft y pega el código.</li><li>Autoriza tu cuenta; VillaWolf terminará aquí.</li></ol><strong id="microsoftCode" aria-label="Código para vincular Microsoft"></strong><p id="microsoftCopyStatus" role="status"></p><p id="microsoftCountdown" role="timer" aria-live="off"></p><div class="account-actions"><button id="microsoftOpenBtn" class="outline" type="button">Abrir Microsoft ↗</button><button id="microsoftCopyBtn" class="outline" type="button">Copiar código</button><button id="microsoftCancelBtn" class="text-button" type="button">Cancelar</button></div></div>
+          <div class="account-actions"><button id="microsoftLoginBtn" class="platform-signin microsoft-signin" type="button"><img src="./assets/microsoft-signin.svg" alt="" aria-hidden="true"><span id="microsoftLoginLabel">Vincular cuenta Microsoft</span><span aria-hidden="true">→</span></button><button id="microsoftLogoutBtn" class="text-button" type="button" hidden>DESVINCULAR MICROSOFT</button></div>
           <div id="microsoftSkinControls" hidden><label for="microsoftSkinVariant">Modelo de skin</label><select id="microsoftSkinVariant"><option value="classic">Brazos anchos</option><option value="slim">Brazos delgados</option></select><button id="microsoftSkinBtn" class="outline" type="button">CAMBIAR SKIN OFICIAL</button></div>
         </section>
         <form id="authForm" hidden>
@@ -117,9 +117,7 @@
           <button id="saveProfileBtn" class="outline" type="button">GUARDAR PERFIL LOCAL</button>
           <p id="profileStatus" aria-live="polite">Elige un nombre para tus mundos locales.</p>
         </details>
-        <div class="avatar-settings">
-          <p id="avatarStatus" aria-live="polite">Personaliza el avatar con un archivo de skin PNG. Solo cambia la imagen del launcher.</p>
-          <div class="account-actions"><button id="chooseAvatarBtn" class="outline" type="button">ELEGIR SKIN PARA EL AVATAR</button><button id="resetAvatarBtn" class="text-button" type="button">USAR AVATAR PREDETERMINADO</button></div>
+        <div class="avatar-settings"><h3>Imagen de perfil</h3><p id="avatarStatus" aria-live="polite">Tu foto de Discord es la imagen predeterminada. Con Minecraft Java Premium puedes alternarla con tu skin oficial.</p><div class="account-avatar-options" role="group" aria-label="Imagen de perfil"><button id="avatarDiscordBtn" class="outline" type="button" aria-pressed="true">Foto de Discord</button><button id="avatarMinecraftBtn" class="outline" type="button" aria-pressed="false">Skin oficial <span class="premium-option">Premium</span></button></div>
         </div>
       </section>
   </div>

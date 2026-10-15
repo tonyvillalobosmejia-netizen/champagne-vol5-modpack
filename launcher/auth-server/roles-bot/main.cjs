@@ -6,7 +6,7 @@ if(!app.requestSingleInstanceLock()){app.quit();}else{
  let win,tray,bot,status='Configuración pendiente',store,credentials,stopping=false;
  const publicState=()=>({tokenSaved:!!credentials?.token,endpoint,status,running:!!bot});
  function notify(message){status=message;require('node:fs').writeFileSync(path.join(app.getPath('userData'),'status.json'),JSON.stringify(publicState()));if(win&&!win.isDestroyed())win.webContents.send('bot-state',publicState());}
- function start(){if(bot||!credentials?.token)return;bot=require('./bridge.cjs').startRoleBot({token:credentials.token,key:credentials.syncKey,endpoint,guildIds:['1007732653035880589'],onStatus:notify});notify('Conectando con Discord y VillaWolf…');}
+ function start(){if(bot||!credentials?.token)return;bot=require('./bridge.cjs').startRoleBot({token:credentials.token,key:credentials.syncKey,endpoint,guildIds:['1007732653035880589'],syncAllGuilds:true,notificationsEnabled:true,onStatus:notify});notify('Conectando con Discord y VillaWolf…');}
  function guard(event){if(event.sender!==win?.webContents||event.senderFrame!==win.webContents.mainFrame)throw Error('Solicitud no permitida.');}
  ipcMain.handle('bot-status',e=>{guard(e);return publicState();});
  ipcMain.handle('bot-save',async(e,token)=>{guard(e);if(typeof token!=='string'||!/[A-Za-z0-9_]/.test(token)||!/^[-A-Za-z0-9_.]{40,300}$/.test(token))return{ok:false,message:'Introduce la clave del bot de Discord. No la envíes al chat.'};try{if(bot){await bot.stop();bot=null;}credentials={...credentials,token};store.save(credentials);start();return{ok:true,...publicState()};}catch{return{ok:false,message:'Windows no pudo proteger la configuración.'};}});

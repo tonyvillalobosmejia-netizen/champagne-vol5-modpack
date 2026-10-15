@@ -1,5 +1,9 @@
 const {contextBridge,ipcRenderer}=require('electron');
 contextBridge.exposeInMainWorld('admin',{
+  wizardLoad:()=>ipcRenderer.invoke('admin-wizard-load'),wizardSave:input=>ipcRenderer.invoke('admin-wizard-save',input),
+  wizardFolder:input=>ipcRenderer.invoke('admin-wizard-folder',input),wizardInspect:input=>ipcRenderer.invoke('admin-wizard-inspect',input),
+  wizardAnalyze:input=>ipcRenderer.invoke('admin-wizard-analyze',input),wizardDiscord:input=>ipcRenderer.invoke('admin-wizard-discord',input),
+  wizardImage:()=>ipcRenderer.invoke('admin-wizard-image'),wizardCreate:input=>ipcRenderer.invoke('admin-wizard-create',input),
   deletePack:()=>ipcRenderer.invoke('admin-delete-pack'),
   packs:()=>ipcRenderer.invoke('admin-packs'),selectPack:id=>ipcRenderer.invoke('admin-select-pack',id),createPack:input=>ipcRenderer.invoke('admin-create-pack',input),
   authStatus:()=>ipcRenderer.invoke('admin-auth-status'),login:()=>ipcRenderer.invoke('admin-auth-login'),logout:()=>ipcRenderer.invoke('admin-auth-logout'),cancelLogin:()=>ipcRenderer.invoke('admin-auth-cancel'),

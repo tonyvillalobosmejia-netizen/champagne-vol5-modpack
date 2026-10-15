@@ -393,12 +393,14 @@ function refreshSidebarAccount() {
   $("sidebarUsername").title = username || "Cuenta"; $("accountBtn").title = username ? "Cuenta de " + username : "Tu cuenta";
   $("sidebarAccountType").textContent = microsoftState.user ? "MINECRAFT JAVA PREMIUM" : accountState.user ? accountState.provider === 'discord' ? 'CUENTA DISCORD' : "CUENTA VILLAWOLF" : username ? "PERFIL LOCAL" : "SIN SESIÓN";
   $("accountBtn").setAttribute("aria-label", username ? "Gestionar cuenta de " + username : "Abrir cuenta");
-  $("chooseAvatarBtn").disabled = !username || !!microsoftState.user;
-  $("resetAvatarBtn").disabled = !username || !!microsoftState.user;
+  $("avatarMinecraftBtn").disabled = !microsoftState.user || accountBusy;
+  $("avatarDiscordBtn").disabled = !accountState.user || accountBusy;
+  $("accountIdentityName").textContent=accountState.user?.discordName||username||"Tu perfil";
+  $("accountPremiumBadge").hidden=!microsoftState.user;
   $("sidebarAvatar").src = "./assets/avatar-default.svg";
   const requestId = ++avatarRequest;
   window.launcher.getAccountAvatar().then(result => {
-    if (requestId === avatarRequest && result.ok && result.image) drawSkinAvatar(result.image, requestId);
+    if(requestId!==avatarRequest||!result.ok)return;for(const [id,source]of [["avatarDiscordBtn","discord"],["avatarMinecraftBtn","minecraft"]])$(id).setAttribute("aria-pressed",String(result.source===source));if(result.image){if(result.kind==="image")$("sidebarAvatar").src=result.image;else drawSkinAvatar(result.image,requestId);}
   }).catch(() => {});
 }
 function drawSkinAvatar(source, requestId) {
@@ -435,25 +437,17 @@ $("bottomSettingsBtn").addEventListener("click", () => {
 $("accountOverlay").addEventListener("keydown", event => {
   if (event.key === "Escape") { event.preventDefault(); closeAccountPanel(); }
   if (event.key === "Tab") {
-    const focusable = [...$("accountPanel").querySelectorAll('button, input, summary')].filter(element => !element.disabled && element.getClientRects().length);
+    const focusable = [...$("accountPanel").querySelectorAll('button, input, select, summary')].filter(element => !element.disabled && element.getClientRects().length);
     const first = focusable[0], last = focusable[focusable.length - 1];
     if (!first) return;
     if (event.shiftKey && (document.activeElement === first || document.activeElement === $("accountPanel"))) { event.preventDefault(); last.focus(); }
     else if (!event.shiftKey && (document.activeElement === last || document.activeElement === $("accountPanel"))) { event.preventDefault(); first.focus(); }
   }
 });
-async function changeAvatar(clear = false) {
-  if (accountBusy) return;
-  $("chooseAvatarBtn").disabled = true; $("resetAvatarBtn").disabled = true;
-  try {
-    const result = await (clear ? window.launcher.resetAccountAvatar() : window.launcher.chooseAccountAvatar());
-    if (result.ok && !result.cancelled) { refreshSidebarAccount(); $("avatarStatus").textContent = clear ? "Avatar predeterminado restaurado." : "Avatar actualizado. Solo cambia la imagen del launcher."; }
-    else if (!result.ok) $("avatarStatus").textContent = result.message;
-  } catch { $("avatarStatus").textContent = "No se pudo cambiar el avatar."; }
-  finally { const username = microsoftState.user?.username || accountState.user?.username || localUsername; $("chooseAvatarBtn").disabled = !username; $("resetAvatarBtn").disabled = !username; }
-}
-$("chooseAvatarBtn").addEventListener("click", () => changeAvatar());
-$("resetAvatarBtn").addEventListener("click", () => changeAvatar(true));
+async function chooseAvatarSource(source){try{const result=await window.launcher.setAccountAvatarSource(source);if(!result.ok)throw Error(result.message);$("avatarStatus").textContent=source==="minecraft"?"Usando tu skin oficial de Minecraft.":"Usando tu foto de Discord.";refreshSidebarAccount();}catch(e){$("avatarStatus").textContent=e.message;}}
+$("avatarDiscordBtn").onclick=()=>chooseAvatarSource("discord");
+$("avatarMinecraftBtn").onclick=()=>chooseAvatarSource("minecraft");
+$("sidebarAvatar").addEventListener("load",()=>{$("accountIdentityAvatar").src=$("sidebarAvatar").src;});
 
 // DESCARGAR METADATOS OFICIALES (fase previa al inicio real)
 $("prepareBtn").addEventListener("click", () =>
@@ -646,7 +640,7 @@ $('activityOpenLogsBtn').addEventListener('click',async()=>{ try { const result=
 // Microsoft se mantiene separado de Discord; no se exponen tokens al renderer.
 
 function showMicrosoftState(state){
- microsoftState=state;
+ microsoftState=state;$('microsoftLoginLabel').textContent='Vincular cuenta Microsoft';
  $('microsoftStatus').textContent=state.user?'Minecraft Java: '+state.user.username+'. Sesión guardada '+(state.persistent?'en esta PC.':'solo hasta cerrar el launcher.'):state.configured?'Vincula una cuenta Microsoft con Minecraft Java.':'Microsoft está pendiente de configurar para VillaWolf.';
  $('microsoftLoginBtn').hidden=!!state.user;
  $('microsoftLoginBtn').disabled=!state.configured||accountBusy;
@@ -655,16 +649,21 @@ function showMicrosoftState(state){
  if(state.user)$('microsoftSkinVariant').value=state.user.variant;
  refreshSidebarAccount();
 }
+let microsoftCodeTimer=null,microsoftCodeExpired=false;
 window.launcher.onMicrosoftDevice(data=>{
+ clearInterval(microsoftCodeTimer);
+ if(data){microsoftCodeExpired=false;const tick=()=>{const left=Math.max(0,Math.ceil((data.expiresAt-Date.now())/1000));$('microsoftCountdown').textContent=left?'Código válido por '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0'):'El código venció. Pulsa Vincular cuenta Microsoft para generar uno nuevo.';if(!left){microsoftCodeExpired=true;clearInterval(microsoftCodeTimer);window.launcher.cancelMicrosoftLogin();}};tick();microsoftCodeTimer=setInterval(tick,1000);}
  $('microsoftDevice').hidden=!data;
  $('microsoftCode').textContent=data?.code||'';
- if(data)$('microsoftStatus').textContent='Autoriza VillaWolf en el navegador. Esperando a Microsoft…';
+ if(data){$('microsoftStatus').textContent='Autoriza VillaWolf en el navegador. Esperando a Microsoft…';$('microsoftCopyStatus').textContent=data.copied?'✓ Código copiado. Pégalo en la página de Microsoft.':'Selecciona el código y cópialo para continuar en Microsoft.';}
 });
+$('microsoftOpenBtn').onclick=async()=>{try{const r=await window.launcher.openMicrosoftVerification();if(!r.ok)$('microsoftCopyStatus').textContent=r.message;}catch{$('microsoftCopyStatus').textContent='No se pudo abrir Microsoft. Reintenta.';}};
+$('microsoftCopyBtn').onclick=async()=>{try{const r=await window.launcher.copyMicrosoftCode();$('microsoftCopyStatus').textContent=r.message;}catch{$('microsoftCopyStatus').textContent='Selecciona el código y cópialo para continuar.';}};
 $('microsoftCancelBtn').addEventListener('click',()=>window.launcher.cancelMicrosoftLogin());
 async function microsoftAction(action){
  if(accountBusy)return;accountBusy=true;$('playBtn').disabled=true;
  for(const id of ['microsoftLoginBtn','microsoftLogoutBtn','microsoftSkinBtn','logoutAccountBtn','discordLoginBtn'])$(id).disabled=true;
- try{const result=await action();if(result.ok&&!result.cancelled){showMicrosoftState(result);addLog(result.message||'Cuenta Microsoft actualizada.','success');}else if(!result.ok)$('microsoftStatus').textContent=result.message;}
+ try{const result=await action();if(result.ok&&!result.cancelled){showMicrosoftState(result);addLog(result.message||'Cuenta Microsoft actualizada.','success');}else if(!result.ok){$('microsoftStatus').textContent=microsoftCodeExpired?'El código venció. Genera uno nuevo para volver a intentar.':result.message;$('microsoftLoginLabel').textContent='Generar código nuevo';}}
  catch(e){$('microsoftStatus').textContent=e.message;}
  finally{accountBusy=false;syncPlayButton();for(const id of ['microsoftLogoutBtn','microsoftSkinBtn','logoutAccountBtn','discordLoginBtn'])$(id).disabled=false;$('microsoftLoginBtn').disabled=!microsoftState.configured;}
 }

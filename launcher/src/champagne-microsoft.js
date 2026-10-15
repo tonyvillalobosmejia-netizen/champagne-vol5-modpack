@@ -22,7 +22,14 @@ function createMicrosoftClient({clientId='',sessionStore,openBrowser,onDevice=()
   let r;try{r=await fetcher(url,{method:form||json||body?'POST':'GET',redirect:'error',signal:signal?AbortSignal.any([signal,AbortSignal.timeout(20000)]):AbortSignal.timeout(20000),headers:{Accept:'application/json',...(form?{'Content-Type':'application/x-www-form-urlencoded'}:{}),...(json?{'Content-Type':'application/json'}:{}),...(bearer?{Authorization:'Bearer '+bearer}:{})},body:form?new URLSearchParams(form):json?JSON.stringify(json):body});}catch{if(signal?.aborted)throw Error('Inicio de sesión Microsoft cancelado.');throw Error('No se pudo conectar con Microsoft o Minecraft. Reintenta.');}
   const chunks=[];let size=0;for await(const chunk of r.body){size+=chunk.length;if(size>1024*1024)throw Error('Respuesta de Microsoft demasiado grande.');chunks.push(Buffer.from(chunk));}
   let v;try{v=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{throw Error('Respuesta inválida de Microsoft.');}
-  if(!r.ok){const e=Error(r.status===403&&url.endsWith('authentication/login_with_xbox')?'Microsoft/Minecraft no autorizó la aplicación VillaWolf. Hay que revisar su registro y permisos.':r.status===404&&url.endsWith('minecraft/profile')?'Esta cuenta no tiene un perfil de Minecraft Java.':v.error==='invalid_grant'?'La sesión Microsoft venció o fue revocada. Vuelve a iniciar sesión.':'No se pudo verificar la cuenta Microsoft (HTTP '+r.status+').');e.status=r.status;e.oauthError=v.error;e.xerr=v.XErr;throw e;}return v;
+  if(!r.ok){
+   const stage=url===MS+'devicecode'?'solicitud de código':url===MS+'token'?(form?.grant_type==='refresh_token'?'renovación Microsoft':'autorización Microsoft'):url.includes('user.auth.xboxlive.com')?'perfil Xbox':url.includes('xsts.auth.xboxlive.com')?'autorización Xbox':url.endsWith('authentication/login_with_xbox')?'acceso Minecraft':url.endsWith('entitlements/mcstore')?'licencia Java':'perfil Minecraft';
+   const codes=Array.isArray(v.error_codes)?v.error_codes.filter(n=>Number.isSafeInteger(n)&&n>0).slice(0,3):[];
+   const diagnostic=codes.length?' Código: '+codes.map(n=>'AADSTS'+n).join(', ')+'.':'';
+   const invalidGrant=form?.grant_type==='refresh_token'?'La sesión Microsoft venció o fue revocada. Vuelve a iniciar sesión.':'Microsoft no pudo completar esta autorización. Inicia la vinculación otra vez para obtener un código nuevo.';
+   const e=Error((r.status===403&&url.endsWith('authentication/login_with_xbox')?'Microsoft/Minecraft no autorizó la aplicación VillaWolf. Hay que revisar su registro y permisos.':r.status===404&&url.endsWith('minecraft/profile')?'Esta cuenta no tiene un perfil de Minecraft Java.':v.error==='invalid_grant'?invalidGrant:'No se pudo verificar la cuenta Microsoft (HTTP '+r.status+', '+stage+').')+diagnostic);
+   e.status=r.status;e.oauthError=v.error;e.xerr=Number.isSafeInteger(v.XErr)?v.XErr:undefined;e.stage=stage;e.codes=codes;throw e;
+  }return v;
  }
  async function checkMinecraft(accessToken,signal){
   const license=await request(MC+'entitlements/mcstore',{bearer:accessToken,signal});

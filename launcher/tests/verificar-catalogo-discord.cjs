@@ -7,8 +7,8 @@ async function fixture(t){
   const db=new DatabaseSync(':memory:');db.exec(fs.readFileSync(path.join(__dirname,'../auth-server/cloudflare/schema.sql'),'utf8'));t.after(()=>db.close());
   function prepared(sql,args=[]){return {bind:(...values)=>prepared(sql,values),first:async()=>db.prepare(sql).get(...args)||null,run:async()=>({meta:db.prepare(sql).run(...args)}),all:async()=>({results:db.prepare(sql).all(...args)})};}
   const env={DB:{prepare:prepared,batch:async statements=>Promise.all(statements.map(statement=>statement.run()))},DISCORD_CLIENT_ID:'1558941216773767178',DISCORD_GUILD_ID:'1007732653035880589',DISCORD_ROLE_ID:'1558938399300390952',DISCORD_CLIENT_SECRET:'falso-secreto',TOKEN_KEY:'a'.repeat(64)};
-  let now=Date.now();const state={roles:[],refresh:true,role:true,name:'Jugador.test',id:'1000000000000000001',offline:false};let exchanges=0;
-  const fetchImpl=async (url,options)=>{assert.equal(options.redirect,'manual');if(state.redirect)return new Response(null,{status:302,headers:{Location:'https://example.invalid'}});if(state.offline)throw Error('offline');if(state.ghFetch&&url.startsWith('https://api.github.com/'))return state.ghFetch(url,options);if(state.cfFetch&&(url.startsWith('https://api.curseforge.com/')||url.startsWith('https://edge.forgecdn.net/')||url.includes('/updates/packs/conejil/stable.json')))return state.cfFetch(url,options);if(url.includes('/updates/catalog.json'))return new Response(JSON.stringify({schemaVersion:1,packs:[{id:'conejil',name:'Mundo Conejil',roleId:'1559431805096960020',enabled:true,manifestPath:'updates/packs/conejil/stable.json'},{id:'survival',name:'Survival',roleId:'1559431805096960021',enabled:true,manifestPath:'updates/packs/survival/stable.json'}]}));if(url.endsWith('/member')){state.memberCalls=(state.memberCalls||0)+1;if(state.rateTimes>0){state.rateTimes--;return Response.json({retry_after:state.rateSeconds||0.02},{status:429,headers:{'retry-after':String(state.rateSeconds||0.02)}});}if(state.memberDelay)await new Promise(resolve=>setTimeout(resolve,state.memberDelay));}if(url.endsWith('oauth2/token'))exchanges++;return new Response(JSON.stringify(url.endsWith('oauth2/token')?{access_token:'oauth-privado-ficticio',...(state.refresh?{refresh_token:'refresh-ficticio'}:{}),token_type:'Bearer',expires_in:86400,scope:'identify guilds.members.read'}:url.endsWith('users/@me')?{id:state.id,username:state.name,global_name:'Jugador ✨',avatar:'a'.repeat(32)}:{roles:state.roles,user:{id:state.id}}));};
+  let now=Date.now();const state={roles:[],refresh:true,role:true,name:'Jugador.test',id:'1000000000000000001',offline:false,memberCalls:0};let exchanges=0;
+  const fetchImpl=async (url,options)=>{assert.equal(options.redirect,'manual');if(state.redirect)return new Response(null,{status:302,headers:{Location:'https://example.invalid'}});if(state.offline)throw Error('offline');if(state.ghFetch&&url.startsWith('https://api.github.com/'))return state.ghFetch(url,options);if(state.cfFetch&&(url.startsWith('https://api.curseforge.com/')||url.startsWith('https://edge.forgecdn.net/')||url.includes('/updates/packs/conejil/stable.json')))return state.cfFetch(url,options);if(url.includes('/updates/catalog.json')&&state.catalog)return Response.json(state.catalog);if(url.endsWith('/member')&&state.guildMembership){const guildId=url.split('/guilds/')[1].split('/')[0];const roles=state.guildMembership[guildId];state.memberCalls++;return roles?Response.json({roles,user:{id:state.id}}):Response.json({message:'No member'},{status:404});}if(url.includes('/updates/catalog.json'))return new Response(JSON.stringify({schemaVersion:1,packs:[{id:'conejil',name:'Mundo Conejil',roleId:'1559431805096960020',enabled:true,manifestPath:'updates/packs/conejil/stable.json'},{id:'survival',name:'Survival',roleId:'1559431805096960021',enabled:true,manifestPath:'updates/packs/survival/stable.json'}]}));if(url.endsWith('/member')){state.memberCalls=(state.memberCalls||0)+1;if(state.rateTimes>0){state.rateTimes--;return Response.json({retry_after:state.rateSeconds||0.02},{status:429,headers:{'retry-after':String(state.rateSeconds||0.02)}});}if(state.memberDelay)await new Promise(resolve=>setTimeout(resolve,state.memberDelay));}if(url.endsWith('oauth2/token'))exchanges++;return new Response(JSON.stringify(url.endsWith('oauth2/token')?{access_token:'oauth-privado-ficticio',...(state.refresh?{refresh_token:'refresh-ficticio'}:{}),token_type:'Bearer',expires_in:86400,scope:'identify guilds.members.read'}:url.endsWith('users/@me')?{id:state.id,username:state.name,global_name:'Jugador ✨',avatar:'a'.repeat(32)}:{roles:state.roles,user:{id:state.id}}));};
   const worker=createWorker({fetchImpl,clock:()=>now});
   async function send(route,input,token,handler=worker){const response=await handler.fetch(new Request('https://prueba.workers.dev'+route,{method:input?'POST':'GET',headers:{'CF-Connecting-IP':'192.0.2.1',...(input?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{})},...(input?{body:JSON.stringify(input)}:{})}),env);return {status:response.status,value:response.headers.get('content-type')==='application/octet-stream'?{bytes:Buffer.from(await response.arrayBuffer()),headers:Object.fromEntries(response.headers)}:await response.json()};}
   const random=()=>crypto.randomBytes(32).toString('base64url');
@@ -18,6 +18,63 @@ async function fixture(t){
 }
 
 test('Catálogo: cada jugador recibe únicamente sus modpacks y la revocación es inmediata',async t=>{const f=await fixture(t);f.state.roles=['1559431805096960020'];const session=(await f.login()).value;assert.ok(session.token);let r=await f.send('/v2/catalog',null,session.token);assert.equal(r.status,200);assert.deepEqual(r.value.catalog.packs.map(p=>p.id),['conejil']);assert.equal((await f.send('/v2/packs/survival',null,session.token)).status,403);f.state.roles.push('1559431805096960021');f.advance(60001);r=await f.send('/v2/catalog',null,session.token);assert.deepEqual(r.value.catalog.packs.map(p=>p.id),['conejil','survival']);f.state.roles=[];assert.equal((await f.send('/v2/packs/conejil',null,session.token)).status,403);assert.deepEqual((await f.send('/v2/catalog',null,session.token)).value.catalog.packs,[]);});
+test('Jugador externo no necesita VillaWolf y el rol se comprueba en su propio servidor',async t=>{
+  const f=await fixture(t),external='1100890182884012062',role='1559431805096960020';
+  f.state.guildMembership={[external]:[role]};
+  f.state.catalog={schemaVersion:1,packs:[{id:'racoon',name:'Racoon',guildId:external,roleId:role,enabled:true,manifestPath:'updates/packs/racoon/stable.json'},{id:'oficial',name:'Oficial',roleId:role,enabled:true,manifestPath:'updates/packs/oficial/stable.json'}]};
+  const login=await f.login();assert.equal(login.status,200);assert.equal(f.state.memberCalls,0);
+  const library=await f.send('/v2/catalog',null,login.value.token);assert.equal(library.status,200);assert.deepEqual(library.value.catalog.packs.map(p=>p.id),['racoon']);
+  assert.equal((await f.send('/v2/packs/oficial',null,login.value.token)).status,403);
+  f.state.guildMembership[external]=[];
+  assert.equal((await f.send('/v2/packs/racoon',null,login.value.token)).status,403);
+});
+test('Administración externa sólo exige pertenencia y valida rol, canal y permisos del bot',async t=>{
+  const f=await fixture(t),guild='1100890182884012062',role='1559431805096960020',channel='1560014364155838514';
+  f.state.roles=['1559330834278781048'];const session=(await f.login('admin')).value;
+  const now=Date.now()-1000,generation=crypto.randomUUID();f.env.ROLE_BOT_ENABLED='true';
+  f.db.prepare('INSERT INTO role_bot_state VALUES(?,?,1,1,?,?,?)').run(guild,generation,now,now,'a'.repeat(64));
+  f.db.prepare('INSERT INTO role_bot_members VALUES(?,?,?,?,1,0,NULL)').run(guild,f.state.id,generation,'[]');
+  const metadata={roles:[{id:role,mentionable:false}],channels:[{id:channel,type:0,permissions:String((1n<<10n)|(1n<<11n)|(1n<<14n)|(1n<<15n))}]};
+  f.db.prepare('INSERT INTO role_bot_communities VALUES(?,?,?,?)').run(guild,generation,JSON.stringify(metadata),now);
+  const input={guildId:guild,roleId:role,announcements:{modpack:{enabled:true,channelId:channel,mentionRole:false}}};
+  assert.equal((await f.send('/v2/admin/community/check',input,session.token)).status,200);
+  assert.equal((await f.send('/v2/admin/community/check',{...input,roleId:'1559431805096960021'},session.token)).status,400);
+  assert.equal((await f.send('/v2/admin/community/check',{...input,announcements:{modpack:{...input.announcements.modpack,mentionRole:true}}},session.token)).status,403);
+  metadata.channels[0].permissions='1024';f.db.prepare('UPDATE role_bot_communities SET metadata=?').run(JSON.stringify(metadata));
+  assert.equal((await f.send('/v2/admin/community/check',input,session.token)).status,403);
+  f.db.prepare('UPDATE role_bot_members SET present=0').run();
+  assert.equal((await f.send('/v2/admin/community/check',{guildId:guild,roleId:role},session.token)).status,403);
+});
+test('publicación confirmada guarda cambios reales y un solo registro; rechaza commits sin autoría',async t=>{
+ const f=await fixture(t);f.state.roles=['1559330834278781048'];const session=(await f.login('admin')).value;
+ f.env.GITHUB_TOKEN='falso-token-solo-pruebas';
+ const commit='c'.repeat(40),parent='b'.repeat(40),pack={id:'conejil',name:'Racoon',roleId:'1559431805096960020',enabled:true,manifestPath:'updates/packs/conejil/stable.json'};
+ const manifest={packId:'conejil',version:'0.1.0',game:{serverId:'conejil',packName:'Racoon',minecraftVersion:'1.20.1',forgeVersion:'47.4.10'},files:[{path:'mods/a.jar',sha256:'a'}],content:{files:[]}};
+ const content=value=>({encoding:'base64',content:Buffer.from(JSON.stringify(value)).toString('base64')});
+ f.state.ghFetch=async url=>{
+   if(url.includes('/git/ref/heads/'))return Response.json({object:{sha:commit}});
+   if(url.includes('/contents/updates/catalog.json'))return Response.json(content({schemaVersion:1,packs:[pack]}));
+   if(url.includes('/contents/updates/packs/conejil/stable.json'))return Response.json(content(manifest));
+   if(url.includes('/git/commits/'))return Response.json({parents:[{sha:parent}]});
+   if(url.includes('/compare/'))return Response.json({total_commits:1,files:[{filename:pack.manifestPath,status:'added'},{filename:'updates/packs/conejil/versions/modpack-0.1.0.json',status:'added'}]});
+   throw Error('Unexpected GitHub path');
+ };
+ assert.equal((await f.send('/v2/admin/publication/event',{packId:pack.id,commit},session.token)).status,403);
+ f.db.prepare('INSERT INTO publication_receipts VALUES(?,?,?,1,?)').run(commit,f.state.id,'Administrador verificado',Date.now());
+ for(let i=0;i<2;i++)assert.equal((await f.send('/v2/admin/publication/event',{packId:pack.id,commit},session.token)).status,200);
+ const rows=f.db.prepare('SELECT * FROM notification_jobs').all();assert.equal(rows.length,1);
+ const audit=JSON.parse(rows[0].payload);assert.equal(audit.actorName,'Administrador verificado');assert.ok(audit.changes.includes('Mods: 1 añadidos, 0 modificados y 0 retirados.'));
+ assert.equal(f.db.prepare('SELECT count(*) AS n FROM admin_actions').get().n,1);
+});
+test('auditoría usa administrador autenticado y evita atribuir eventos a otra cuenta',async t=>{
+ const f=await fixture(t);f.state.roles=['1559330834278781048'];const session=(await f.login('admin')).value;
+ const input={id:crypto.randomUUID(),packId:'conejil',action:'draft_saved',name:'Racoon',actorName:'Nombre inventado'};
+ assert.equal((await f.send('/v2/admin/audit/event',input,session.token)).status,200);
+ assert.equal((await f.send('/v2/admin/audit/event',input,session.token)).status,200);
+ const rows=f.db.prepare('SELECT * FROM admin_actions').all();assert.equal(rows.length,1);assert.equal(rows[0].actor_id,f.state.id);assert.notEqual(rows[0].actor_name,input.actorName);
+ assert.equal((await f.send('/v2/admin/audit/event',{...input,id:crypto.randomUUID(),actorId:'1000000000000000002'},session.token)).status,403);
+ f.state.roles=[];assert.equal((await f.send('/v2/admin/audit/event',{...input,id:crypto.randomUUID()},session.token)).status,403);
+});
 test('Administración admite Administrador u Owner y revalida el rol en cada petición',async t=>{const f=await fixture(t);for(const role of ['1559330834278781048','1559330540820373535']){f.state.roles=[role];const session=(await f.login('admin')).value;assert.ok(session.token);assert.equal((await f.send('/v2/admin/session',null,session.token)).status,200);assert.equal((await f.send('/v2/admin/catalog',null,session.token)).value.catalog.packs.length,2);assert.equal((await f.send('/v2/catalog',null,session.token)).status,403);f.state.roles=[];assert.equal((await f.send('/v2/admin/session',null,session.token)).status,403);}assert.equal((await f.login('admin')).status,403);});
 test('El propósito OAuth queda vinculado a la solicitud y un jugador no puede usar rutas administrativas',async t=>{const f=await fixture(t);f.state.roles=['1559330540820373535'];const flow=await f.begin();assert.equal((await f.send('/v1/discord/finish',{...flow,purpose:'admin',code:'x'})).status,401);const session=(await f.login()).value;assert.equal((await f.send('/v2/admin/catalog',null,session.token)).status,403);});
 test('Sesión v2 persiste, renueva Discord sin exponer credenciales y permite revocar al cerrar sesión',async t=>{const f=await fixture(t);const session=(await f.login()).value;assert.ok(session.expiresAt>Date.now()+13*3600000);f.advance(25*3600000);const r=await f.send('/v2/session',null,session.token,f.newWorker());assert.equal(r.status,200);assert.equal(f.exchanges(),2);assert.equal(JSON.stringify(r.value).includes('ficticio'),false);assert.equal(JSON.stringify(f.db.prepare('SELECT * FROM discord_sessions').get()).includes('ficticio'),false);await f.send('/v1/logout',{},session.token);assert.equal((await f.send('/v2/session',null,session.token)).status,401);});

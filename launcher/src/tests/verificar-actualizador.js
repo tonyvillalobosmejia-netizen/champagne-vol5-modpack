@@ -40,6 +40,8 @@ function sandbox(t, document, options = {}) {
         verifiedUsername: async () => "Tester"
       }) };
       if (name === "./champagne-avatar") return require("../champagne-avatar");
+      if (name === "./champagne-avatar-choice") return require("../champagne-avatar-choice");
+      if (name === "./champagne-microsoft-device") return require("../champagne-microsoft-device");
       if (name === "./champagne-manual-downloads") return require("../champagne-manual-downloads");
       if (name === "./champagne-download-inbox") return require("../champagne-download-inbox");
       if (name === "./champagne-support") return require("../champagne-support");

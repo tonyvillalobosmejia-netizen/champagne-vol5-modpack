@@ -33,9 +33,10 @@ const authClient = createAuthClient({
 });
 const {createMicrosoftClient}=require('./champagne-microsoft');
 const {gameIdentity}=require('./champagne-game-identity');
+let microsoftDeviceState=null;
 const microsoftClient=createMicrosoftClient({clientId:config.microsoftClientId||'',
  sessionStore:createSessionStore({directory:app.getPath('userData'),safeStorage:require('electron').safeStorage,scope:'microsoft|'+(config.microsoftClientId||''),filename:'microsoft-session.bin'}),
- openBrowser:url=>shell.openExternal(url),onDevice:data=>{for(const win of BrowserWindow.getAllWindows())win.webContents.send('microsoft-device',data);}
+ openBrowser:url=>shell.openExternal(url),onDevice:data=>{microsoftDeviceState=data;const value=require('./champagne-microsoft-device').copyDeviceCode(data,clipboard);for(const win of BrowserWindow.getAllWindows())win.webContents.send('microsoft-device',value);}
 });
 const {knownGithubUrl,officialRedirect}=require('./champagne-official-sources');
 const { createAvatarStore } = require("./champagne-avatar");
@@ -45,7 +46,8 @@ const { memoryProfiles, redact, explainError, createRepair } = require("./champa
 const { prepareContent, snapshotContent, activeBundle } = require("./champagne-remote-content");
 const avatarStore = createAvatarStore({ directory: path.join(app.getPath("userData"), "avatars"), nativeImage });
 const avatarUsername = () => microsoftClient.status().user?.username || authClient.status().user?.username || getLocalProfile().username;
-let avatarDialogBusy = false;
+const avatarChoice=require('./champagne-avatar-choice').createAvatarChoice(app.getPath('userData'));
+const discordAvatarCache=new Map();
 let microsoftOperationBusy = false;
 let officialAvatarKey=null;
 let selectedJava = null;
@@ -1150,7 +1152,7 @@ app.whenReady().then(() => {
     await new Promise((resolve,reject)=>{child.once('spawn',resolve);child.once('error',reject);});child.unref();setImmediate(()=>app.quit());
     return {ok:true,message:'Desinstalando VillaWolf…'};
   });
-  ipcMain.handle("open-discord", async () => { await shell.openExternal("https://discord.gg/K2uWjjEJu"); return { ok: true, message: "Discord del servidor abierto." }; });
+  ipcMain.handle("open-discord", async () => { const guildId=selectedPack?.guildId;const url=typeof guildId==='string'&&/^\d{17,20}$/.test(guildId)&&guildId!=='1007732653035880589'?'https://discord.com/channels/'+guildId:'https://discord.gg/K2uWjjEJu';await shell.openExternal(url); return { ok: true, message: 'Discord de esta comunidad abierto.' }; });
   ipcMain.handle("close-launcher", () => { setImmediate(() => app.quit()); return { ok: true }; });
   ipcMain.handle("memory-profiles", () => memoryProfiles(os.totalmem()));
   ipcMain.handle("diagnostics", (_event, message) => { lastProblem = typeof message === "string" ? message.slice(0, 8000) : ""; return { ...explainError(lastProblem), log: diagnostics() }; });
@@ -1179,38 +1181,24 @@ app.whenReady().then(() => {
     }
   });
   ipcMain.handle("account-avatar", async () => {
-    const user=microsoftClient.status().user,username=avatarUsername();
+    const user=microsoftClient.status().user,username=avatarUsername(),discord=authClient.status().user,source=avatarChoice.get(discord?.id,!!user);
+    if(source==='discord'){
+      try{const url=new URL(discord?.avatarUrl);if(url.origin!=='https://cdn.discordapp.com'||!/^\/(?:avatars\/\d{17,20}\/(?:a_)?[a-f0-9]{32}\.png|embed\/avatars\/[0-5]\.png)$/.test(url.pathname)||url.username||url.password||url.hash)throw Error();const cacheKey=discord.id+'|'+url.href;let image=discordAvatarCache.get(cacheKey);if(!image){const response=await fetch(url,{redirect:'error',signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error();const chunks=[];let bytes=0;for await(const chunk of response.body){bytes+=chunk.length;if(bytes>256*1024)throw Error();chunks.push(Buffer.from(chunk));}const decoded=nativeImage.createFromBuffer(Buffer.concat(chunks));if(decoded.isEmpty())throw Error();image=decoded.resize({width:128,height:128}).toDataURL();if(discordAvatarCache.size>10)discordAvatarCache.clear();discordAvatarCache.set(cacheKey,image);}if(authClient.status().user?.id!==discord.id)return{ok:true,image:null,source:'discord'};return{ok:true,image,kind:'image',source:'discord'};}catch{return{ok:true,image:null,source:'discord'};}
+    }
     if(user?.skinUrl){
       const key=user.id+'|'+user.skinUrl;
-      if(officialAvatarKey===key){const saved=avatarStore.get(username);if(saved.image)return saved;}
+      if(officialAvatarKey===key){const saved=avatarStore.get(username);if(saved.image)return{...saved,source:'minecraft',kind:'skin'};}
       try{
         const response=await fetch(user.skinUrl,{redirect:'error',signal:AbortSignal.timeout(10000)});
         if(!response.ok)throw Error('Skin oficial no disponible.');
         const chunks=[];let total=0;for await(const part of response.body){total+=part.length;if(total>256*1024)throw Error('Skin demasiado grande.');chunks.push(Buffer.from(part));}
         if(microsoftClient.status().user?.id!==user.id||microsoftClient.status().user?.skinUrl!==user.skinUrl)return {ok:true,image:null};
-        const result=avatarStore.saveBytes(username,Buffer.concat(chunks));officialAvatarKey=key;return result;
-      }catch{return avatarStore.get(username);}
+        const result=avatarStore.saveBytes(username,Buffer.concat(chunks));officialAvatarKey=key;return{...result,source:'minecraft',kind:'skin'};
+      }catch{return{ok:true,image:null,source:'minecraft',kind:'skin'};}
     }
-    return avatarStore.get(username);
+    return {ok:true,image:null};
   });
-  ipcMain.handle("choose-account-avatar", async event => {
-    if (avatarDialogBusy) return { ok: false, message: "Ya hay una selección de skin abierta." };
-    avatarDialogBusy = true;
-    try {
-      if(microsoftClient.status().user)return {ok:false,message:"Usa Cambiar skin oficial para personalizar tu cuenta Microsoft."};
-      const username = avatarUsername();
-      if (!username) return { ok: false, message: "Elige primero una cuenta o un nombre local." };
-      const result = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), { title: "Elegir skin para el avatar del launcher", filters: [{ name: "Skin Minecraft PNG", extensions: ["png"] }], properties: ["openFile"] });
-      if (result.canceled || !result.filePaths.length) return { ok: true, cancelled: true };
-      if (avatarUsername() !== username) return { ok: false, message: "La cuenta cambió. Selecciona la skin nuevamente." };
-      return avatarStore.save(username, result.filePaths[0]);
-    } catch (error) { return { ok: false, message: error.message }; }
-    finally { avatarDialogBusy = false; }
-  });
-  ipcMain.handle("reset-account-avatar", () => {
-    try { return avatarStore.clear(avatarUsername()); }
-    catch (error) { return { ok: false, message: error.message }; }
-  });
+  ipcMain.handle("set-account-avatar-source",(_event,source)=>{try{return{ok:true,source:avatarChoice.set(authClient.status().user?.id,source,!!microsoftClient.status().user)};}catch(error){return{ok:false,message:error.message};}});
   ipcMain.handle("auth-status", () => ({...authClient.status(),microsoft:microsoftClient.status()}));
   const accountOperation = action => {
     if (microsoftOperationBusy || microsoftClient.status().busy) return {ok:false,message:"Espera o cancela la solicitud Microsoft."};
@@ -1222,6 +1210,8 @@ app.whenReady().then(() => {
   ipcMain.handle("auth-login", (_event, input) => accountOperation(() => authClient.login(input)));
   ipcMain.handle("auth-discord-login", () => accountOperation(() => authClient.loginDiscord()));
   ipcMain.handle("auth-discord-cancel", () => authClient.cancelDiscordLogin());
+  ipcMain.handle('microsoft-open-verification',async()=>{if(!microsoftDeviceState||microsoftDeviceState.expiresAt<=Date.now())return{ok:false,message:'Genera un código nuevo para continuar.'};await shell.openExternal('https://microsoft.com/devicelogin');return{ok:true};});
+  ipcMain.handle('microsoft-copy-code',()=>{if(!microsoftDeviceState||microsoftDeviceState.expiresAt<=Date.now())return{ok:false,message:'El código venció. Genera uno nuevo.'};const copied=require('./champagne-microsoft-device').copyDeviceCode(microsoftDeviceState,clipboard);return{ok:copied.copied,message:copied.copied?'Código copiado. Pégalo en Microsoft.':'No se pudo copiar; selecciona el código y cópialo.'};});
   ipcMain.handle('microsoft-status',()=>microsoftClient.status());
   ipcMain.handle('microsoft-login',()=>microsoftOperation(async()=>{
    await authClient.verifiedUsername();

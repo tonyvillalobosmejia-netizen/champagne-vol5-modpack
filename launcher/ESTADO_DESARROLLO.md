@@ -4,6 +4,37 @@
 **Alcance:** VillaWolf Launcher, VillaWolf Administrador, autenticación/publicación central y bot de roles.
 **Propósito:** compartir avances y pendientes con otra persona o ChatGPT sin conceder permisos para modificar código.
 
+## Actualización en preparación: Launcher 0.1.18 / Administrador 0.1.21 (14 de octubre de 2026)
+
+- **Parcial, no publicado:** formulario de cuatro pestañas, guardado compacto de borradores, imagen inicial y diseño avanzado local. El borrador no publica ni anuncia.
+- **Verificado automáticamente:** seis pruebas del modelo y almacenamiento del borrador; veinte pruebas de catálogo/autenticación, incluida pertenencia al servidor externo sin exigir Gestionar servidor y comprobación de roles/canales/permisos; tres pruebas de seguridad de plantillas de anuncios.
+- **Parcial:** bot prepara metadatos firmados y sincronización por comunidad. Migración aditiva 0004_communities.sql preparada localmente; no aplicada a producción.
+- **Implementado localmente y probado automáticamente:** cola persistente de anuncios, seguimiento de releases y auditoría central con cambios reales. Pendiente activar el servicio y verificar la integración real. El canal elegido por el propietario es registro del Discord oficial.
+- **Prueba visual:** cuatro pestañas revisadas en navegador aislado con API ficticia y comprobaciones pendientes explícitas. No es evidencia de preparación, publicación ni arranque del juego.
+- **Racoon Team:** se creó una categoría privada de pruebas, dos canales privados y un rol verde sin permisos administrativos. Se conservarán al terminar. Bot presente y envío/lectura reales confirmados en ambos canales privados; sin Administrador. La cola completa todavía no verificada en producción.
+- Versiones publicadas sin cambios: Launcher 0.1.17, Administrador 0.1.20. No se desplegó Cloudflare ni se reinició el bot de producción.
+
+### Compatibilidad con Minecraft
+
+| Minecraft / cargador | Estado | Evidencia |
+| --- | --- | --- |
+| 1.20.1 / Forge 47.4.10 / Java 17 | Arranque real verificado anteriormente | Ensayo de Minecraft en esta PC; no repetido en esta modificación |
+| 1.21.1 / Forge 52.1.0 / Java 21 | Preparación verificada automáticamente; juego no verificado | Ensayo automatizado previo de creación/preparación |
+| Otros perfiles Forge modernos desde 1.18 | Admitidos por validación del motor; compatibilidad individual no verificada | No afirmar que todas las combinaciones arranquen |
+| Fabric, NeoForge y Quilt | No soportados; controles bloqueados | Requieren implementación y pruebas reales |
+
+CurseForge es la fuente y gestor de instancias, no un cargador de mods. La versión se detecta en sus metadatos; Forge queda bloqueado como cargador.
+
+## Microsoft / Minecraft: revisión de AppID
+
+El propietario aportó el 14 de octubre de 2026 una captura del correo «AppID Review Complete»: indica aprobación de las aplicaciones enviadas para la allow list. **El propietario aportó además capturas de la cuenta Java vinculada y de Minecraft 1.20.1 Forge ejecutando un mundo con la identidad oficial.** Verificados por esa evidencia el acceso y arranque Premium; no comprobados aquí un servidor remoto online ni la renovación real tras vencer la sesión. El correo no muestra el AppID; no confirma por sí solo la correspondencia con el cliente configurado ni el funcionamiento completo.
+
+### Registro de cambios de cada publicación
+
+**Implementado localmente; no desplegado:** el evento de publicación confirmada compara el manifiesto del commit con su padre y añade a la auditoría privada versión anterior/nueva, cantidades de mods y archivos añadidos/modificados/retirados y cambios de nombre, Minecraft/Forge, fondo, noticias, tarjeta de actualizaciones y notas. No copia rutas locales, credenciales ni contenido de configuraciones. Una publicación sólo de diseño no afirma haber cambiado mods ni versión. El mensaje divide resúmenes largos para respetar los límites de Discord.
+
+**Verificación:** 11 pruebas de resumen, plantillas y cola pasaron el 14 de octubre de 2026 (3 nuevas para el resumen real y sus límites). Falta verificar este registro contra una publicación y un envío reales en Discord, tras la autorización de despliegue.
+
 ## Cómo leer y mantener este informe
 
 - **Terminada/verificada:** implementada, con la evidencia indicada; no significa que se hayan probado todos los equipos o escenarios.
@@ -17,8 +48,8 @@
 
 | Componente | Publicada | En desarrollo local | Situación |
 | --- | --- | --- | --- |
-| Launcher Windows x64 | **0.1.17** | **0.1.17** | Release publicada, descargas e integridad verificadas; arranque en perfil aislado. Instalación habitual no actualizada por este ensayo. |
-| Administrador Windows x64 | **0.1.20** | **0.1.20** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
+| Launcher Windows x64 | **0.1.17** | **0.1.18** | Release publicada, descargas e integridad verificadas; arranque en perfil aislado. Instalación habitual no actualizada por este ensayo. |
+| Administrador Windows x64 | **0.1.20** | **0.1.21** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
 | Servicio Cloudflare villawolf-auth | Health informa **1.1.0** | Código local con integración opcional del bot | La versión del servicio es independiente de la de las aplicaciones. Integración del bot desplegada; versión activa 475d159f, ROLE_BOT_ENABLED=true. |
 | VillaWolf Bot local | No distribuido públicamente | **0.1.0** | Conectado en esta PC y sincronizado con producción; configuración cifrada. No distribuido como instalador. |
 
@@ -53,7 +84,7 @@ Publicaciones verificadas:
 | Progreso de preparación | Implementado. La barra aparece durante el trabajo y se oculta al terminar; porcentajes sólo cuando hay medidas disponibles. |
 | Mensajes de actualización y errores | Terminados. Avisos amables, detalles técnicos desplegables y botones Copiar error, Abrir registro y Cerrar. Las pausas de Discord no se presentan como una petición de volver a iniciar sesión. |
 | Ajustes de memoria y reparación | Implementados con pruebas de perfiles de RAM, validación de archivos y bloqueo de operaciones concurrentes. |
-| Avatar local de cuenta | Implementado: elegir imagen/skin para el avatar y restaurar el predeterminado. No equivale a cambiar la skin oficial de Minecraft. |
+| Avatar de cuenta | Desarrollo 0.1.18: Discord por defecto; cuenta Premium vinculada puede alternar skin oficial. Se retiró la carga manual de avatar. Mantiene aparte el cambio de skin oficial. |
 | Borrado local de modpack | Terminado con confirmación; conserva mundos, capturas y opciones por defecto. Eliminar también esos datos exige una selección adicional. |
 | Desinstalación de aplicación/componentes | Implementada con controles de alcance y confirmación. No se utilizó para generar este informe. |
 | Enlace a Discord y registros | Implementados. Acceso a comunidad, actividad y diagnósticos con filtrado de credenciales. |
@@ -300,3 +331,17 @@ Se preparan guías visuales para Discord con la interfaz actual y datos de ejemp
 Se actualizó la bienvenida, enlaces de descarga, guía inicial de jugadores y guía inicial privada de administración. Se publicaron novedades de Launcher 0.1.17 y Administrador 0.1.20, tutorial de jugadores con dos imágenes adjuntas y dos tutoriales privados de administración con una imagen cada uno. Capturas de la interfaz actual con datos de ejemplo y sin credenciales, alojadas también en launcher/docs/tutoriales; documentación visual sincronizada mediante commit a0887669abdfaf70fb9f4616feda91c7e4786fd3. Se respetaron los canales no-tocar y no se modificaron permisos ni asignaciones. El bot sólo sincroniza roles; sigue ejecutándose en esta PC y vuelve a OAuth cuando no está disponible.
 
 NsisUpdater real confirmó Launcher 0.1.17 desde 0.1.16 y Administrador 0.1.20 desde 0.1.19, sin descargar ni instalar en el perfil habitual. Consulta real del Launcher tras despliegue: catálogo HTTP 200 filtrado por rol y autorización de Mundo Conejil HTTP 200. No se ejecutó Minecraft ni se borró un mundo real durante esta publicación.
+
+### Verificación de permisos del bot en Racoon Team — 2026-10-14
+
+- Configurado mediante Discord un permiso individual para VillaWolf · Guardián en la categoría privada de pruebas: ver canales, enviar mensajes, insertar enlaces, adjuntar archivos y leer historial. Ambos canales heredan el permiso.
+- Verificado por API: ambos canales siguen privados y permiten los cinco permisos al bot; su rol global Miembro conserva permisos 0. No se otorgó Administrador ni gestión de canales.
+- Envío real y lectura posterior confirmados en prueba-actualizaciones-modpack y prueba-actualizaciones-launcher. Mensajes identificados como pruebas, sin menciones y sin anunciar una release. El helper evita repetir el mismo mensaje de prueba.
+- Esta comprobación no demuestra todavía el flujo completo de cola de anuncios de la nueva versión ni la publicación de instaladores.
+
+### Preparación de publicación — 14 de octubre de 2026
+
+- Batería completa ejecutada por terminal: **268 pruebas, 268 aprobadas, 0 fallos, 0 omitidas** (41,1 s). No acredita todas las combinaciones de Minecraft ni equipos.
+- Versiones locales: Launcher 0.1.18, Administrador 0.1.21, Bot 0.2.0, Worker 1.2.0. Instaladores en compilación; todavía no publicados en el momento de este registro.
+- Migraciones aditivas 0004, 0005 y 0006 ejecutadas correctamente en D1; no modifican tablas de sesiones existentes. Punto de recuperación previo guardado.
+- El propietario pidió priorizar la publicación: se limita el cierre a arranque, permisos e integridad, sin otra ronda exhaustiva.

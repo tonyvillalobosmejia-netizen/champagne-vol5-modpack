@@ -7,7 +7,7 @@ function validateCatalog(value){
   if(!p||!/^[a-z0-9][a-z0-9-]{0,63}$/.test(p.id||'')||ids.has(p.id)||typeof p.name!=='string'||!p.name.trim()||p.name.length>80||!/^\d{17,20}$/.test(p.roleId||'')||typeof p.enabled!=='boolean')throw Error('Revisa el nombre, identificador y rol de cada modpack.');
   const manifestPath=p.id===LEGACY_ID?'updates/stable-v2.json':'updates/packs/'+p.id+'/stable.json';
   if(p.manifestPath!==manifestPath)throw Error('Canal de modpack inválido.');ids.add(p.id);
-  return{id:p.id,name:p.name.trim(),roleId:p.roleId,enabled:p.enabled,manifestPath};
+   return{id:p.id,name:p.name.trim(),roleId:p.roleId,enabled:p.enabled,manifestPath,...require('./champagne-community').communityFields(p)};
  });const deletedPacks=value.deletedPacks||[];if(!Array.isArray(deletedPacks)||deletedPacks.length>1000||new Set(deletedPacks).size!==deletedPacks.length||deletedPacks.some(id=>typeof id!=='string'||!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id)||ids.has(id)))throw Error('Registro de lanzadores eliminados inválido.');return{schemaVersion:1,packs,...(deletedPacks.length?{deletedPacks:[...deletedPacks]}:{})};
 }
 function channelFor(pack){return RAW+validateCatalog({schemaVersion:1,packs:[pack]}).packs[0].manifestPath;}
