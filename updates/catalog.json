@@ -7,16 +7,10 @@
       "roleId": "1559431805096960020",
       "enabled": true,
       "manifestPath": "updates/stable-v2.json"
-    },
-    {
-      "id": "pack-1686e2b84fd253dc",
-      "name": "Minecraft Extremo",
-      "roleId": "1558938399300390952",
-      "enabled": false,
-      "manifestPath": "updates/packs/pack-1686e2b84fd253dc/stable.json"
     }
   ],
   "deletedPacks": [
-    "pack-790dd9d5947e4626"
+    "pack-790dd9d5947e4626",
+    "pack-1686e2b84fd253dc"
   ]
 }
