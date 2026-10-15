@@ -6,12 +6,12 @@
 
 ## Publicación actual — 15 de octubre de 2026
 
-- **Publicados y verificados:** Launcher 0.1.18 y Administrador 0.1.25. Descarga pública de instaladores, blockmaps y latest.yml comprobada por SHA-256/tamaño; canales de actualización activados.
-- **Pruebas:** 268 aprobadas, 0 fallos; arranque de ambos paquetes en perfiles aislados aprobado. No se repitieron todas las combinaciones de Minecraft ni la instalación habitual de esta PC.
+- **Publicados y verificados:** Launcher 0.1.19, Administrador 0.1.26 y Bot 0.2.4. Descargas públicas comprobadas por SHA-256/tamaño; metadatos SHA-512 de los actualizadores verificados. Canales habituales activos, sin prerelease separado. Todo 0.x es desarrollo y pruebas; 1.0.0 se reserva para el primer lanzamiento definitivo.
+- **Pruebas actuales de distribución:** tres paquetes compilaron y arrancaron en perfiles aislados; actualizadores reales detectaron las nuevas versiones sin instalar. Diez pruebas seleccionadas de actualizadores, sesión y reconexión simulada del Bot aprobadas; además 22 pruebas del simulador del actualizador pasaron tras ajustar su resolución de módulos y limpieza. Las 268 pruebas citadas en entradas anteriores corresponden a validaciones históricas, no repetidas en esta publicación. No se afirma instalación en otra PC ni renovación real de tokens vencidos.
 - **Administrador 0.1.23:** formulario oscuro de cuatro pestañas, borradores locales, imagen inicial, validaciones reales y comprobación de comunidades externas. Crear borrador no publica ni anuncia.
 - **Launcher 0.1.18:** cuenta renovada, Discord obligatorio/Microsoft opcional, código de dispositivo copiado automáticamente y avatar de Discord o skin oficial Premium.
 - **Worker 1.2.2 desplegado:** migraciones aditivas 0004–0006 ejecutadas, ROLE_BOT_MULTI_GUILD=true y ADMIN_RELEASE_CHANNEL_ID configurado y verificado por UI. Roles, cola y auditoría implementados. No se cambiaron secretos ni tablas anteriores.
-- **Bot 0.2.0 conectado:** el propietario reemplazó la credencial; comprobación de identidad por Discord aprobada y estado local «Bot conectado. Roles sincronizados». Los dos canales privados de Racoon mantienen los cinco permisos necesarios. La comprobación directa de Discord sigue disponible como respaldo.
+- **Bot 0.2.4 publicado:** conexión, roles y anuncios se muestran por separado; historial cifrado, saneado y copiable. Reconexión y resincronización comprobadas con simulación; conexión real del Bot local comprobada anteriormente sin cambiar sus credenciales. No se reinstaló ni interrumpió el Bot local para esta publicación.
 - **Racoon Team:** bot y mensajes reales comprobados anteriormente en ambos canales privados, sin Administrador; la credencial dejó de ser aceptada al retomar el 15 de octubre. Canales y rol de pruebas se conservan.
 - **Integración real comprobada:** catálogo y verificación con sesión guardada; reportes recuperados y mensajes reales en registro (incluye Mundo Conejil 0.1.7 y resumen de cambios). Cola local de eventos vacía. No se repitió todo el arranque de Minecraft en esta corrección.
 
@@ -49,10 +49,10 @@ El propietario aportó el 14 de octubre de 2026 una captura del correo «AppID R
 
 | Componente | Publicada | En desarrollo local | Situación |
 | --- | --- | --- | --- |
-| Launcher Windows x64 | **0.1.18** | **0.1.18** | Release publicada, descargas e integridad verificadas; arranque en perfil aislado. Instalación habitual no actualizada por este ensayo. |
-| Administrador Windows x64 | **0.1.24** | **0.1.24** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
-| Servicio Cloudflare villawolf-auth | **1.2.0** | **1.2.0** | Health confirmado; comunidades externas, auditoría y cola desplegados. ROLE_BOT_ENABLED y ROLE_BOT_MULTI_GUILD activos. |
-| VillaWolf Bot local | No distribuido como instalador | **0.2.0** | Código actualizado, token persistido cifrado; identidad y conexión verificadas el 15 de octubre. Roles sincronizados. |
+| Launcher Windows x64 | **0.1.19** | **0.1.19** | Publicado y detectado por el actualizador desde 0.1.18; integridad pública y arranque aislado verificados. Instalación local sigue como PRUEBA LOCAL 20261015.1. |
+| Administrador Windows x64 | **0.1.26** | **0.1.26** | Publicado y detectado desde 0.1.25 por su canal existente. Incluye 005, 006 y 007. Instalación local sigue como PRUEBA LOCAL 20261015.2. |
+| Servicio Cloudflare villawolf-auth | **1.2.2** | **1.2.2 + cambios 003 pendientes** | Producción sin cambios en esta publicación; rutas de diagnóstico nuevas no desplegadas. |
+| VillaWolf Bot Windows x64 | **0.2.4** | **0.2.4** | Instalador publicado y detectado desde 0.2.3. Instalación local sigue como PRUEBA LOCAL 20261015.1. |
 
 Publicaciones verificadas:
 
@@ -599,3 +599,20 @@ Los fuentes pendientes del Error 003 del Worker se sincronizan con el repositori
 Validaciones previas a distribución: los tres paquetes arrancaron en Electron con datos temporales y red desactivada. Se verificaron versiones, módulos corregidos, ausencia de credenciales/rutas privadas y de bloqueos PRUEBA LOCAL. Los tres instaladores PE son válidos; SHA-512 y tamaños coinciden con latest.yml de Launcher y Administrador, y se generaron SHA256SUMS.txt para las tres aplicaciones. Los paquetes aún esperan publicación al registrar esta comprobación.
 
 GitHub CI detectó un fallo de su simulador antiguo src/tests/verificar-actualizador.js al resolver el nuevo módulo de diagnóstico. Se actualizó sólo el simulador para resolver módulos desde src y emitir el cierre de la aplicación simulada, liberando los monitores de errores entre casos. Las 22 pruebas de ese archivo aprobaron; no se modificó código de las aplicaciones ni sus binarios para este ajuste.
+
+
+## 2026-10-15 — Publicados Launcher 0.1.19, Administrador 0.1.26 y Bot 0.2.4
+
+**Distribución completada y verificada.** No son releases beta separadas ni prereleases: el ciclo 0.x completo es desarrollo/pruebas. La versión 1.0.0 no se creó.
+
+- Launcher: https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/v0.1.19
+- Administrador: https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/admin-v0.1.26
+- Bot: https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/bot-v0.2.4
+
+Los instaladores, blockmaps y archivos de integridad/metadatos se subieron primero como borradores y se verificaron por tamaño/SHA-256 antes de publicar. Se verificaron de nuevo las 11 descargas públicas tras publicar, usando las URLs definitivas de los assets. Los borradores tenían URLs temporales untagged; la verificación local se ajustó para leer las URLs definitivas de GitHub, sin reemplazar assets.
+
+Launcher ocupa releases/latest con v0.1.19; Administrador conserva updates/admin/latest.yml, actualizado en commit 49fc503c3dfbced5fdd47bc0d4ad321a400636a5; Bot conserva la consulta por tags bot-v. Se ejecutaron los controladores habituales con electron-updater real para comprobar detección desde Launcher 0.1.18 y Administrador 0.1.25, y el controlador real del Bot desde 0.2.3: detectaron respectivamente 0.1.19, 0.1.26 y 0.2.4. Sólo se consultaron metadatos en esa prueba; no se instaló ni descargó automáticamente un ejecutable.
+
+Se comprobó que las cinco releases anteriores mantienen sus IDs y assets originales, sin sobrescribir instaladores. El árbol remoto updates/ conserva todos sus archivos anteriores salvo el canal del Administrador autorizado; Mundo Conejil 0.1.8 y los demás modpacks no se modificaron. No hubo despliegue de Cloudflare, cambios de permisos, instalación local de estas releases ni eliminación de respaldos. Código y documentación se sincronizaron en la rama preparacion-paso97 del repositorio de referencia.
+
+Pendientes: Error 003 central requiere autorización/despliegue/pruebas del Worker; firma pública Windows pendiente; pruebas manuales en otras computadoras todavía no realizadas. Las instalaciones PRUEBA LOCAL de esta PC conservan intencionalmente sus bloqueos de actualización: para pasar a la distribución publicada hay que ejecutar su instalador, no se quitaron esos bloqueos remotamente. La conservación de datos se validó previamente en las instalaciones locales de prueba y se cotejaron identidad y módulo de almacenamiento cifrado entre los paquetes actuales y los instalados; no se afirma una instalación real de estas releases en otra PC.
