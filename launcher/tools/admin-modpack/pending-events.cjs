@@ -1,0 +1,3 @@
+'use strict';
+function createPendingEventSync({store,account,onPending=()=>{}}){let syncing=null;return async function sync(){if(syncing)return syncing;syncing=(async()=>{let pending=0;const user=account.status().user,actorId=user?.discordId||user?.id?.replace(/^discord:/,'');for(const event of store.pending()){if(event.actorId&&event.actorId!==actorId)continue;try{if(event.type==='publication')await account.publicationEvent(event);else await account.auditEvent(event);store.acknowledge(event.id);}catch{pending++;}}if(pending)onPending(pending);return{pending};})();try{return await syncing;}finally{syncing=null;}};}
+module.exports={createPendingEventSync};

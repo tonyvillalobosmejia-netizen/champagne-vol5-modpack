@@ -11,10 +11,11 @@ async function fixture(t){
 }
 test('anuncia sólo nuevas releases oficiales y respeta canales optativos por comunidad',async t=>{
  const f=await fixture(t);f.state.releases=[f.release('launcher','0.1.18'),f.release('admin','0.1.21')];await f.watcher.check(f.env);
- const jobs=f.db.prepare('SELECT * FROM notification_jobs').all();assert.equal(jobs.length,2);
- const launcher=jobs.find(x=>JSON.parse(x.payload).kind==='launcher');assert.equal(launcher.guild_id,'1100890182884012062');assert.equal(JSON.parse(launcher.payload).roleId,'1560015165121110097');
+ const jobs=f.db.prepare('SELECT * FROM notification_jobs').all();assert.equal(jobs.length,3);
+ const launcher=jobs.find(x=>JSON.parse(x.payload).kind==='launcher'&&x.guild_id==='1100890182884012062');assert.equal(launcher.guild_id,'1100890182884012062');assert.equal(JSON.parse(launcher.payload).roleId,'1560015165121110097');
+ assert.ok(jobs.some(x=>x.channel_id==='1559334945372250314'));assert.ok(jobs.every(x=>!JSON.parse(x.payload).notes.includes('Notas oficiales')));
  const admin=jobs.find(x=>JSON.parse(x.payload).kind==='admin');assert.equal(admin.channel_id,f.env.ADMIN_RELEASE_CHANNEL_ID);
- f.advance(900001);await f.watcher.check(f.env);assert.equal(f.db.prepare('SELECT count(*) AS n FROM notification_jobs').get().n,2);
+ f.advance(900001);await f.watcher.check(f.env);assert.equal(f.db.prepare('SELECT count(*) AS n FROM notification_jobs').get().n,3);
 });
 test('no anuncia borradores, prereleases, archivos incompletos ni versiones anteriores',async t=>{
  const f=await fixture(t);f.state.releases=[f.release('launcher','0.1.17'),f.release('launcher','0.1.18',{draft:true}),f.release('launcher','0.1.19',{prerelease:true}),f.release('admin','0.1.21',{assets:[]})];await f.watcher.check(f.env);assert.equal(f.db.prepare('SELECT count(*) AS n FROM notification_jobs').get().n,0);

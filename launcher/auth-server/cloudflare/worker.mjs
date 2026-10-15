@@ -1,3 +1,4 @@
+import {publicationMetadata} from './publication-metadata.mjs';
 // Servicio gratuito Workers + D1. Sin contraseñas, bot ni permisos de administrador.
 const catalogUrl='https://raw.githubusercontent.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/preparacion-paso97/updates/catalog.json';
 const adminRoles=['1559330834278781048','1559330540820373535'];
@@ -132,10 +133,10 @@ export function createReleaseAnnouncements({fetchImpl=fetch,clock=Date.now,outbo
       const prefix=kind==='launcher'?'v':'admin-v',current=cursors.results.find(c=>c.kind===kind)?.version|| (kind==='launcher'?'0.1.17':'0.1.20');
       const candidates=releases.filter(r=>r.draft===false&&r.prerelease===false&&typeof r.tag_name==='string'&&r.tag_name.startsWith(prefix)&&versionParts(r.tag_name.slice(prefix.length))&&Number.isFinite(Date.parse(r.published_at))&&Date.parse(r.published_at)<=clock()&&Array.isArray(r.assets)&&r.assets.some(a=>a.name===('VillaWolf.'+(kind==='launcher'?'Launcher':'Administrador')+'.Setup.'+r.tag_name.slice(prefix.length)+'.exe'))).sort((a,b)=>newer(a.tag_name.slice(prefix.length),b.tag_name.slice(prefix.length))?-1:1);
       const release=candidates[0],version=release?.tag_name.slice(prefix.length);
-      if(release&&newer(version,current)){
-        const notes=typeof release.body==='string'?release.body.slice(0,3900):'Nueva versión oficial disponible.';
+      if(release&&(newer(version,current)||version===current&&newer(version,kind==='launcher'?'0.1.17':'0.1.20'))){
+        const notes='Ya está disponible la versión '+version+'. Actualiza la aplicación para utilizarla.';
         if(/(?:github_pat_|ghp_|access_token|client_secret)/i.test(notes))throw new AuthError(400,'Las notas oficiales contienen texto no publicable.');
-        const destinations=kind==='launcher'?catalog.packs.filter(p=>p.enabled&&p.announcements?.launcher?.enabled).map(p=>({guildId:p.guildId||env.DISCORD_GUILD_ID,channelId:p.announcements.launcher.channelId,roleId:p.roleId,mentionRole:!!p.announcements.launcher.mentionRole})):snowflake(env.ADMIN_RELEASE_CHANNEL_ID)?[{guildId:env.DISCORD_GUILD_ID,channelId:env.ADMIN_RELEASE_CHANNEL_ID,mentionRole:false}]:[];
+        const destinations=kind==='launcher'?[{guildId:env.DISCORD_GUILD_ID,channelId:'1559334945372250314',mentionRole:false},...catalog.packs.filter(p=>p.enabled&&p.announcements?.launcher?.enabled).map(p=>({guildId:p.guildId||env.DISCORD_GUILD_ID,channelId:p.announcements.launcher.channelId,roleId:p.roleId,mentionRole:!!p.announcements.launcher.mentionRole}))].filter((d,i,all)=>all.findIndex(x=>x.guildId===d.guildId&&x.channelId===d.channelId&&x.roleId===d.roleId)===i):snowflake(env.ADMIN_RELEASE_CHANNEL_ID)?[{guildId:env.DISCORD_GUILD_ID,channelId:env.ADMIN_RELEASE_CHANNEL_ID,mentionRole:false}]:[];
         if(kind==='admin'&&!destinations.length)continue;
         for(const d of destinations){await outbox.enqueue(env,{eventId:'release:'+kind+':'+version+':'+(d.mentionRole?d.roleId:'silent'),guildId:d.guildId,channelId:d.channelId,payload:{kind,name:kind==='launcher'?'VillaWolf Launcher':'VillaWolf Administrador',version,notes,...(d.roleId?{roleId:d.roleId}:{}),mentionRole:d.mentionRole}});queued++;}
         await env.DB.prepare('INSERT INTO release_cursors(kind,version,checked_at) VALUES(?,?,?) ON CONFLICT(kind) DO UPDATE SET version=excluded.version,checked_at=excluded.checked_at').bind(kind,version,clock()).run();
@@ -172,8 +173,9 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
     if(!Array.isArray(value.roles)||value.roles.some(id=>!snowflake(id))||(value.user&&value.user.id!==discordId)||value.pending===true)throw new AuthError(403,'Completa tu acceso al Discord de VillaWolf.');return value;
   }
   async function catalog(env){
+    let value;if(env.GITHUB_TOKEN){value=await githubJson(env,'updates/catalog.json',ghBranch);}else{
     let response;try{response=await fetchImpl(catalogUrl,{redirect:'manual',signal:AbortSignal.timeout(10000)});}catch{throw new AuthError(503,'No se pudo consultar la biblioteca de modpacks.');}
-    let value;if(response.status===404)value=catalogSeed;else{if(!response.ok)throw new AuthError(503,'La biblioteca no está disponible.');const text=await response.text();if(encoder.encode(text).length>65536)throw new AuthError(503,'Catálogo demasiado grande.');try{value=JSON.parse(text);}catch{throw new AuthError(503,'Catálogo inválido.');}}
+    if(response.status===404)value=catalogSeed;else{if(!response.ok)throw new AuthError(503,'La biblioteca no está disponible.');const text=await response.text();if(encoder.encode(text).length>65536)throw new AuthError(503,'Catálogo demasiado grande.');try{value=JSON.parse(text);}catch{throw new AuthError(503,'Catálogo inválido.');}}}
     if(value?.schemaVersion!==1||!Array.isArray(value.packs)||value.packs.length>50)throw new AuthError(503,'Catálogo inválido.');
     const ids=new Set();for(const p of value.packs){const expected=p.id==='champagne-vol5'?'updates/stable-v2.json':'updates/packs/'+p.id+'/stable.json';if(!/^[a-z0-9][a-z0-9-]{0,63}$/.test(p.id||'')||ids.has(p.id)||typeof p.name!=='string'||!p.name.trim()||p.name.length>80||!snowflake(p.roleId)||typeof p.enabled!=='boolean'||p.manifestPath!==expected)throw new AuthError(503,'Catálogo inválido.');communityPackFields(p);ids.add(p.id);}const deleted=value.deletedPacks||[];if(!Array.isArray(deleted)||deleted.length>1000||new Set(deleted).size!==deleted.length)throw new AuthError(503,'Registro de eliminaciones inválido.');
     const recorded=JSON.parse((await env.DB.prepare('SELECT json_group_array(pack_id) AS ids FROM deleted_packs').first())?.ids||'[]');const deletedPacks=[...new Set([...deleted,...recorded])];if(deletedPacks.length>1000||deletedPacks.some(id=>typeof id!=='string'||!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id)))throw new AuthError(503,'Registro de eliminaciones inválido.');return{...value,packs:value.packs.filter(p=>!deletedPacks.includes(p.id)),...(deletedPacks.length?{deletedPacks}:{})};
@@ -429,7 +431,11 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
   }
   async function githubJson(env,path,commit){
     let file=await ghRequired(env,'/contents/'+path+'?ref='+commit);
-    if(file.encoding!=='base64'&&ghSha(file.sha))file=await ghRequired(env,'/git/blobs/'+file.sha);
+    if(file.encoding!=='base64'&&ghSha(file.sha)){
+      if(!ghSha(commit)||!/^updates\/(?:stable-v2\.json|packs\/[a-z0-9][a-z0-9-]{0,63}\/stable\.json)$/.test(path)||!Number.isSafeInteger(file.size)||file.size>64*1024*1024)throw new AuthError(503,'Manifiesto confirmado inválido o demasiado grande.');
+      const response=await fetchImpl('https://raw.githubusercontent.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/'+commit+'/'+path,{redirect:'manual',signal:AbortSignal.timeout(45000)});
+      try{return await publicationMetadata(response);}catch(error){throw new AuthError(503,'No se pudo leer '+path+': '+error.message);}
+    }
     if(file.encoding!=='base64'||typeof file.content!=='string')throw new AuthError(503,'No se pudo leer la publicación confirmada.');
     try{return JSON.parse(decoder.decode(decodeBase64(file.content.replace(/\s/g,''))));}catch{throw new AuthError(503,'Publicación confirmada inválida.');}
   }
@@ -448,12 +454,15 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
     if(manifest.packId!==pack.id||manifest.game?.serverId!==pack.id||typeof manifest.version!=='string'||manifest.version.length>40||!/^\d+\.\d+\.\d+$/.test(manifest.version))throw new AuthError(400,'Versión publicada inválida.');
     const commit=await ghRequired(env,'/git/commits/'+input.commit);if(commit.parents?.length!==1||!ghSha(commit.parents[0].sha))throw new AuthError(400,'Historial de publicación inválido.');
     const diff=await ghRequired(env,'/compare/'+commit.parents[0].sha+'...'+input.commit);
-    if(diff.total_commits!==1||!diff.files?.some(f=>f.filename===expected&&['added','modified'].includes(f.status)))throw new AuthError(400,'El commit no publicó este lanzador.');
+    const manifestChanged=diff.files?.some(f=>f.filename===expected&&['added','modified'].includes(f.status));
+    let previousPack=null;if(!manifestChanged&&diff.files?.some(f=>f.filename==='updates/catalog.json'&&f.status==='modified')){const previousCatalog=await githubJson(env,'updates/catalog.json',commit.parents[0].sha);previousPack=previousCatalog.packs?.find(p=>p.id===pack.id);}
+    if(diff.total_commits!==1||!manifestChanged&&(!previousPack||JSON.stringify(previousPack)===JSON.stringify(pack)))throw new AuthError(400,'El commit no publicó ni modificó este lanzador.');
     const versionPath=pack.id==='champagne-vol5'?'updates/versions/modpack-'+manifest.version+'.json':'updates/packs/'+pack.id+'/versions/modpack-'+manifest.version+'.json';
     const newVersion=diff.files.some(f=>f.filename===versionPath&&f.status==='added');
     const firstPublication=diff.files.some(f=>f.filename===expected&&f.status==='added');
     const previous=firstPublication?null:await githubJson(env,expected,commit.parents[0].sha);
     const changes=publicationChanges(previous,manifest);
+    if(previousPack){changes.splice(0,changes.length,...['Configuración del lanzador actualizada.']);if(previousPack.roleId!==pack.roleId)changes.push('Rol de acceso actualizado.');if(previousPack.guildId!==pack.guildId)changes.push('Servidor Discord actualizado.');if(JSON.stringify(previousPack.announcements)!==JSON.stringify(pack.announcements))changes.push('Canales o menciones de anuncios actualizados.');}
     const eventId='publication:'+input.commit+':'+pack.id;
     await env.DB.prepare('INSERT INTO admin_actions(id,actor_id,actor_name,action,pack_id,commit_sha,version,created_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(eventId,receipt.actor_id,receipt.actor_name,newVersion?'published':'presentation_published',pack.id,input.commit,manifest.version,clock()).run();
     await outbox.enqueue(env,{eventId,guildId:env.DISCORD_GUILD_ID,channelId:'1414678783679795425',payload:{kind:'audit',action:'published',actorName:receipt.actor_name,name:pack.name,version:manifest.version,changes}});
@@ -495,7 +504,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
       const url=new URL(request.url);if(url.search)throw new AuthError(400,'Solicitud inválida.');
       if(request.method==='POST'&&url.pathname==='/internal/role-bot')return reply(200,await roleBot.receive(request,env));
       if(request.method==='POST'&&url.pathname==='/internal/notifications')return reply(200,await notifications(request,env));
-      if(request.method==='GET'&&url.pathname==='/health')return reply(200,{ok:true,provider:'discord',storage:'D1',version:'1.2.0',multiGuild:true,notifications:true,audit:true,catalog:true,admin:true,discordRetry:true,catalogSnapshotSeconds:60,curseforgeApi:true,curseforgeConfigured:!!env.CURSEFORGE_API_KEY,githubPublishing:true,githubConfigured:!!env.GITHUB_TOKEN});
+      if(request.method==='GET'&&url.pathname==='/health')return reply(200,{ok:true,provider:'discord',storage:'D1',version:'1.2.2',multiGuild:true,notifications:true,audit:true,catalog:true,admin:true,discordRetry:true,catalogSnapshotSeconds:60,curseforgeApi:true,curseforgeConfigured:!!env.CURSEFORGE_API_KEY,githubPublishing:true,githubConfigured:!!env.GITHUB_TOKEN});
       const cfRoute=/^\/v2\/(?:admin\/)?curseforge\/(?:matches|download)$/.test(url.pathname),ghRoute=url.pathname==='/v2/admin/delete-pack'||url.pathname==='/v2/admin/github'||url.pathname==='/v2/admin/github/status'||url.pathname==='/v2/admin/github/blob';
       const bucket=await digest((request.headers.get('CF-Connecting-IP')||'unknown')+':'+(cfRoute?'curseforge:':ghRoute?'github:':'')+Math.floor(clock()/60000));
       const count=await env.DB.prepare('INSERT INTO discord_limits VALUES(?,1,?) ON CONFLICT(bucket) DO UPDATE SET count=count+1 RETURNING count').bind(bucket,clock()+120000).all();

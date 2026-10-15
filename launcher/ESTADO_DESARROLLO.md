@@ -405,3 +405,18 @@ El propietario reemplazó el token de forma privada. Discord users/@me y las com
 ### Incidencia de actualización automática tras 0.1.24
 
 El 15 de octubre se comprobó que la API de GitHub contenía 0.1.24 mientras la URL raw habitual aún devolvía 0.1.23; el servidor anuncia caché max-age=300. La variante refs/heads ya devolvía 0.1.24. Se instaló directamente en esta PC el mismo instalador publicado, tras cotejar SHA-256; salida 0 y versión del ASAR instalado 0.1.24. No se cambiaron los datos de usuario ni se creó otra release. La propagación del endpoint original no queda confirmada por esta instalación directa.
+
+## Corrección 0.1.25 / servicio 1.2.1 — catálogo, cola y avisos
+
+Servicio 1.2.1 desplegado en Cloudflare (ce784964); Administrador 0.1.25 en desarrollo, no publicado todavía.
+
+- Causa de lanzador ausente: API de GitHub contenía el nuevo lanzador mientras el raw leído desde el servicio devolvía un catálogo anterior. Con conexión central configurada, el catálogo se lee por API. Verificación real: la sesión del propietario recibe Mundo Conejil y juaaaaaannnn; ambos verifican acceso HTTP 200.
+- Causa de reporte pendiente: manifiesto Mundo Conejil de 34.870.427 bytes; la respuesta blob base64 de GitHub superaba 2 MiB (48.044.022 bytes). Se leen metadatos por streaming desde el commit confirmado, omitiendo únicamente payloads base64 para el resumen. No cambia archivos, hashes ni validación de publicación. Reintento real confirmado HTTP 200, auditoría encolada; entrega final del bot por verificar.
+- Cola del Administrador: un evento fallido conserva su registro y deja pasar los siguientes de la misma cuenta; reintento automático cada 120 segundos cuando está inactivo.
+- Avisos futuros de Launcher y Administrador breves: versión y enlace oficial; canal oficial Launcher y canal privado Administrador, además de comunidades con anuncios habilitados. Auditoría privada conserva resumen de cambios.
+- Pruebas: 18 de anuncios, cola remota y manifiestos grandes; 32 de catálogo, permisos, GitHub central, cola local y eliminación. Todas aprobadas.
+- El propietario autorizó limpieza de versiones anteriores en esta PC y GitHub. Aún no ejecutada; conservar versiones activas, mundos, sesiones, carpetas originales y commits. Procesar primero los eventos que necesitan manifiestos históricos.
+
+### Ajustes finales del servicio 1.2.2
+
+Se añade auditoría de cambios confirmados sólo en catálogo (rol, servidor o anuncios) aunque el manifiesto conserve los mismos bytes; se comprueba el cambio real del mismo lanzador contra el catálogo padre. La última publicación pendiente correspondía a ese caso. Revalidación automatizada aprobada. El instalador 0.1.25 pasó integridad, exclusión de almacenes privados y arranque aislado (358 archivos, SHA-256 7130dded136fda94815f9da1bfb0818bcd505934cb340f8673f200154d9193d9).
