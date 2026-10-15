@@ -1,5 +1,24 @@
 [
   {
+    "version": "0.1.10",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-15T22:47:55.805Z",
+    "notes": "Me equivoque en un mod XD",
+    "mods": 117,
+    "content": 202,
+    "changes": {
+      "added": [
+        "mods/jei-1.20.1-forge-15.71.0.223.jar",
+        "mods/mezz_config-1.20.1-forge-0.6.8.jar"
+      ],
+      "changed": [],
+      "removed": [
+        "mods/jei-1.20.1-forge-15.56.0.205.jar"
+      ]
+    },
+    "restoredFrom": null
+  },
+  {
     "version": "0.1.9",
     "packName": "Mundo Conejil",
     "publishedAt": "2026-10-15T21:51:52.263Z",
