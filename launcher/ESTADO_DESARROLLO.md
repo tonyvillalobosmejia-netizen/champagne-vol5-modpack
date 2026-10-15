@@ -448,5 +448,5 @@ Se añade auditoría de cambios confirmados sólo en catálogo (rol, servidor o 
 - Los resultados manuales propuestos previamente por el propietario siguen pendientes de autorización documental; no se han agregado como pruebas propias.
 
 
-## VillaWolf Bot 0.2.2 (desarrollo)
-Versión visible y botón Buscar actualizaciones. Consulta exclusivamente releases estables del Bot; ofrece abrir el instalador oficial cuando existe una versión superior. Es una actualización manual: requiere ejecutar el instalador. No reinicia ni detiene el bot automáticamente. Conserva las credenciales cifradas. Publicación y prueba del paquete pendientes.
+## VillaWolf Bot 0.2.2 (publicado)
+Versión visible y botón Buscar actualizaciones. Consulta exclusivamente releases estables del Bot; ofrece abrir el instalador oficial cuando existe una versión superior. Es una actualización manual: requiere ejecutar el instalador. No reinicia ni detiene el bot automáticamente. Conserva las credenciales cifradas. Cuatro pruebas automatizadas de actualización aprobadas. Arranque aislado del paquete, versión y botón comprobados. Instalador publicado: https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/bot-v0.2.2. Descargas verificadas mediante SHA-256.
