@@ -3,13 +3,16 @@ const {app,BrowserWindow,ipcMain,safeStorage,Tray,Menu,clipboard,shell}=require(
 const endpoint='https://villawolf-auth.tony-villalobos-mejia-973.workers.dev';
 app.setName('VillaWolf Bot');app.setAppUserModelId('com.villawolf.rolesbot');app.setPath('userData',path.join(app.getPath('appData'),'VillaWolf Bot'));
 if(!app.requestSingleInstanceLock()){app.quit();}else{
+ const botVersion=require('./package.json').version;const updates=require('./updates.cjs').createBotUpdates({version:botVersion,openBrowser:url=>shell.openExternal(url)});
  let access,win,tray,bot,status='Configuración pendiente',store,credentials,stopping=false;
- const publicState=()=>({authorized:!!access?.user(),account:access?.user()?.username||null,tokenSaved:!!credentials?.token,endpoint,status,running:!!bot});
+ const publicState=()=>({version:botVersion,authorized:!!access?.user(),account:access?.user()?.username||null,tokenSaved:!!credentials?.token,endpoint,status,running:!!bot});
  function notify(message){status=message;require('node:fs').writeFileSync(path.join(app.getPath('userData'),'status.json'),JSON.stringify(publicState()));if(win&&!win.isDestroyed())win.webContents.send('bot-state',publicState());}
  function start(){if(!access?.user())throw Error('Acceso de administrador no verificado.');if(bot||!credentials?.token)return;bot=require('./bridge.cjs').startRoleBot({token:credentials.token,key:credentials.syncKey,endpoint,guildIds:['1007732653035880589'],syncAllGuilds:true,notificationsEnabled:true,onStatus:notify});notify('Conectando con Discord y VillaWolf…');}
  function guard(event){if(event.sender!==win?.webContents||event.senderFrame!==win.webContents.mainFrame)throw Error('Solicitud no permitida.');}
  ipcMain.handle('bot-login',async e=>{guard(e);try{await access.login();notify('Acceso autorizado.');return publicState();}catch(error){return{...publicState(),message:error.message};}});
  ipcMain.handle('bot-logout',async e=>{guard(e);if(bot){await bot.stop();bot=null;}await access.logout();notify('Sesión cerrada.');return publicState();});
+ ipcMain.handle('bot-update-check',e=>{guard(e);return updates.check();});
+ ipcMain.handle('bot-update-download',e=>{guard(e);return updates.download();});
  ipcMain.handle('bot-status',e=>{guard(e);return publicState();});
  ipcMain.handle('bot-save',async(e,token)=>{guard(e);try{await access.verify();}catch(error){return{ok:false,message:error.message};}if(typeof token!=='string'||!/[A-Za-z0-9_]/.test(token)||!/^[-A-Za-z0-9_.]{40,300}$/.test(token))return{ok:false,message:'Introduce la clave del bot de Discord. No la envíes al chat.'};try{if(bot){await bot.stop();bot=null;}credentials={...credentials,token};store.save(credentials);start();return{ok:true,...publicState()};}catch{return{ok:false,message:'Windows no pudo proteger la configuración.'};}});
  ipcMain.handle('bot-copy-link-key',async e=>{guard(e);await access.verify();clipboard.writeText(credentials.syncKey);return{ok:true,message:'Clave de conexión copiada. Pégala sólo en ROLE_BOT_KEY de Cloudflare.'};});

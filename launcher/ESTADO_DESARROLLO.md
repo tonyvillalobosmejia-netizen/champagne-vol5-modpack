@@ -446,3 +446,7 @@ Se añade auditoría de cambios confirmados sólo en catálogo (rol, servidor o 
 - Pruebas automatizadas del control de acceso: 5 casos aprobados (sin sesión, permiso rechazado, autorizado, revocación y cierre). Inicio OAuth real de esta versión pendiente de comprobar con el propietario.
 - Repositorio: `tonyvillalobosmejia-netizen/champagne-vol5-modpack`, rama `preparacion-paso97`, código bajo `launcher/`. Esta copia local no contiene `.git`.
 - Los resultados manuales propuestos previamente por el propietario siguen pendientes de autorización documental; no se han agregado como pruebas propias.
+
+
+## VillaWolf Bot 0.2.2 (desarrollo)
+Versión visible y botón Buscar actualizaciones. Consulta exclusivamente releases estables del Bot; ofrece abrir el instalador oficial cuando existe una versión superior. Es una actualización manual: requiere ejecutar el instalador. No reinicia ni detiene el bot automáticamente. Conserva las credenciales cifradas. Publicación y prueba del paquete pendientes.
