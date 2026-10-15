@@ -6,9 +6,9 @@
 
 ## Publicación actual — 15 de octubre de 2026
 
-- **Publicados y verificados:** Launcher 0.1.18 y Administrador 0.1.21. Descarga pública de instaladores, blockmaps y latest.yml comprobada por SHA-256/tamaño; canales de actualización activados.
+- **Publicados y verificados:** Launcher 0.1.18 y Administrador 0.1.23. Descarga pública de instaladores, blockmaps y latest.yml comprobada por SHA-256/tamaño; canales de actualización activados.
 - **Pruebas:** 268 aprobadas, 0 fallos; arranque de ambos paquetes en perfiles aislados aprobado. No se repitieron todas las combinaciones de Minecraft ni la instalación habitual de esta PC.
-- **Administrador 0.1.21:** formulario oscuro de cuatro pestañas, borradores locales, imagen inicial, validaciones reales y comprobación de comunidades externas. Crear borrador no publica ni anuncia.
+- **Administrador 0.1.23:** formulario oscuro de cuatro pestañas, borradores locales, imagen inicial, validaciones reales y comprobación de comunidades externas. Crear borrador no publica ni anuncia.
 - **Launcher 0.1.18:** cuenta renovada, Discord obligatorio/Microsoft opcional, código de dispositivo copiado automáticamente y avatar de Discord o skin oficial Premium.
 - **Worker 1.2.0 desplegado:** migraciones aditivas 0004–0006 ejecutadas, ROLE_BOT_MULTI_GUILD=true y ADMIN_RELEASE_CHANNEL_ID configurado y verificado por UI. Roles, cola y auditoría implementados. No se cambiaron secretos ni tablas anteriores.
 - **Bot 0.2.0 conectado:** el propietario reemplazó la credencial; comprobación de identidad por Discord aprobada y estado local «Bot conectado. Roles sincronizados». Los dos canales privados de Racoon mantienen los cinco permisos necesarios. La comprobación directa de Discord sigue disponible como respaldo.
@@ -50,7 +50,7 @@ El propietario aportó el 14 de octubre de 2026 una captura del correo «AppID R
 | Componente | Publicada | En desarrollo local | Situación |
 | --- | --- | --- | --- |
 | Launcher Windows x64 | **0.1.18** | **0.1.18** | Release publicada, descargas e integridad verificadas; arranque en perfil aislado. Instalación habitual no actualizada por este ensayo. |
-| Administrador Windows x64 | **0.1.22** | **0.1.23** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
+| Administrador Windows x64 | **0.1.23** | **0.1.23** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
 | Servicio Cloudflare villawolf-auth | **1.2.0** | **1.2.0** | Health confirmado; comunidades externas, auditoría y cola desplegados. ROLE_BOT_ENABLED y ROLE_BOT_MULTI_GUILD activos. |
 | VillaWolf Bot local | No distribuido como instalador | **0.2.0** | Código actualizado, token persistido cifrado; identidad y conexión verificadas el 15 de octubre. Roles sincronizados. |
 
@@ -100,7 +100,7 @@ Publicaciones verificadas:
 | Aplicación e instalador independientes | Terminados. Icono y estilo verdes, versión propia y canal de actualización separado del Launcher. |
 | Acceso Discord Administrador u Owner | Terminado y desplegado. Exige uno de esos roles en el servidor oficial de VillaWolf. Un rol de jugador no permite entrar a las rutas administrativas. |
 | Perfil con nombre/avatar | Terminado. Botón superior derecho, cuenta Discord y conexión de publicación. |
-| Tres menús principales | Terminados: Edición de interfaz, Carpetas y archivos, Información del servidor. El último muestra No disponible; no implica que exista automatización de servidor. |
+| Menús principales | Edición de interfaz, Carpetas y archivos, Información del servidor y Configuración de Discord (cuarto menú solicitado explícitamente). Información del servidor sigue No disponible; no implica automatización de hosting. |
 | Selección de lanzador y cierre de menús | Terminados. Selector y acciones alineados, menús de edición al seleccionar, cierre visible. Edición carga directamente sin el botón adicional Editar. |
 | Creación de nuevos modpacks | Terminada para el catálogo actual: nombre, rol y canal propios. Crear localmente no publica ni convierte el borrador en visible para jugadores hasta completar la publicación. |
 | Carpeta CurseForge por lanzador | Terminada y persistente; evita que la selección de carpeta se borre o se reutilice en otro modpack. |
@@ -377,3 +377,9 @@ El propietario reemplazó el token de forma privada. Discord users/@me y las com
 - 16 pruebas específicas aprobadas, incluyendo carga de configuración Discord, rechazo de otro ID y cancelación sin alterar ajustes. Revisión de interfaz con API ficticia a 1280 y 640 px: sin desbordamiento y paneles exclusivos. No equivale a publicar un modpack real.
 
 - Recorrido visual adicional (API ficticia): Crear y continuar abre directamente Contenido con título de creación; Comprobación sólo habilita la revisión tras preparar; Publicación exige las dos confirmaciones. Cambio de menú oculta el anterior. Sin desbordamiento horizontal a 640 px. Capturas guardadas en revision-villawolf; no son publicaciones reales.
+
+### Publicación confirmada Administrador 0.1.23 — 15 de octubre de 2026
+
+- Release admin-v0.1.23 publicada; instalador, blockmap y latest.yml descargados públicamente y verificados contra sus hashes/tamaños. Canal independiente activado en commit 1ad3ec5c7cbf2e034e61a41d90e5366058dfe710. Launcher latest permanece v0.1.18.
+- Código de esta mejora: 48db9e0da82e227d5b5458b6b4627ad4bd7cf4f3 en preparacion-paso97, carpeta launcher. Arranque del paquete en perfil aislado aprobado y ASAR cotejado con los archivos actuales; sin almacenes privados.
+- Las comprobaciones de interfaz usan fixtures sin publicar en servicios reales. No se modificó ningún modpack de jugadores durante esta distribución.
