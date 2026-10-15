@@ -50,7 +50,7 @@ El propietario aportó el 14 de octubre de 2026 una captura del correo «AppID R
 | Componente | Publicada | En desarrollo local | Situación |
 | --- | --- | --- | --- |
 | Launcher Windows x64 | **0.1.18** | **0.1.18** | Release publicada, descargas e integridad verificadas; arranque en perfil aislado. Instalación habitual no actualizada por este ensayo. |
-| Administrador Windows x64 | **0.1.21** | **0.1.21** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
+| Administrador Windows x64 | **0.1.21** | **0.1.22** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
 | Servicio Cloudflare villawolf-auth | **1.2.0** | **1.2.0** | Health confirmado; comunidades externas, auditoría y cola desplegados. ROLE_BOT_ENABLED y ROLE_BOT_MULTI_GUILD activos. |
 | VillaWolf Bot local | No distribuido como instalador | **0.2.0** | Código actualizado, token persistido cifrado; identidad y conexión verificadas el 15 de octubre. Roles sincronizados. |
 
@@ -362,3 +362,9 @@ NsisUpdater real confirmó Launcher 0.1.17 desde 0.1.16 y Administrador 0.1.20 d
 ### Reconexión del bot — 15 de octubre de 2026
 
 El propietario reemplazó el token de forma privada. Discord users/@me y las comprobaciones de pertenencia/permisos de Racoon responden correctamente. El estado del bot confirma conexión y roles sincronizados. El bloqueo HTTP 401 anterior queda corregido. No se repitió la batería de pruebas ni una publicación de modpack real; la cola completa y auditoría de una publicación siguen pendientes de ensayo real.
+
+### Corrección de borradores anteriores — 15 de octubre de 2026
+
+- Administrador 0.1.22 en preparación. Causa confirmada en código: admin-analyze y admin-design consultaban borradores para cualquier ID del catálogo, pero draft-store sólo admitía session y pack-16hex. Mundo Conejil usa champagne-vol5 y fallaba después de resolver las fuentes.
+- Corregido: admite los IDs seguros del catálogo; los anteriores usan un prefijo catalog- para no colisionar con session, acciones o pendientes. Conserva los borradores nuevos existentes sin migrarlos. Si no hay borrador devuelve null. No se cambian JAR, hashes, rutas de CurseForge ni mundos.
+- 16 pruebas específicas aprobadas, 0 fallos: borradores, creación/preparación/publicación simulada y diseño independiente. Publicación e instalación pendientes en este registro.
