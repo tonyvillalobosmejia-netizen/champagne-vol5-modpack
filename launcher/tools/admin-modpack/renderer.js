@@ -1,5 +1,5 @@
 'use strict';
-const $=id=>document.getElementById(id); let data=null,locked=false,tokenSaved=false,preparedUi=false,currentMenu=null,modpackView='new',adminAuthorized=false,activePackId=null;
+const $=id=>document.getElementById(id); let data=null,locked=false,tokenSaved=false,preparedUi=false,publishedResult=null,currentMenu=null,modpackView='new',adminAuthorized=false,activePackId=null;
 let sourceSavePending=null,sharedToken=false;
 let adminRetryTimer=null;
 function accountControls(result){clearTimeout(adminRetryTimer);adminRetryTimer=null;if(result.retryAfter>0&&result.user)adminRetryTimer=setTimeout(()=>run(async()=>{const session=await window.admin.authStatus();accountControls(session);if(adminAuthorized)await refreshAdminPacks();return session;}),(Math.min(result.retryAfter,86400)+1)*1000);adminAuthorized=!!result.authorized;if(result.user?.avatarUrl)$('adminProfileAvatar').src=result.user.avatarUrl;else $('adminProfileAvatar').src='./assets/villawolf-admin-icon.png';$('adminProfileName').textContent=result.user?.discordName||'Perfil';$('adminProfileButton').title=result.user?.discordName||'Mi perfil';if(!adminAuthorized)activePackId=null;$('adminLibrary').hidden=!adminAuthorized;$('adminAccountStatus').textContent=result.message||(result.user?(result.user.discordName||result.user.username)+(adminAuthorized?' · Acceso autorizado':' · Sin permiso de administración'):'Inicia sesión para continuar.');$('adminLogin').hidden=!!result.user;$('adminLogout').hidden=!result.user;for(const b of document.querySelectorAll('[data-menu]'))b.disabled=!adminAuthorized&&b.dataset.menu!=='profile';if(!adminAuthorized){currentMenu='profile';updateNavigation();}}
@@ -14,12 +14,12 @@ window.admin.onProgress(message=>{say(message);if(!$('operationProgress').hidden
 function startProgress(message,design=false){$(design?'designProgressSlot':'modpackProgressSlot').append($('operationProgress'));$('operationProgress').hidden=false;$('progressBar').removeAttribute('value');$('progressMessage').textContent=message;}
 function tokenControls(){ $('tokenEntry').hidden=tokenSaved;$('tokenSaved').hidden=!tokenSaved;$('token').disabled=locked||tokenSaved;$('saveToken').hidden=tokenSaved;$('saveToken').disabled=locked||tokenSaved;$('forgetToken').hidden=!tokenSaved||sharedToken;$('forgetToken').disabled=locked||!tokenSaved;}
 function selectMenu(name){document.querySelector('[data-menu="'+name+'"]').onclick();}
-function invalidate(){preparedUi=false; $('publishStep').querySelector('summary').textContent='4. Revisa el resumen y publica';$('result').textContent='';$('publication').hidden=true;$('openOutput').hidden=true;$('tested').checked=$('reviewed').checked=false; }
+function invalidate(){preparedUi=false;publishedResult=null;$('publish').textContent='Verificar descargas y publicar'; $('publishStep').querySelector('summary').textContent='4. Revisa el resumen y publica';$('result').textContent='';$('publication').hidden=true;$('openOutput').hidden=true;$('tested').checked=$('reviewed').checked=false; }
 async function run(action){if(locked)return;if(sourceSavePending)await sourceSavePending;if(locked)return;locked=true;const controls=[...document.querySelectorAll('button,input,textarea')].map(e=>[e,e.disabled]);controls.forEach(([e])=>e.disabled=true);try{const result=await action();if(!result.ok)throw new Error(result.error||result.message||'No se pudo completar la operación.');return result;}catch(error){say('Error: '+error.message);}finally{locked=false;controls.forEach(([e,disabled])=>e.disabled=disabled);tokenControls();for(const b of document.querySelectorAll('[data-menu]'))b.disabled=!adminAuthorized&&b.dataset.menu!=='profile';$('adminCancelLogin').disabled=false;$('closeAdminMenu').disabled=false;$('prepare').disabled=!!data?.unresolved?.length;updateNavigation();}}
 function rows(target,title,items){const h=document.createElement('strong');h.textContent=title+' ('+items.length+')';target.append(h);for(const item of items){const p=document.createElement('p');p.textContent=item;target.append(p);}}
 function selected(){return [...$('content').querySelectorAll('input:checked')].map(e=>e.value);}
 function removals(){if(!data)return;const keep=new Set(selected());const removed=data.previousContent.filter(e=>!keep.has(e.path));$('removals').textContent=removed.length+' archivos anteriores dejarán de administrarse. '+removed.map(e=>e.path).slice(0,6).join(', ');}
-$('choose').onclick=()=>run(async()=>{const r=await window.admin.folder();if(r.ok){$('source').value=r.source;$('review').hidden=true;data=null;invalidate();$('analysisStep').open=true;}return r;});
+$('choose').onclick=()=>run(async()=>{const r=await window.admin.folder();if(r.ok){$('source').value=r.source;updateStep=0;$('review').hidden=true;data=null;invalidate();$('analysisStep').open=true;}return r;});
 function showReport(report){invalidate();data=report;updateStep=report.mode==='presentation'?0:1;$('publishDesign').textContent=data.draft?'Guardar diseño del borrador':'Publicar cambios';$('analysisStep').open=false;$('reviewStep').open=true;$('operationProgress').hidden=true;
   $('testedLabel').textContent=data.mode==='presentation'?' Revisé el nombre, la imagen y las dos tarjetas en la vista previa.':' Abrí Minecraft con estos mods y entré a un mundo sin errores.';
   $('packTitle').value=data.design.packName;$('notes').value=data.design.notes?.text||'';
@@ -34,7 +34,7 @@ function showReport(report){invalidate();data=report;updateStep=report.mode==='p
   $('review').hidden=false;updateNavigation();preview();removals();say(data.mode==='presentation'?'Diseño publicado cargado. Los mods y configuraciones se conservan; revisa la vista previa antes de publicar.':data.mode==='restore'?'Recuperación de '+data.restoredFrom+' preparada para revisar. Publicar exige una nueva versión y confirmar las pruebas.':data.unresolved.length?'Hay mods sin fuente exacta; la publicación quedará bloqueada.':'Análisis listo. Revisa los cambios y selecciona el contenido.');
 }
 function loadDesignDirectly(){return run(async()=>{say('Cargando opciones de interfaz…');const r=await window.admin.design();if(r.ok)showReport(r.report);return r;});}
-$('source').onchange=()=>{if(!activePackId)return;const input={packId:activePackId,source:$('source').value.trim()};const previous=sourceSavePending||Promise.resolve();const pending=previous.then(()=>window.admin.saveSource(input)).then(r=>{if(activePackId===input.packId){if(r.ok){$('source').value=r.source;data=null;invalidate();$('review').hidden=true;say('Carpeta guardada para este lanzador.');}else say('Error: '+(r.error||r.message));}return r;}).catch(e=>{say('Error: '+e.message);return{ok:false};}).finally(()=>{if(sourceSavePending===pending)sourceSavePending=null;});sourceSavePending=pending;};
+$('source').onchange=()=>{updateNavigation();if(!activePackId)return;const input={packId:activePackId,source:$('source').value.trim()};const previous=sourceSavePending||Promise.resolve();const pending=previous.then(()=>window.admin.saveSource(input)).then(r=>{if(activePackId===input.packId){if(r.ok){$('source').value=r.source;data=null;invalidate();$('review').hidden=true;say('Carpeta guardada para este lanzador.');}else say('Error: '+(r.error||r.message));}return r;}).catch(e=>{say('Error: '+e.message);return{ok:false};}).finally(()=>{if(sourceSavePending===pending)sourceSavePending=null;});sourceSavePending=pending;};
 $('analyze').onclick=()=>run(async()=>{invalidate();$('review').hidden=true;data=null;say('Analizando…');const r=await window.admin.analyze({packId:activePackId,source:$('source').value.trim()});if(r.ok)showReport(r.report);return r;});
 function loadHistoryDirectly(){return run(async()=>{say('Consultando historial de versiones…');const r=await window.admin.history();if(r.ok){$('history').replaceChildren();say(r.history.entries.length?'Historial actualizado.':'Todavía no hay versiones publicadas para este lanzador.');for(const entry of r.history.entries){const row=document.createElement('div'),label=document.createElement('div'),button=document.createElement('button'),details=document.createElement('details'),summary=document.createElement('summary'),text=document.createElement('p');row.className='history-row';label.textContent=(entry.packName||'Modpack')+' '+entry.version+(entry.current?' · Actual':'')+(entry.publishedAt?' · '+new Date(entry.publishedAt).toLocaleString():'');summary.textContent='Notas y cambios';text.textContent=(entry.notes||'Esta publicación no tenía notas registradas.')+(entry.mods?'\n'+entry.mods+' mods · '+entry.content+' archivos':'')+(entry.changes?'\nAñadidos: '+entry.changes.added.length+' · Modificados: '+entry.changes.changed.length+' · Retirados: '+entry.changes.removed.length:'')+(entry.restoredFrom?'\nRecuperada de '+entry.restoredFrom:'');details.append(summary,text);label.append(details);button.textContent='Recuperar como nueva versión';button.onclick=()=>run(async()=>{const recovered=await window.admin.restore(entry.version);if(recovered.ok){modpackView='new';showReport(recovered.report);updateNavigation();}return recovered;});row.append(label,button);$('history').append(row);}}return r;});}
 $('imageBtn').onclick=()=>run(async()=>{const r=await window.admin.image();if(r.ok&&!r.cancelled){invalidate();$('backgroundPreview').src=r.preview;$('backgroundPreview').hidden=false;preview();}return r;});
@@ -56,11 +56,13 @@ $('publishDesign').onclick=()=>run(async()=>{
 });
 $('openOutput').onclick=()=>run(()=>window.admin.output());
 $('publish').onclick=()=>run(async()=>{
+  if(publishedResult)return {ok:true};
+  if(!preparedUi)return {ok:false,error:'Prepara el paquete antes de publicarlo.'};
   if(!$('tested').checked||!$('reviewed').checked)return {ok:false,error:'Confirma la prueba y la revisión del contenido antes de publicar.'};
   const saved=await window.admin.tokenStatus();if(!saved.ok)return saved;showTokenStatus(saved);
   if(!saved.saved){selectMenu('profile');$('token').focus();return {ok:false,error:'Guarda el token en Perfil antes de publicar.'};}
   const input={token:'',tested:true,reviewed:true};$('publishStep').open=false;startProgress('Verificando descargas y preparando la publicación…');
-  try{const result=await window.admin.publish(input);if(result.ok&&result.result){say('Publicado: '+result.result.packName+' '+result.result.version);$('result').textContent='Los jugadores recibirán esta versión al pulsar JUGAR. Commit: '+result.result.commit;$('publishStep').querySelector('summary').textContent='✓ Publicado: '+result.result.packName+' '+result.result.version;$('review').hidden=true;updateStep=3;updateNavigation();}
+  try{const result=await window.admin.publish(input);if(result.ok&&result.result){publishedResult=result.result;preparedUi=false;say('Publicado: '+result.result.packName+' '+result.result.version);$('result').textContent='Los jugadores recibirán esta versión al pulsar JUGAR. Commit: '+result.result.commit;$('publishStep').querySelector('summary').textContent='✓ Publicado: '+result.result.packName+' '+result.result.version;$('review').hidden=true;updateStep=3;updateNavigation();}
     else{$('publishStep').open=true;if(result.error?.includes('GitHub rechazó el token (401)')){selectMenu('profile');$('tokenSaved').textContent='⚠ Token rechazado por GitHub';$('tokenStatus').textContent=result.error;}if(result.cancelled)say('Publicación cancelada. Puedes revisar el resumen y volver a intentarlo.');}return result;
   }catch(error){$('publishStep').open=true;throw error;}finally{$('operationProgress').hidden=true;}
 });
@@ -110,23 +112,28 @@ $('adminOpenFiles').onclick=()=>{creatingPublication=false;currentMenu='modpack'
 window.VillaWolfAdminDraftCreated=async (r,options={})=>{selectedAdminPack(r);await refreshAdminPacks();currentMenu='modpack';modpackView='new';updateNavigation();say('Borrador guardado. Analiza su carpeta, revisa y prepara antes de publicar.');if(options.continueToPublication){creatingPublication=true;return run(async()=>{say('Analizando el nuevo lanzador para preparar su publicación…');const analyzed=await window.admin.analyze({packId:activePackId,source:r.source});if(analyzed.ok)showReport(analyzed.report);return analyzed;});}};
 
 // The numbered flow reuses the real analysis, preparation and publication controls.
+$('analyze').hidden=true;$('prepare').hidden=true;
 $('updatePrepareSlot').append($('prepare'),$('openOutput'));
 $('updateTestSlot').append($('tested').closest('label'),$('reviewed').closest('label'));
 function updateFileSteps(visible){
  visible=visible&&!!activePackId;$('updateFlowHeader').hidden=!visible;$('updateFlowFooter').hidden=!visible;$('updateCheckPanel').hidden=!visible||updateStep!==2;
  if(!visible)return;
  $('updateFlowTitle').textContent=creatingPublication?'Crear nuevo lanzador · Publicación':'Actualizar modpack';
- $('analysisPanel').hidden=updateStep!==0;$('review').hidden=updateStep!==1||!data||data.mode==='presentation';$('publication').hidden=updateStep!==3||!preparedUi;
- for(let i=0;i<4;i++){const tab=$('updateTab'+i);tab.setAttribute('aria-selected',String(i===updateStep));tab.disabled=locked||(i>0&&(!data||data.mode==='presentation'))||(i===3&&!preparedUi);}
+ $('analysisPanel').hidden=updateStep!==0;$('review').hidden=updateStep!==1||!data||data.mode==='presentation';$('publication').hidden=updateStep!==3||(!preparedUi&&!publishedResult);
+ for(let i=0;i<4;i++){const tab=$('updateTab'+i);tab.setAttribute('aria-selected',String(i===updateStep));tab.disabled=locked||(!!publishedResult&&i>0&&i<3)||(i>0&&(!data||data.mode==='presentation'))||(i===3&&!preparedUi&&!publishedResult);}
  $('analysisStep').open=$('reviewStep').open=$('publishStep').open=true;
- $('updatePrevious').disabled=locked||updateStep===0;
- $('updateNext').hidden=updateStep===3;$('updateNext').disabled=locked||(updateStep===0&&(!data||data.mode==='presentation'))||(updateStep===1&&!!data?.unresolved?.length)||(updateStep===2&&(!preparedUi||!$('tested').checked||!$('reviewed').checked));
- $('updateFlowState').textContent=preparedUi?'Paquete preparado · Publicación pendiente':'Sin publicar';
+ $('updatePrevious').hidden=!!publishedResult;$('updatePrevious').disabled=locked||updateStep===0;
+ $('updateNext').hidden=updateStep===3;
+ $('updateNext').textContent=updateStep===0?'Analizar y continuar':updateStep===1?'Preparar y comprobar':updateStep===2?'Revisar publicación':'Siguiente';
+ $('updateNext').disabled=locked||(updateStep===0&&!$('source').value.trim())||(updateStep===1&&!!data?.unresolved?.length)||(updateStep===2&&(!preparedUi||!$('tested').checked||!$('reviewed').checked));
+ $('updateFlowState').textContent=publishedResult?'Publicado · '+publishedResult.version:preparedUi?'Paquete preparado · Publicación pendiente':'Sin publicar';
+ $('publish').disabled=locked||!preparedUi||!!publishedResult;
+ $('publish').textContent=publishedResult?'✓ Publicado':'Verificar descargas y publicar';
  $('openOutput').hidden=!preparedUi;$('tested').disabled=$('reviewed').disabled=locked||!preparedUi;
 }
-for(let i=0;i<4;i++)$('updateTab'+i).onclick=()=>{if(locked||(i>0&&!data)||(i===3&&(!preparedUi||!$('tested').checked||!$('reviewed').checked))){say('Completa la preparación y confirma la prueba antes de publicar.');return;}updateStep=i;updateNavigation();};
+for(let i=0;i<4;i++)$('updateTab'+i).onclick=()=>{if(locked||(!!publishedResult&&i>0&&i<3)||(i>0&&!data)||(i===3&&!publishedResult&&(!preparedUi||!$('tested').checked||!$('reviewed').checked))){say('Completa la preparación y confirma la prueba antes de publicar.');return;}updateStep=i;updateNavigation();};
 $('updatePrevious').onclick=()=>{if(!locked){updateStep=Math.max(0,updateStep-1);updateNavigation();}};
-$('updateNext').onclick=()=>{if(!locked&&!$('updateNext').disabled){updateStep=Math.min(3,updateStep+1);updateNavigation();}};
+$('updateNext').onclick=async()=>{if(locked||$('updateNext').disabled)return;if(updateStep===0)return $('analyze').onclick();if(updateStep===1)return $('prepare').onclick();updateStep=Math.min(3,updateStep+1);updateNavigation();};
 for(const id of ['tested','reviewed'])$(id).addEventListener('change',()=>updateNavigation());
 
 const notesLabel=$('notes').closest('label');notesLabel.hidden=false;$('updateNotesSlot').append(notesLabel);

@@ -50,7 +50,7 @@ El propietario aportó el 14 de octubre de 2026 una captura del correo «AppID R
 | Componente | Publicada | En desarrollo local | Situación |
 | --- | --- | --- | --- |
 | Launcher Windows x64 | **0.1.18** | **0.1.18** | Release publicada, descargas e integridad verificadas; arranque en perfil aislado. Instalación habitual no actualizada por este ensayo. |
-| Administrador Windows x64 | **0.1.23** | **0.1.23** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
+| Administrador Windows x64 | **0.1.23** | **0.1.24** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
 | Servicio Cloudflare villawolf-auth | **1.2.0** | **1.2.0** | Health confirmado; comunidades externas, auditoría y cola desplegados. ROLE_BOT_ENABLED y ROLE_BOT_MULTI_GUILD activos. |
 | VillaWolf Bot local | No distribuido como instalador | **0.2.0** | Código actualizado, token persistido cifrado; identidad y conexión verificadas el 15 de octubre. Roles sincronizados. |
 
@@ -383,3 +383,14 @@ El propietario reemplazó el token de forma privada. Discord users/@me y las com
 - Release admin-v0.1.23 publicada; instalador, blockmap y latest.yml descargados públicamente y verificados contra sus hashes/tamaños. Canal independiente activado en commit 1ad3ec5c7cbf2e034e61a41d90e5366058dfe710. Launcher latest permanece v0.1.18.
 - Código de esta mejora: 48db9e0da82e227d5b5458b6b4627ad4bd7cf4f3 en preparacion-paso97, carpeta launcher. Arranque del paquete en perfil aislado aprobado y ASAR cotejado con los archivos actuales; sin almacenes privados.
 - Las comprobaciones de interfaz usan fixtures sin publicar en servicios reales. No se modificó ningún modpack de jugadores durante esta distribución.
+
+## Administrador 0.1.24 — flujo de publicación simplificado
+
+**Estado: implementado y probado localmente; publicación pendiente.** Repositorio `tonyvillalobosmejia-netizen/champagne-vol5-modpack`, rama `preparacion-paso97` (código remoto bajo `launcher/`; checkout local sin .git).
+
+- El botón inferior ejecuta «Analizar y continuar», «Preparar y comprobar» y «Revisar publicación» según la etapa. Se retiran de la vista los botones de análisis/preparación duplicados. Se conservan selección de contenido, hashes, fuentes oficiales, prueba del juego y confirmación final.
+- Después del éxito, el estado queda «Publicado», el botón se desactiva y no se vuelve a invocar publicación. Un análisis/paquete nuevo reinicia el estado. Cancelaciones y fallos permiten reintentar sin perder la preparación.
+- Causa del error posterior a Mundo Conejil 0.1.7: el servicio consumía correctamente la preparación tras publicar, pero la interfaz mantenía el envío habilitado. El registro aportado confirma la publicación; los dos errores siguientes no implican que se haya deshecho. No se ha republicado ni modificado ese modpack.
+- Anuncio y auditoría figuraban en cola según el registro del propietario; entrega en Discord no verificada en esta corrección.
+- Pruebas específicas: 19 aprobadas, 0 fallos, incluyendo secuencia analizar/preparar/publicar, bloqueo del segundo envío, nueva preparación y reintentos tras cancelación/error. Los ensayos de servicios usan fixtures; no son una publicación real de modpack.
+- Sin cambios en Launcher, Bot, Cloudflare, mundos, historial, sesiones ni archivos originales de CurseForge.
