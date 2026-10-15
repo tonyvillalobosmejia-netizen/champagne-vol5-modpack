@@ -14,25 +14,9 @@
       "roleId": "1558938399300390952",
       "enabled": false,
       "manifestPath": "updates/packs/pack-1686e2b84fd253dc/stable.json"
-    },
-    {
-      "id": "pack-790dd9d5947e4626",
-      "name": "Pruebaaaaas",
-      "roleId": "1559342814100463736",
-      "enabled": true,
-      "manifestPath": "updates/packs/pack-790dd9d5947e4626/stable.json",
-      "guildId": "1007732653035880589",
-      "description": "pruebaaaaa",
-      "announcements": {
-        "modpack": {
-          "enabled": true,
-          "channelId": "1559347420498894918",
-          "mentionRole": true
-        },
-        "launcher": {
-          "enabled": false
-        }
-      }
     }
+  ],
+  "deletedPacks": [
+    "pack-790dd9d5947e4626"
   ]
 }
