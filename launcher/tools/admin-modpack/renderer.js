@@ -14,13 +14,13 @@ window.admin.onProgress(message=>{say(message);if(!$('operationProgress').hidden
 function startProgress(message,design=false){$(design?'designProgressSlot':'modpackProgressSlot').append($('operationProgress'));$('operationProgress').hidden=false;$('progressBar').removeAttribute('value');$('progressMessage').textContent=message;}
 function tokenControls(){ $('tokenEntry').hidden=tokenSaved;$('tokenSaved').hidden=!tokenSaved;$('token').disabled=locked||tokenSaved;$('saveToken').hidden=tokenSaved;$('saveToken').disabled=locked||tokenSaved;$('forgetToken').hidden=!tokenSaved||sharedToken;$('forgetToken').disabled=locked||!tokenSaved;}
 function selectMenu(name){document.querySelector('[data-menu="'+name+'"]').onclick();}
-function invalidate(){preparedUi=false; $('publishStep').querySelector('summary').textContent='3. Revisa el resumen y publica';$('result').textContent='';$('publication').hidden=true;$('openOutput').hidden=true;$('tested').checked=$('reviewed').checked=false; }
-async function run(action){if(locked)return;if(sourceSavePending)await sourceSavePending;if(locked)return;locked=true;const controls=[...document.querySelectorAll('button,input,textarea')].map(e=>[e,e.disabled]);controls.forEach(([e])=>e.disabled=true);try{const result=await action();if(!result.ok)throw new Error(result.error||result.message||'No se pudo completar la operación.');return result;}catch(error){say('Error: '+error.message);}finally{locked=false;controls.forEach(([e,disabled])=>e.disabled=disabled);tokenControls();for(const b of document.querySelectorAll('[data-menu]'))b.disabled=!adminAuthorized&&b.dataset.menu!=='profile';$('adminCancelLogin').disabled=false;$('closeAdminMenu').disabled=false;$('prepare').disabled=!!data?.unresolved?.length;}}
+function invalidate(){preparedUi=false; $('publishStep').querySelector('summary').textContent='4. Revisa el resumen y publica';$('result').textContent='';$('publication').hidden=true;$('openOutput').hidden=true;$('tested').checked=$('reviewed').checked=false; }
+async function run(action){if(locked)return;if(sourceSavePending)await sourceSavePending;if(locked)return;locked=true;const controls=[...document.querySelectorAll('button,input,textarea')].map(e=>[e,e.disabled]);controls.forEach(([e])=>e.disabled=true);try{const result=await action();if(!result.ok)throw new Error(result.error||result.message||'No se pudo completar la operación.');return result;}catch(error){say('Error: '+error.message);}finally{locked=false;controls.forEach(([e,disabled])=>e.disabled=disabled);tokenControls();for(const b of document.querySelectorAll('[data-menu]'))b.disabled=!adminAuthorized&&b.dataset.menu!=='profile';$('adminCancelLogin').disabled=false;$('closeAdminMenu').disabled=false;$('prepare').disabled=!!data?.unresolved?.length;updateNavigation();}}
 function rows(target,title,items){const h=document.createElement('strong');h.textContent=title+' ('+items.length+')';target.append(h);for(const item of items){const p=document.createElement('p');p.textContent=item;target.append(p);}}
 function selected(){return [...$('content').querySelectorAll('input:checked')].map(e=>e.value);}
 function removals(){if(!data)return;const keep=new Set(selected());const removed=data.previousContent.filter(e=>!keep.has(e.path));$('removals').textContent=removed.length+' archivos anteriores dejarán de administrarse. '+removed.map(e=>e.path).slice(0,6).join(', ');}
 $('choose').onclick=()=>run(async()=>{const r=await window.admin.folder();if(r.ok){$('source').value=r.source;$('review').hidden=true;data=null;invalidate();$('analysisStep').open=true;}return r;});
-function showReport(report){invalidate();data=report;$('publishDesign').textContent=data.draft?'Guardar diseño del borrador':'Publicar cambios';$('analysisStep').open=false;$('reviewStep').open=true;$('operationProgress').hidden=true;
+function showReport(report){invalidate();data=report;updateStep=report.mode==='presentation'?0:1;$('publishDesign').textContent=data.draft?'Guardar diseño del borrador':'Publicar cambios';$('analysisStep').open=false;$('reviewStep').open=true;$('operationProgress').hidden=true;
   $('testedLabel').textContent=data.mode==='presentation'?' Revisé el nombre, la imagen y las dos tarjetas en la vista previa.':' Abrí Minecraft con estos mods y entré a un mundo sin errores.';
   $('packTitle').value=data.design.packName;$('notes').value=data.design.notes?.text||'';
   $('newsTitle').value=data.design.news?.title||'Tu próxima aventura';$('newsText').value=data.design.news?.text||'Las novedades de nuestra comunidad están en Discord.';
@@ -43,7 +43,7 @@ for(const id of ['packTitle','notes','newsTitle','newsText','updatesTitle','upda
 $('version').oninput=invalidate;
 $('filter').oninput=()=>{const term=$('filter').value.toLowerCase();for(const label of $('content').children)label.hidden=!label.textContent.toLowerCase().includes(term);};
 $('newFiles').onclick=()=>{if(!data||locked)return;for(const check of $('content').querySelectorAll('input'))if(!check.disabled)check.checked=true;invalidate();removals();};
-$('prepare').onclick=()=>run(async()=>{invalidate();say('Comprobando el paquete…');const r=await window.admin.prepare({version:$('version').value.trim(),selected:selected(),packName:$('packTitle').value.trim(),notes:$('notes').value,news:{title:$('newsTitle').value,text:$('newsText').value},updates:{title:$('updatesTitle').value,text:$('updatesText').value}});if(r.ok){preparedUi=true;$('publication').hidden=false;$('openOutput').hidden=false;$('reviewStep').open=false;$('publishStep').open=true;const v=r.review;$('publishSummary').textContent=`${data.currentVersion} → ${v.version}\nNombre: ${v.packName}\nMinecraft ${v.minecraft} · Forge ${v.forge}\n${v.mods} mods · ${v.content} archivos de contenido\nMods: ${v.changes.added.length} añadidos, ${v.changes.changed.length} cambiados, ${v.changes.removed.length} retirados\nContenido: ${v.contentChanges.added.length} añadidos, ${v.contentChanges.changed.length} cambiados, ${v.contentChanges.removed.length} retirados\nArchivos retirados: ${[...v.changes.removed,...v.contentChanges.removed].join(', ')||'ninguno'}\nFondo: ${v.backgroundChanged?'cambiado':'conservado'}\nNoticias: ${v.news?.title||'predeterminadas'}\n${v.news?.text||''}\nActualizaciones: ${v.updates?.title||'predeterminadas'}\n${v.updates?.text||''}\n${$('removals').textContent}\nDestino: ${$('destination').textContent}`;say('Paquete preparado: '+r.content+' archivos de contenido. Prueba el juego antes de publicar.');}return r;});
+$('prepare').onclick=()=>run(async()=>{invalidate();say('Comprobando el paquete…');const r=await window.admin.prepare({version:$('version').value.trim(),selected:selected(),packName:$('packTitle').value.trim(),notes:$('notes').value,news:{title:$('newsTitle').value,text:$('newsText').value},updates:{title:$('updatesTitle').value,text:$('updatesText').value}});if(r.ok){preparedUi=true;updateStep=2;$('publication').hidden=false;$('openOutput').hidden=false;$('reviewStep').open=false;$('publishStep').open=true;const v=r.review;$('publishSummary').textContent=`${data.currentVersion} → ${v.version}\nNombre: ${v.packName}\nMinecraft ${v.minecraft} · Forge ${v.forge}\n${v.mods} mods · ${v.content} archivos de contenido\nMods: ${v.changes.added.length} añadidos, ${v.changes.changed.length} cambiados, ${v.changes.removed.length} retirados\nContenido: ${v.contentChanges.added.length} añadidos, ${v.contentChanges.changed.length} cambiados, ${v.contentChanges.removed.length} retirados\nArchivos retirados: ${[...v.changes.removed,...v.contentChanges.removed].join(', ')||'ninguno'}\nFondo: ${v.backgroundChanged?'cambiado':'conservado'}\nNoticias: ${v.news?.title||'predeterminadas'}\n${v.news?.text||''}\nActualizaciones: ${v.updates?.title||'predeterminadas'}\n${v.updates?.text||''}\n${$('removals').textContent}\nDestino: ${$('destination').textContent}`;say('Paquete preparado: '+r.content+' archivos de contenido. Prueba el juego antes de publicar.');updateNavigation();}return r;});
 $('publishDesign').onclick=()=>run(async()=>{
   if(!data||data.mode!=='presentation')return{ok:false,error:'Pulsa Cargar diseño publicado antes de editar y publicar la interfaz.'};
   const saved=await window.admin.tokenStatus();if(!saved.ok)return saved;showTokenStatus(saved);if(!saved.saved){selectMenu('profile');return{ok:false,error:'Guarda el token en Perfil antes de publicar.'};}
@@ -60,7 +60,7 @@ $('publish').onclick=()=>run(async()=>{
   const saved=await window.admin.tokenStatus();if(!saved.ok)return saved;showTokenStatus(saved);
   if(!saved.saved){selectMenu('profile');$('token').focus();return {ok:false,error:'Guarda el token en Perfil antes de publicar.'};}
   const input={token:'',tested:true,reviewed:true};$('publishStep').open=false;startProgress('Verificando descargas y preparando la publicación…');
-  try{const result=await window.admin.publish(input);if(result.ok&&result.result){say('Publicado: '+result.result.packName+' '+result.result.version);$('result').textContent='Los jugadores recibirán esta versión al pulsar JUGAR. Commit: '+result.result.commit;$('publishStep').querySelector('summary').textContent='✓ Publicado: '+result.result.packName+' '+result.result.version;$('review').hidden=true;}
+  try{const result=await window.admin.publish(input);if(result.ok&&result.result){say('Publicado: '+result.result.packName+' '+result.result.version);$('result').textContent='Los jugadores recibirán esta versión al pulsar JUGAR. Commit: '+result.result.commit;$('publishStep').querySelector('summary').textContent='✓ Publicado: '+result.result.packName+' '+result.result.version;$('review').hidden=true;updateStep=3;updateNavigation();}
     else{$('publishStep').open=true;if(result.error?.includes('GitHub rechazó el token (401)')){selectMenu('profile');$('tokenSaved').textContent='⚠ Token rechazado por GitHub';$('tokenStatus').textContent=result.error;}if(result.cancelled)say('Publicación cancelada. Puedes revisar el resumen y volver a intentarlo.');}return result;
   }catch(error){$('publishStep').open=true;throw error;}finally{$('operationProgress').hidden=true;}
 });
@@ -68,12 +68,13 @@ run(async()=>{const r=await window.admin.info();if(r.ok){$('adminVersion').textC
 
 function preview(){ $('previewName').textContent=$('packTitle').value;for(const pair of [['News','news'],['Updates','updates']]){ $('preview'+pair[0]+'Title').textContent=$(pair[1]+'Title').value;$('preview'+pair[0]+'Text').textContent=$(pair[1]+'Text').value;}const image=$('backgroundPreview');$('previewScene').style.backgroundImage=image.hidden?'url("../../src/assets/villawolf-icon.png")':'url("'+image.src+'")';}
 $('closeAdminMenu').onclick=()=>{if(locked)return;currentMenu=null;updateNavigation();$(activePackId?'adminPackChoice':'adminProfileButton').focus();};
+let updateStep=0,creatingPublication=false;
 function updateNavigation(){
   $('menuToolbar').hidden=!currentMenu;
-  const menuNames={profile:'Mi perfil',appearance:'Edición de interfaz',modpack:modpackView==='history'?'Historial de versiones':'Nueva actualización',server:'Información del servidor'};
+  const menuNames={profile:'Mi perfil',appearance:'Edición de interfaz',modpack:modpackView==='history'?'Historial de versiones':'Nueva actualización',server:'Información del servidor',community:'Configuración de Discord'};
   $('openMenuTitle').textContent=menuNames[currentMenu]||'';
   $('closeAdminMenu').disabled=locked;
-  $('adminEditorMenus').hidden=!adminAuthorized||(!activePackId&&currentMenu!=='modpack');$('wizardEntry').hidden=!adminAuthorized||currentMenu!=='modpack';$('adminDeletePack').hidden=!adminAuthorized||!activePackId;
+  $('adminEditorMenus').hidden=!adminAuthorized||(!activePackId&&currentMenu!=='modpack');$('wizardEntry').hidden=!adminAuthorized;$('adminDeletePack').hidden=!adminAuthorized||!activePackId;
   $('workspace').hidden=!currentMenu||['server','profile'].includes(currentMenu);
   $('modpackSubmenu').hidden=currentMenu!=='modpack';
   for(const panel of document.querySelectorAll('[data-panel]'))panel.hidden=panel.dataset.panel!==currentMenu;
@@ -86,6 +87,8 @@ function updateNavigation(){
   if(currentMenu==='appearance')$('reviewStep').open=true;
   for(const tab of document.querySelectorAll('[data-menu]'))tab.classList.toggle('active',tab.dataset.menu===currentMenu);
   for(const tab of document.querySelectorAll('[data-modpack-view]'))tab.classList.toggle('active',tab.dataset.modpackView===modpackView);
+  updateFileSteps(newUpdate);
+  $('communityEditor').hidden=currentMenu!=='community'||!activePackId;
 }
 for(const button of document.querySelectorAll('[data-menu]'))button.onclick=()=>{if(locked)return;currentMenu=button.dataset.menu;updateNavigation();if(currentMenu==='appearance'&&data?.mode!=='presentation')return loadDesignDirectly();if(currentMenu==='modpack'&&modpackView==='history')return loadHistoryDirectly();};
 for(const button of document.querySelectorAll('[data-modpack-view]'))button.onclick=()=>{if(locked)return;modpackView=button.dataset.modpackView;updateNavigation();if(modpackView==='history')return loadHistoryDirectly();};
@@ -96,12 +99,36 @@ $('saveToken').onclick=()=>run(async()=>{if(tokenSaved)return {ok:false,error:'B
 $('forgetToken').onclick=()=>run(async()=>{const r=await window.admin.forgetToken();if(r.ok){showTokenStatus(r);}return r;});
 
 async function refreshAdminPacks(){$('adminLibraryStatus').textContent='Consultando los lanzadores publicados…';const r=await window.admin.packs();$('adminLibraryStatus').textContent=r.ok?(r.packs.length?'Selecciona el lanzador que deseas editar.':'Todavía no hay lanzadores publicados.'):'No se pudo cargar la lista. '+(r.error||r.message||'Pulsa Actualizar lista para reintentar.');if(r.ok){$('adminPackChoice').replaceChildren();const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='Selecciona el lanzador a modificar';placeholder.disabled=true;placeholder.selected=!r.selectedId;$('adminPackChoice').append(placeholder);for(const pack of r.packs){const option=document.createElement('option');option.value=pack.id;option.textContent=pack.name+(pack.enabled?'':' · Retirado');option.selected=pack.id===r.selectedId;$('adminPackChoice').append(option);}}return r;}
-function selectedAdminPack(r){activePackId=r.selectedId;currentMenu=null;data=null;invalidate();$('source').value=r.source||'';$('packTitle').value=r.packName;$('review').hidden=true;$('history').replaceChildren();updateNavigation();}
+function selectedAdminPack(r){activePackId=r.selectedId;updateStep=0;creatingPublication=false;currentMenu=null;data=null;invalidate();$('source').value=r.source||'';$('packTitle').value=r.packName;$('review').hidden=true;$('history').replaceChildren();updateNavigation();}
 $('adminPackChoice').onchange=()=>run(async()=>{const r=await window.admin.selectPack($('adminPackChoice').value);if(r.ok)selectedAdminPack(r);return r;});
 
 $('adminDeletePack').onclick=()=>run(async()=>{const r=await window.admin.deletePack();if(r.ok&&!r.cancelled){activePackId=null;currentMenu=null;data=null;invalidate();updateNavigation();$('adminPackChoice').replaceChildren();const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='Selecciona el lanzador a modificar';placeholder.disabled=true;placeholder.selected=true;$('adminPackChoice').append(placeholder);for(const pack of r.packs||[]){const option=document.createElement('option');option.value=pack.id;option.textContent=pack.name+(pack.enabled?'':' · Retirado');$('adminPackChoice').append(option);}$('adminLibraryStatus').textContent='Lanzador eliminado. Puedes seleccionar otro o actualizar la lista.';say('Lanzador eliminado. Los jugadores recibirán la limpieza al conectarse. La carpeta original de CurseForge se conserva.');}return r;});
 
 $('adminReloadPacks').onclick=()=>run(()=>refreshAdminPacks());
 
-$('adminOpenFiles').onclick=()=>{currentMenu='modpack';modpackView='new';updateNavigation();};
-window.VillaWolfAdminDraftCreated=async r=>{selectedAdminPack(r);await refreshAdminPacks();currentMenu='modpack';modpackView='new';updateNavigation();say('Borrador guardado. Analiza su carpeta, revisa y prepara antes de publicar.');};
+$('adminOpenFiles').onclick=()=>{creatingPublication=false;currentMenu='modpack';modpackView='new';updateNavigation();};
+window.VillaWolfAdminDraftCreated=async (r,options={})=>{selectedAdminPack(r);await refreshAdminPacks();currentMenu='modpack';modpackView='new';updateNavigation();say('Borrador guardado. Analiza su carpeta, revisa y prepara antes de publicar.');if(options.continueToPublication){creatingPublication=true;return run(async()=>{say('Analizando el nuevo lanzador para preparar su publicación…');const analyzed=await window.admin.analyze({packId:activePackId,source:r.source});if(analyzed.ok)showReport(analyzed.report);return analyzed;});}};
+
+// The numbered flow reuses the real analysis, preparation and publication controls.
+$('updatePrepareSlot').append($('prepare'),$('openOutput'));
+$('updateTestSlot').append($('tested').closest('label'),$('reviewed').closest('label'));
+function updateFileSteps(visible){
+ visible=visible&&!!activePackId;$('updateFlowHeader').hidden=!visible;$('updateFlowFooter').hidden=!visible;$('updateCheckPanel').hidden=!visible||updateStep!==2;
+ if(!visible)return;
+ $('updateFlowTitle').textContent=creatingPublication?'Crear nuevo lanzador · Publicación':'Actualizar modpack';
+ $('analysisPanel').hidden=updateStep!==0;$('review').hidden=updateStep!==1||!data||data.mode==='presentation';$('publication').hidden=updateStep!==3||!preparedUi;
+ for(let i=0;i<4;i++){const tab=$('updateTab'+i);tab.setAttribute('aria-selected',String(i===updateStep));tab.disabled=locked||(i>0&&(!data||data.mode==='presentation'))||(i===3&&!preparedUi);}
+ $('analysisStep').open=$('reviewStep').open=$('publishStep').open=true;
+ $('updatePrevious').disabled=locked||updateStep===0;
+ $('updateNext').hidden=updateStep===3;$('updateNext').disabled=locked||(updateStep===0&&(!data||data.mode==='presentation'))||(updateStep===1&&!!data?.unresolved?.length)||(updateStep===2&&(!preparedUi||!$('tested').checked||!$('reviewed').checked));
+ $('updateFlowState').textContent=preparedUi?'Paquete preparado · Publicación pendiente':'Sin publicar';
+ $('openOutput').hidden=!preparedUi;$('tested').disabled=$('reviewed').disabled=locked||!preparedUi;
+}
+for(let i=0;i<4;i++)$('updateTab'+i).onclick=()=>{if(locked||(i>0&&!data)||(i===3&&(!preparedUi||!$('tested').checked||!$('reviewed').checked))){say('Completa la preparación y confirma la prueba antes de publicar.');return;}updateStep=i;updateNavigation();};
+$('updatePrevious').onclick=()=>{if(!locked){updateStep=Math.max(0,updateStep-1);updateNavigation();}};
+$('updateNext').onclick=()=>{if(!locked&&!$('updateNext').disabled){updateStep=Math.min(3,updateStep+1);updateNavigation();}};
+for(const id of ['tested','reviewed'])$(id).addEventListener('change',()=>updateNavigation());
+
+const notesLabel=$('notes').closest('label');notesLabel.hidden=false;$('updateNotesSlot').append(notesLabel);
+
+window.VillaWolfCommunitySaved=()=>{data=null;invalidate();updateNavigation();};

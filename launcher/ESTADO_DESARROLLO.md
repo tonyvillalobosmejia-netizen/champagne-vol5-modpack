@@ -50,7 +50,7 @@ El propietario aportó el 14 de octubre de 2026 una captura del correo «AppID R
 | Componente | Publicada | En desarrollo local | Situación |
 | --- | --- | --- | --- |
 | Launcher Windows x64 | **0.1.18** | **0.1.18** | Release publicada, descargas e integridad verificadas; arranque en perfil aislado. Instalación habitual no actualizada por este ensayo. |
-| Administrador Windows x64 | **0.1.21** | **0.1.22** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
+| Administrador Windows x64 | **0.1.22** | **0.1.23** | Release publicada, descargas e integridad verificadas; canal independiente activado y arranque en perfil aislado. |
 | Servicio Cloudflare villawolf-auth | **1.2.0** | **1.2.0** | Health confirmado; comunidades externas, auditoría y cola desplegados. ROLE_BOT_ENABLED y ROLE_BOT_MULTI_GUILD activos. |
 | VillaWolf Bot local | No distribuido como instalador | **0.2.0** | Código actualizado, token persistido cifrado; identidad y conexión verificadas el 15 de octubre. Roles sincronizados. |
 
@@ -368,3 +368,12 @@ El propietario reemplazó el token de forma privada. Discord users/@me y las com
 - Administrador 0.1.22 en preparación. Causa confirmada en código: admin-analyze y admin-design consultaban borradores para cualquier ID del catálogo, pero draft-store sólo admitía session y pack-16hex. Mundo Conejil usa champagne-vol5 y fallaba después de resolver las fuentes.
 - Corregido: admite los IDs seguros del catálogo; los anteriores usan un prefijo catalog- para no colisionar con session, acciones o pendientes. Conserva los borradores nuevos existentes sin migrarlos. Si no hay borrador devuelve null. No se cambian JAR, hashes, rutas de CurseForge ni mundos.
 - 16 pruebas específicas aprobadas, 0 fallos: borradores, creación/preparación/publicación simulada y diseño independiente. Publicación e instalación pendientes en este registro.
+
+### Navegación y Discord editables — 15 de octubre de 2026
+
+- Administrador 0.1.22 publicado y verificado: corrección de IDs anteriores.
+- En desarrollo 0.1.23: Crear nuevo lanzador junto a Subir carpetas; actualización en cuatro pasos (Carpeta, Contenido, Comprobación y Publicación), una sola pantalla visible y botones Anterior/Siguiente. Crear permite guardar borrador o continuar directamente a analizar y preparar su publicación; mantiene prueba del juego, revisión y confirmación final. No publica automáticamente un borrador.
+- Cuarto menú principal autorizado por el propietario: Configuración de Discord. Permite editar servidor oficial/externo, rol, anuncios opcionales de modpack/Launcher, canales y menciones; verifica permisos y exige confirmación al guardar. Para publicados modifica catálogo/presentación mediante el motor existente, conservando mods y versión; para borradores guarda localmente.
+- 16 pruebas específicas aprobadas, incluyendo carga de configuración Discord, rechazo de otro ID y cancelación sin alterar ajustes. Revisión de interfaz con API ficticia a 1280 y 640 px: sin desbordamiento y paneles exclusivos. No equivale a publicar un modpack real.
+
+- Recorrido visual adicional (API ficticia): Crear y continuar abre directamente Contenido con título de creación; Comprobación sólo habilita la revisión tras preparar; Publicación exige las dos confirmaciones. Cambio de menú oculta el anterior. Sin desbordamiento horizontal a 640 px. Capturas guardadas en revision-villawolf; no son publicaciones reales.
