@@ -1,5 +1,22 @@
 [
   {
+    "version": "0.1.9",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-15T21:51:52.263Z",
+    "notes": "🚀 Novedades\n\n⚡ Integración de mods de optimización para mejorar el rendimiento.\n\n🎮 Preparación del modpack para supervivencia multijugador.\n\n🖥️ Personalización del menú principal y de la pantalla de carga.\n\n🛠️ Incorporación de herramientas de administración y configuración.\n\nNueva forma de ver el mundo \n\n⚙️ Mejoras\n\nOptimización de la carga de chunks.\n\nMejoras en el rendimiento gráfico.\n\nOptimización del uso de memoria.\n\nMejoras en el procesamiento de entidades.\n\nAjustes para reducir el lag durante las partidas.\n\nIntegración de herramientas de diagnóstico y rendimiento.\n\n🔧 Correcciones y ajustes\n\nRevisión de configuraciones gráficas y de resolución.\n\nAjustes de compatibilidad entre los mods instalados.\n\nOrganización de archivos y dependencias del modpack.\n\n🔮 Próximas actualizaciones\n\n🌍 Nuevas estructuras, biomas y lugares por explorar.\n\n⚔️ Nuevos enemigos, jefes y desafíos.\n\n⚙️ Sistemas de automatización y tecnología.\n\n🏡 Más bloques decorativos y opciones de construcción.\n\n🌾 Nuevos alimentos, cultivos y mecánicas de supervivencia.\n\n🐺 VillaWolf Modpack — La aventura apenas comienza.",
+    "mods": 116,
+    "content": 196,
+    "changes": {
+      "added": [
+        "mods/DistantHorizons-3.3.3-1.20.1-fabric-forge.jar",
+        "mods/jei-1.20.1-forge-15.56.0.205.jar"
+      ],
+      "changed": [],
+      "removed": []
+    },
+    "restoredFrom": null
+  },
+  {
     "version": "0.1.8",
     "packName": "Mundo Conejil",
     "publishedAt": "2026-10-15T21:01:50.925Z",
