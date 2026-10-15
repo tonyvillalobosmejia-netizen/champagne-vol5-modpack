@@ -14,22 +14,5 @@
       "removed": []
     },
     "restoredFrom": null
-  },
-  {
-    "version": "0.1.6",
-    "packName": "Mundo Conejil",
-    "publishedAt": "2026-10-12T21:45:41.026Z",
-    "notes": "",
-    "mods": 90,
-    "content": 182,
-    "changes": {
-      "added": [
-        "mods/entity_model_features-3.3.11-1.20.1-forge.jar",
-        "mods/entity_texture_features-7.2.5-1.20.1-forge.jar"
-      ],
-      "changed": [],
-      "removed": []
-    },
-    "restoredFrom": null
   }
 ]
