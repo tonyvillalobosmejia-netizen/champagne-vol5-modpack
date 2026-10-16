@@ -484,11 +484,15 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
     await env.DB.prepare('INSERT INTO admin_actions(id,actor_id,actor_name,action,pack_id,commit_sha,version,created_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(eventId,receipt.actor_id,receipt.actor_name,newVersion?'published':'presentation_published',pack.id,input.commit,manifest.version,clock()).run();
     await outbox.enqueue(env,{eventId,guildId:env.DISCORD_GUILD_ID,channelId:'1414678783679795425',payload:{kind:'audit',action:'published',actorName:receipt.actor_name,name:pack.name,version:manifest.version,changes}});
     const announcements=pack.announcements?.modpack;
-    if(newVersion&&announcements?.enabled){
-      await communityCheck(env,token,{guildId:pack.guildId||env.DISCORD_GUILD_ID,roleId:pack.roleId,announcements:pack.announcements});
+    if(newVersion){
       const notes=manifest.presentation?.notes?.text||'Nueva versión disponible.';
       if(typeof notes!=='string'||notes.length>4000||/(?:github_pat_|ghp_|access_token|client_secret)/i.test(notes))throw new AuthError(400,'Las notas del anuncio deben estar libres de credenciales.');
-      await outbox.enqueue(env,{eventId:'modpack:'+pack.id+':'+manifest.version,guildId:pack.guildId||env.DISCORD_GUILD_ID,channelId:announcements.channelId,payload:{kind:'modpack',name:pack.name,version:manifest.version,notes,roleId:pack.roleId,mentionRole:!!announcements.mentionRole,manifestPath:expected,commit:input.commit}});
+      const actor=String(receipt.actor_name||'Administrador verificado').replace(/[*_`~<>@\r\n]/g,'').slice(0,80);
+      await outbox.enqueue(env,{eventId:'modpack-central:'+pack.id+':'+manifest.version,guildId:env.DISCORD_GUILD_ID,channelId:'1559335322926710794',payload:{kind:'modpack',name:pack.name,version:manifest.version,notes:'Publicado por: '+actor+'\n\n'+notes,actorId:receipt.actor_id,actorName:actor,mentionRole:false,manifestPath:expected,commit:input.commit,publishedAt:new Date(receipt.created_at).toISOString()}});
+      if(announcements?.enabled){
+        await communityCheck(env,token,{guildId:pack.guildId||env.DISCORD_GUILD_ID,roleId:pack.roleId,announcements:pack.announcements});
+        await outbox.enqueue(env,{eventId:'modpack:'+pack.id+':'+manifest.version,guildId:pack.guildId||env.DISCORD_GUILD_ID,channelId:announcements.channelId,payload:{kind:'modpack',name:pack.name,version:manifest.version,notes,roleId:pack.roleId,mentionRole:!!announcements.mentionRole,manifestPath:expected,commit:input.commit}});
+      }
     }
     await env.DB.prepare('UPDATE publication_receipts SET confirmed=1 WHERE commit_sha=?').bind(input.commit).run();
     return{ok:true,confirmed:true,announcementQueued:!!(newVersion&&announcements?.enabled)};
@@ -532,7 +536,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
       const url=new URL(request.url);if(url.search)throw new AuthError(400,'Solicitud inválida.');
       if(request.method==='POST'&&url.pathname==='/internal/role-bot')return reply(200,await roleBot.receive(request,env));
       if(request.method==='POST'&&url.pathname==='/internal/notifications')return reply(200,await notifications(request,env));
-      if(request.method==='GET'&&url.pathname==='/health')return reply(200,{ok:true,provider:'discord',storage:'D1',version:'1.2.3',multiGuild:true,notifications:true,audit:true,catalog:true,admin:true,discordRetry:true,catalogSnapshotSeconds:60,curseforgeApi:true,curseforgeConfigured:!!env.CURSEFORGE_API_KEY,githubPublishing:true,githubConfigured:!!env.GITHUB_TOKEN});
+      if(request.method==='GET'&&url.pathname==='/health')return reply(200,{ok:true,provider:'discord',storage:'D1',version:'1.2.4',multiGuild:true,notifications:true,audit:true,catalog:true,admin:true,discordRetry:true,catalogSnapshotSeconds:60,curseforgeApi:true,curseforgeConfigured:!!env.CURSEFORGE_API_KEY,githubPublishing:true,githubConfigured:!!env.GITHUB_TOKEN});
       const cfRoute=/^\/v2\/(?:admin\/)?curseforge\/(?:matches|download)$/.test(url.pathname),ghRoute=url.pathname==='/v2/admin/delete-pack'||url.pathname==='/v2/admin/github'||url.pathname==='/v2/admin/github/status'||url.pathname==='/v2/admin/github/blob';
       const bucket=await digest((request.headers.get('CF-Connecting-IP')||'unknown')+':'+(cfRoute?'curseforge:':ghRoute?'github:':'')+Math.floor(clock()/60000));
       const count=await env.DB.prepare('INSERT INTO discord_limits VALUES(?,1,?) ON CONFLICT(bucket) DO UPDATE SET count=count+1 RETURNING count').bind(bucket,clock()+120000).all();
@@ -554,9 +558,10 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
       if(request.method==='GET'&&url.pathname==='/v1/session')return reply(200,await session(env,token));
       if(request.method==='POST'&&url.pathname==='/v1/logout'){if(validNonce(token))await env.DB.prepare('DELETE FROM discord_sessions WHERE token_hash=?').bind(await digest(token)).run();return reply(200,{ok:true});}
       throw new AuthError(404,'Ruta no encontrada.');
-    }catch(error){if((!error.status||error.status>=500)&&env.DB&&snowflake(env.DISCORD_GUILD_ID)){try{await applicationReports.record(env,{id:crypto.randomUUID(),app:'service',version:'1.2.3',operation:request.method+' '+new URL(request.url).pathname,error:error.message||'Error interno',log:error.stack||'',occurredAt:new Date(clock()).toISOString()},{id:'service',name:'Servicio VillaWolf'});}catch{}}return reply(error.status||503,{ok:false,message:error.status?error.message:'El servicio no pudo comprobar el acceso. Intenta nuevamente.',...(error.retryAfter?{retryAfter:error.retryAfter}:{})});}
+    }catch(error){if((!error.status||error.status>=500)&&env.DB&&snowflake(env.DISCORD_GUILD_ID)){try{await applicationReports.record(env,{id:crypto.randomUUID(),app:'service',version:'1.2.4',operation:request.method+' '+new URL(request.url).pathname,error:error.message||'Error interno',log:error.stack||'',occurredAt:new Date(clock()).toISOString()},{id:'service',name:'Servicio VillaWolf'});}catch{}}return reply(error.status||503,{ok:false,message:error.status?error.message:'El servicio no pudo comprobar el acceso. Intenta nuevamente.',...(error.retryAfter?{retryAfter:error.retryAfter}:{})});}
   }
   async function cleanup(env){return env.DB.batch(['discord_flows','discord_sessions','discord_limits','bot_requests'].map(table=>env.DB.prepare(`DELETE FROM ${table} WHERE expires_at<=?`).bind(clock())));}
   return {fetch:handle,scheduled:(_event,env,ctx)=>ctx.waitUntil(Promise.all([cleanup(env),releaseAnnouncements.check(env)]))};
 }
 export default createWorker();
+
