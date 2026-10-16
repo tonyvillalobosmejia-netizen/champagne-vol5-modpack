@@ -10,10 +10,14 @@
       "guildId": "751907899336556574",
       "announcements": {
         "modpack": {
-          "enabled": false
+          "enabled": true,
+          "channelId": "1560778156045242390",
+          "mentionRole": true
         },
         "launcher": {
-          "enabled": false
+          "enabled": true,
+          "channelId": "1560778156045242390",
+          "mentionRole": true
         }
       }
     }
