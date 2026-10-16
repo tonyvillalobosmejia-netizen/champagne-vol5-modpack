@@ -4,15 +4,13 @@
     {
       "id": "champagne-vol5",
       "name": "Mundo Conejil",
-      "roleId": "1559431805096960020",
+      "roleId": "1560478988214993056",
       "enabled": true,
       "manifestPath": "updates/stable-v2.json",
-      "guildId": "1007732653035880589",
+      "guildId": "751907899336556574",
       "announcements": {
         "modpack": {
-          "enabled": true,
-          "channelId": "1559347420498894918",
-          "mentionRole": true
+          "enabled": false
         },
         "launcher": {
           "enabled": false
