@@ -1,10 +1,10 @@
 # Estado de desarrollo de VillaWolf
 
-**Actualizado:** 15 de octubre de 2026 (America/Mexico_City).
+**Actualizado:** 16 de octubre de 2026 (America/Mexico_City).
 **Alcance:** VillaWolf Launcher, VillaWolf Administrador, autenticación/publicación central y bot de roles.
 **Propósito:** compartir avances y pendientes con otra persona o ChatGPT sin conceder permisos para modificar código.
 
-## Lanzamiento 0.1.20 / 0.2.5 — sincronización recuperada, distribución en curso
+## Lanzamiento 0.1.20 / 0.2.5 — publicados y verificados
 
 **Bloqueo operativo resuelto y comprobado en vivo:** el proceso instalado seguía siendo Bot 0.2.3 PRUEBA LOCAL 20261015.1, sin las correcciones nuevas. Se respaldó su app.asar y datos locales cifrados, se aplicó un parche local de diagnóstico con el bridge nuevo y anuncios/informes remotos desactivados y se reinició dos veces. D1 confirmó en VillaWolf y Racoon Team ready=1, secuencias 4→8 y antigüedades 24–25, 12 y 23 segundos, siempre por debajo de 90. Sin inventar fechas ni escribir role_bot_state desde las herramientas de diagnóstico. La autenticación existente funcionó sin reemplazar claves ni tokens. La causa inicial interna del cese anterior no quedó conservada en los registros disponibles y no se atribuye a intents/clave sin evidencia.
 
@@ -14,11 +14,17 @@
 
 **Activación sin histórico:** establecidos cursores oficiales previos Launcher 0.1.19 y Administrador 0.1.26. Seis trabajos antiguos de esos dos canales quedaron `superseded`, conservando las filas y el historial; no se enviaron. No se alteró la cola configurable de otras comunidades. No hay nueva versión del Administrador en este lanzamiento.
 
-**Distribución en curso, todavía no declarada publicada:** Launcher 0.1.20 y Bot 0.2.5 compilados; 92 pruebas finales aprobadas, 0 fallidas; ambos paquetes arrancan con interfaz en perfiles aislados sin red. Comprobado que el ASAR contiene exactamente los módulos nuevos de cada aplicación y generados SHA256SUMS. Instaladores sin firma Authenticode pública, conforme al estado previo conocido. Pendiente completar subida/releases y descargas públicas verificadas, activación final del Bot y anuncio oficial del Launcher.
+**Distribución completada:** Launcher 0.1.20 y Bot 0.2.5 publicados oficialmente; descargas públicas verificadas por tamaño y SHA-256. 92 pruebas finales aprobadas, 0 fallidas; ambos paquetes arrancaron en perfiles aislados. ASAR contrastado con los módulos locales. Actualizadores públicos: Launcher 0.1.19 detecta 0.1.20 y Bot 0.2.4 detecta 0.2.5. Instaladores sin firma Authenticode pública; pendiente firma de distribución. Código publicado en champagne-vol5-modpack, rama preparacion-paso97, commit 855bd7ae24f70766b662f0c3dda13a3f9f951947. La carpeta local no tiene .git.
+
+**Última comprobación del 16 de octubre:** tras volver a abrir Bot 0.2.5, D1 registró ready=1, secuencia 6 y antigüedad real de 11 segundos en VillaWolf y Racoon Team. El trabajo del anuncio siguió único. Antes de reabrir se observó antigüedad de 321 segundos; el almacenamiento conservaba el último estado local y no bastaba para demostrar ejecución vigente. No se establece la causa de esa interrupción.
+
+**Anuncio oficial verificado:** Launcher 0.1.20 enviado en su canal fijo, sin menciones: mensaje 1560483955910647933. D1 confirmó un trabajo enviado y un intento; sin duplicación tras reiniciar. Sin nueva publicación ni anuncio de Administrador. Ocho releases anteriores y los blobs del modpack se conservaron.
+
+**Limitación de diagnóstico pendiente:** el estado local puede conservar campos de un HTTP 503 anterior aunque el mensaje actual confirme recuperación; estos campos no prueban un fallo vigente. Debe limpiarse ese estado residual en una corrección posterior. La caducidad real se consulta en el servicio. El Bot alojado en esta PC requiere que el proceso y la computadora permanezcan activos.
 
 **Recuperación:** `.champagne-admin/sync-diagnostic-20261015` conserva app.asar anterior y copia cifrada de datos; `.champagne-admin/publicacion-020-025` conserva snapshot remoto previo, sumas, paquetes, pruebas y registro de despliegue. Worker anterior: `39e003ab-78fd-45d0-9314-7eef0ceb7e7c`. No se modificó el modpack ni se abordó Error 009.
 
-## Publicación autorizada 0.1.20 / 0.2.5 — detenida en preflight
+## Antecedente histórico — preflight inicialmente detenido (superado por el lanzamiento anterior)
 
 **Resultado del 15 de octubre de 2026:** 92 pruebas finales seleccionadas aprobadas, 0 fallidas. Error 008 incluido en código local; mejoras de sincronización, diagnósticos y verificación de anuncios incluidas. Detectado y corregido que el compilador del Bot debía copiar los nuevos módulos `failure.cjs` y `official-release.cjs`; no se compiló instalador.
 
@@ -75,15 +81,15 @@ Esta entrada resuelve la identificación de canales y rol que figura pendiente e
 - **Límites:** no se probó aún el diálogo nuevo en la aplicación empaquetada ni la integración de anuncios en producción. La verificación exige digest SHA-256 del asset; si GitHub no lo ofrece, bloquea el anuncio. La descarga completa añade tráfico por destino y por reintento; seguridad priorizada sobre un comprobante de disponibilidad meramente HEAD.
 - **Sin cambios de versiones públicas, instalaciones, credenciales, originales de CurseForge ni modpacks. Error 009 no modificado.** Repositorio de referencia `tonyvillalobosmejia-netizen/champagne-vol5-modpack`, rama `preparacion-paso97`; carpeta local sin `.git`. Documento y código no sincronizados a GitHub en esta tarea.
 
-## Publicación actual — 15 de octubre de 2026
+## Publicación actual — cierre del 16 de octubre de 2026
 
-- **Publicados y verificados:** Launcher 0.1.19, Administrador 0.1.26 y Bot 0.2.4. Descargas públicas comprobadas por SHA-256/tamaño; metadatos SHA-512 de los actualizadores verificados. Canales habituales activos, sin prerelease separado. Todo 0.x es desarrollo y pruebas; 1.0.0 se reserva para el primer lanzamiento definitivo.
-- **Pruebas actuales de distribución:** tres paquetes compilaron y arrancaron en perfiles aislados; actualizadores reales detectaron las nuevas versiones sin instalar. Diez pruebas seleccionadas de actualizadores, sesión y reconexión simulada del Bot aprobadas; además 22 pruebas del simulador del actualizador pasaron tras ajustar su resolución de módulos y limpieza. Las 268 pruebas citadas en entradas anteriores corresponden a validaciones históricas, no repetidas en esta publicación. No se afirma instalación en otra PC ni renovación real de tokens vencidos.
+- **Publicados y verificados:** Launcher 0.1.20, Administrador 0.1.26 y Bot 0.2.5. Descargas públicas comprobadas por SHA-256/tamaño; metadatos SHA-512 de los actualizadores verificados. Canales habituales activos, sin prerelease separado. Todo 0.x es desarrollo y pruebas; 1.0.0 se reserva para el primer lanzamiento definitivo.
+- **Pruebas actuales de distribución:** 92 pruebas finales seleccionadas aprobadas, 0 fallidas; dos paquetes nuevos compilados y arrancados en perfiles aislados. Instaladores y archivos auxiliares públicos descargados y contrastados. Detección de ambos actualizadores verificada sin instalar Launcher. Las comprobaciones de 268 pruebas y publicaciones anteriores son históricas. No se afirma instalación en otra PC ni renovación real de tokens vencidos.
 - **Administrador 0.1.23:** formulario oscuro de cuatro pestañas, borradores locales, imagen inicial, validaciones reales y comprobación de comunidades externas. Crear borrador no publica ni anuncia.
 - **Launcher 0.1.18:** cuenta renovada, Discord obligatorio/Microsoft opcional, código de dispositivo copiado automáticamente y avatar de Discord o skin oficial Premium.
-- **Worker 1.2.2 desplegado:** migraciones aditivas 0004–0006 ejecutadas, ROLE_BOT_MULTI_GUILD=true y ADMIN_RELEASE_CHANNEL_ID configurado y verificado por UI. Roles, cola y auditoría implementados. No se cambiaron secretos ni tablas anteriores.
-- **Bot 0.2.4 publicado:** conexión, roles y anuncios se muestran por separado; historial cifrado, saneado y copiable. Reconexión y resincronización comprobadas con simulación; conexión real del Bot local comprobada anteriormente sin cambiar sus credenciales. No se reinstaló ni interrumpió el Bot local para esta publicación.
-- **Racoon Team:** bot y mensajes reales comprobados anteriormente en ambos canales privados, sin Administrador; la credencial dejó de ser aceptada al retomar el 15 de octubre. Canales y rol de pruebas se conservan.
+- **Worker 1.2.3 desplegado:** protocolo firmado y esquema existentes compatibles; diagnósticos centrales y cursores oficiales activos. Health público verificado. Sin sustituir secretos ni desactivar la caducidad de 90 segundos.
+- **Bot 0.2.5 publicado e instalado en esta PC:** cuenta y credenciales existentes conservadas; reinicio y sincronización real comprobados con D1 (27 segundos en ambos servidores tras instalar). Respaldo disponible. El Launcher instalado no se reinstaló en este lanzamiento.
+- **Racoon Team:** sincronización real recuperada y comprobada junto al servidor oficial. Canales y rol de pruebas conservados. No se enviaron anuncios de prueba en este lanzamiento.
 - **Integración real comprobada:** catálogo y verificación con sesión guardada; reportes recuperados y mensajes reales en registro (incluye Mundo Conejil 0.1.7 y resumen de cambios). Cola local de eventos vacía. No se repitió todo el arranque de Minecraft en esta corrección.
 
 ### Compatibilidad con Minecraft
@@ -120,12 +126,15 @@ El propietario aportó el 14 de octubre de 2026 una captura del correo «AppID R
 
 | Componente | Publicada | En desarrollo local | Situación |
 | --- | --- | --- | --- |
-| Launcher Windows x64 | **0.1.19** | **0.1.19** | Publicado y detectado por el actualizador desde 0.1.18; integridad pública y arranque aislado verificados. Instalación local sigue como PRUEBA LOCAL 20261015.1. |
+| Launcher Windows x64 | **0.1.20** | **0.1.20** | Error 008 incluido. Descarga SHA-256, arranque aislado y detección desde 0.1.19 verificados. Instalación local anterior sin reinstalar. |
 | Administrador Windows x64 | **0.1.26** | **0.1.26** | Publicado y detectado desde 0.1.25 por su canal existente. Incluye 005, 006 y 007. Instalación local sigue como PRUEBA LOCAL 20261015.2. |
-| Servicio Cloudflare villawolf-auth | **1.2.2** | **1.2.2 + cambios 003 pendientes** | Producción sin cambios en esta publicación; rutas de diagnóstico nuevas no desplegadas. |
-| VillaWolf Bot Windows x64 | **0.2.4** | **0.2.4** | Instalador publicado y detectado desde 0.2.3. Instalación local sigue como PRUEBA LOCAL 20261015.1. |
+| Servicio Cloudflare villawolf-auth | **1.2.3** | **1.2.3** | Desplegado; health y sincronización firmada comprobados. |
+| VillaWolf Bot Windows x64 | **0.2.5** | **0.2.5** | Publicado, detectado desde 0.2.4 e instalado localmente conservando cuenta; reinicio comprobado. |
 
 Publicaciones verificadas:
+
+- [Launcher 0.1.20](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/v0.1.20).
+- [Bot 0.2.5](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/bot-v0.2.5).
 
 - [Launcher 0.1.18](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/v0.1.18).
 - [Administrador 0.1.21](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/admin-v0.1.21).
@@ -689,3 +698,4 @@ Se comprobó que las cinco releases anteriores mantienen sus IDs y assets origin
 Pendientes: Error 003 central requiere autorización/despliegue/pruebas del Worker; firma pública Windows pendiente; pruebas manuales en otras computadoras todavía no realizadas. Las instalaciones PRUEBA LOCAL de esta PC conservan intencionalmente sus bloqueos de actualización: para pasar a la distribución publicada hay que ejecutar su instalador, no se quitaron esos bloqueos remotamente. La conservación de datos se validó previamente en las instalaciones locales de prueba y se cotejaron identidad y módulo de almacenamiento cifrado entre los paquetes actuales y los instalados; no se afirma una instalación real de estas releases en otra PC.
 
 GitHub CI posterior al ajuste del simulador también terminó correctamente: npm test y compilación Windows aprobados en https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/actions/runs/38815563979. Fue ejecutado por el workflow existente del repositorio, sin despliegue ni publicación automática de nuevas versiones.
+
