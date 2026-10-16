@@ -1,15 +1,17 @@
 'use strict';
+const failure=require('./failure.cjs');
 const crypto=require('node:crypto'),{message,auditMessage,diagnosticMessage}=require('./announcement.cjs');
 function createNotificationClient({endpoint,key,fetcher=fetch,clock=Date.now}){
+ let releaseStatus=null;
  const url=new URL(endpoint);if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash||!/^[a-f0-9]{64}$/.test(key||''))throw Error('Conexión de anuncios inválida.');
  async function request(action,fields){
    const body=JSON.stringify({action,...fields,sentAt:clock(),nonce:crypto.randomBytes(32).toString('base64url')});
    const signature=crypto.createHmac('sha256',Buffer.from(key,'hex')).update(body).digest('hex');
    const r=await fetcher(new URL('/internal/notifications',url),{method:'POST',redirect:'manual',headers:{'Content-Type':'application/json','x-villawolf-signature':signature},body,signal:AbortSignal.timeout(15000)});
-   if(!r.ok)throw Error('Sincronización de anuncios pendiente (HTTP '+r.status+').');
+   if(!r.ok){const error=failure.serviceError(r.status,'announcements-'+action);const retry=Number(r.headers?.get('retry-after'));if(Number.isFinite(retry))error.retryAfterMs=retry*1000;throw error;}
    return r.json();
  }
- return{problem:report=>request('problem',{report}),diagnostic:id=>request('diagnostic',{id}),poll:async guildIds=>(await request('poll',{guildIds})).job,ack:result=>request('ack',{result})};
+ return{releaseStatus:()=>releaseStatus,problem:report=>request('problem',{report}),diagnostic:id=>request('diagnostic',{id}),poll:async guildIds=>{const value=await request('poll',{guildIds});releaseStatus=value.releases||null;return value.job;},ack:result=>request('ack',{result})};
 }
 async function deliver(job,{client,ack,fetcher=fetch,onProblem=()=>{}}){
  const problem=error=>{if(job.payload.kind!=='diagnostic')onProblem(error,'announcement-delivery');};
@@ -30,6 +32,10 @@ async function deliver(job,{client,ack,fetcher=fetch,onProblem=()=>{}}){
  }catch(error){problem(error);return report('uncertain',{retryAfterMs:300000});}
  let payload;
  try{
+   if (['launcher','admin'].includes(job.payload.kind)) job={...job,payload:await require('./official-release.cjs').verifiedRelease(job.payload,fetcher)};
+   if(job.guildId==='1007732653035880589'&&job.channelId==='1559334945372250314'&&job.payload.kind==='launcher')job={...job,payload:{...job.payload,mentionRole:false,roleId:undefined}};
+   // Rol real confirmado desde la interfaz de VillaWolf; no altera comunidades externas.
+   if(job.guildId==='1007732653035880589'&&job.channelId==='1559347693245956189'&&job.payload.kind==='admin')job={...job,payload:{...job.payload,mentionRole:true,roleId:'1559330834278781048'}};
    payload=job.payload.kind==='diagnostic'?{...diagnosticMessage(job.payload),components:require('./diagnostics.cjs').diagnosticButtons(job.id)}:job.payload.kind==='audit'?auditMessage(job.payload):message(job.payload);
    for(const embed of payload.embeds)embed.footer={text:embed.footer.text+' · '+marker};
    if(job.payload.kind==='modpack'&&job.payload.manifestPath&&job.payload.commit){
@@ -57,9 +63,9 @@ async function deliver(job,{client,ack,fetcher=fetch,onProblem=()=>{}}){
    return report('uncertain',{retryAfterMs:300000});
  }
 }
-function startNotifications({client,endpoint,key,onStatus=()=>{},onProblem=()=>{},fetcher=fetch}){
- const service=createNotificationClient({endpoint,key,fetcher});const onInteraction=i=>require('./diagnostics.cjs').diagnosticInteraction(i,{service}).catch(()=>{});client.on('interactionCreate',onInteraction);let stopped=false,busy=false,lastAnnouncement='unknown';
- async function tick(){if(stopped||busy||!client.isReady())return;busy=true;try{const guildIds=[...client.guilds.cache.keys()].slice(0,50),job=await service.poll(guildIds);if(job)await deliver(job,{client,fetcher,onProblem,ack:async result=>{const value=await service.ack(result);lastAnnouncement=result.outcome==='sent'?'sent':'pending';onStatus(lastAnnouncement==='sent'?'Anuncio entregado.':'Anuncio pendiente; se reintentará sin duplicarlo.',{domain:'announcements'});return value;}});else if(lastAnnouncement!=='pending')onStatus('Cola consultada; sin envíos disponibles ahora.',{domain:'announcements'});}catch(error){onProblem(error,'announcements');onStatus('Anuncios pendientes. Se reintentará sin duplicar publicaciones.',{domain:'announcements'});}finally{busy=false;}}
+function startNotifications({client,endpoint,key,onStatus=()=>{},onProblem=()=>{},fetcher=fetch,clock=Date.now}){
+ const service=createNotificationClient({endpoint,key,fetcher,clock});const onInteraction=i=>require('./diagnostics.cjs').diagnosticInteraction(i,{service}).catch(()=>{});client.on('interactionCreate',onInteraction);let stopped=false,busy=false,lastAnnouncement='unknown',failures=0,retryAt=0;
+ async function tick(){if(stopped||busy||!client.isReady()||clock()<retryAt)return;busy=true;try{const guildIds=[...client.guilds.cache.keys()].slice(0,50),job=await service.poll(guildIds);if(job)await deliver(job,{client,fetcher,onProblem,ack:async result=>{const value=await service.ack(result);lastAnnouncement=result.outcome==='sent'?'sent':'pending';onStatus(lastAnnouncement==='sent'?'Anuncio entregado.':'Anuncio pendiente; se reintentará sin duplicarlo.',{domain:'announcements'});return value;}});else onStatus(service.releaseStatus()?.ok===false?'Cola consultada; sin envíos disponibles ahora. La comprobación de nuevas versiones oficiales no pudo completarse.':'Cola consultada; sin envíos disponibles ahora.',{domain:'announcements'});failures=0;retryAt=0;}catch(error){failures++;const wait=failure.delay(error,failures);retryAt=clock()+wait;const diagnostic=failure.describe(error,'announcements');onProblem(new Error(failure.summary(diagnostic)),'announcements');onStatus('No se pudo consultar o confirmar la cola; no se afirma que haya anuncios pendientes. '+failure.summary(diagnostic)+' Reintento en '+Math.ceil(wait/1000)+' s.',{domain:'announcements',phase:'unavailable',...diagnostic,retryAt});}finally{busy=false;}}
  const timer=setInterval(tick,15000);timer.unref?.();return{tick,stop:()=>{stopped=true;clearInterval(timer);client.off?.('interactionCreate',onInteraction);}};
 }
 module.exports={createNotificationClient,deliver,startNotifications};

@@ -122,26 +122,41 @@ export function createReleaseAnnouncements({fetchImpl=fetch,clock=Date.now,outbo
   const versionParts=v=>typeof v==='string'&&/^\d+\.\d+\.\d+$/.test(v)&&v.length<=40?v.split('.').map(Number):null;
   const newer=(a,b)=>{const x=versionParts(a),y=versionParts(b);if(!x||!y)return false;for(let i=0;i<3;i++){if(x[i]!==y[i])return x[i]>y[i];}return false;};
   async function check(env){
-    const cursors=await env.DB.prepare('SELECT * FROM release_cursors').all();
-    if(cursors.results.length===2&&cursors.results.every(r=>r.checked_at>clock()-60000))return{ok:true,cached:true,versions:cursors.results.map(r=>({kind:r.kind,version:r.version}))};
+    const cursors=(await env.DB.prepare('SELECT * FROM release_cursors').all()).results;
     const response=await fetchImpl('https://api.github.com/repos/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases?per_page=30',{redirect:'manual',signal:AbortSignal.timeout(15000),headers:{Accept:'application/vnd.github+json','User-Agent':'VillaWolf-Release-Announcements',...(env.GITHUB_TOKEN?{Authorization:'Bearer '+env.GITHUB_TOKEN}:{})}});
     if(!response.ok)throw new AuthError(503,'Los anuncios de versiones esperan a GitHub.');
     const raw=await response.text();if(encoder.encode(raw).length>4*1024*1024)throw new AuthError(503,'Lista de versiones demasiado grande.');
     let releases;try{releases=JSON.parse(raw);}catch{throw new AuthError(503,'Lista de versiones inválida.');}
     if(!Array.isArray(releases))throw new AuthError(503,'Lista de versiones inválida.');
-    const catalog=await loadCatalog(env);let queued=0;const observed=[];
+    let catalog=null;try{catalog=await loadCatalog(env);}catch{} // Fallar el catálogo no bloquea destinos oficiales.
+    let queued=0;const observed=[];
+    const save=(kind,version)=>env.DB.prepare('INSERT INTO release_cursors(kind,version,checked_at) VALUES(?,?,?) ON CONFLICT(kind) DO UPDATE SET version=excluded.version,checked_at=excluded.checked_at').bind(kind,version,clock()).run();
     for(const kind of ['launcher','admin']){
-      const prefix=kind==='launcher'?'v':'admin-v',current=cursors.results.find(c=>c.kind===kind)?.version|| (kind==='launcher'?'0.1.17':'0.1.20');
+      const prefix=kind==='launcher'?'v':'admin-v';
       const candidates=releases.filter(r=>r.draft===false&&r.prerelease===false&&typeof r.tag_name==='string'&&r.tag_name.startsWith(prefix)&&versionParts(r.tag_name.slice(prefix.length))&&Number.isFinite(Date.parse(r.published_at))&&Date.parse(r.published_at)<=clock()&&Array.isArray(r.assets)&&r.assets.some(a=>a.name===('VillaWolf.'+(kind==='launcher'?'Launcher':'Administrador')+'.Setup.'+r.tag_name.slice(prefix.length)+'.exe'))).sort((a,b)=>newer(a.tag_name.slice(prefix.length),b.tag_name.slice(prefix.length))?-1:1);
-      const release=candidates[0],version=release?.tag_name.slice(prefix.length);observed.push({kind,current,latest:version||null});
-      if(release&&(newer(version,current)||version===current&&newer(version,kind==='launcher'?'0.1.17':'0.1.20'))){
-        const notes='Ya está disponible la versión '+version+'. Actualiza la aplicación para utilizarla.';
-        if(/(?:github_pat_|ghp_|access_token|client_secret)/i.test(notes))throw new AuthError(400,'Las notas oficiales contienen texto no publicable.');
-        const destinations=kind==='launcher'?[{guildId:env.DISCORD_GUILD_ID,channelId:'1559334945372250314',mentionRole:false},...catalog.packs.filter(p=>p.enabled&&p.announcements?.launcher?.enabled).map(p=>({guildId:p.guildId||env.DISCORD_GUILD_ID,channelId:p.announcements.launcher.channelId,roleId:p.roleId,mentionRole:!!p.announcements.launcher.mentionRole}))].filter((d,i,all)=>all.findIndex(x=>x.guildId===d.guildId&&x.channelId===d.channelId&&x.roleId===d.roleId)===i):snowflake(env.ADMIN_RELEASE_CHANNEL_ID)?[{guildId:env.DISCORD_GUILD_ID,channelId:env.ADMIN_RELEASE_CHANNEL_ID,mentionRole:false}]:[];
-        if(kind==='admin'&&!destinations.length)continue;
-        for(const d of destinations){await outbox.enqueue(env,{eventId:'release:'+kind+':'+version+':'+(d.mentionRole?d.roleId:'silent'),guildId:d.guildId,channelId:d.channelId,payload:{kind,name:kind==='launcher'?'VillaWolf Launcher':'VillaWolf Administrador',version,notes,...(d.roleId?{roleId:d.roleId}:{}),mentionRole:d.mentionRole}});queued++;}
-        await env.DB.prepare('INSERT INTO release_cursors(kind,version,checked_at) VALUES(?,?,?) ON CONFLICT(kind) DO UPDATE SET version=excluded.version,checked_at=excluded.checked_at').bind(kind,version,clock()).run();
-      }else await env.DB.prepare('UPDATE release_cursors SET checked_at=? WHERE kind=?').bind(clock(),kind).run();
+      const release=candidates[0];if(!release)continue;
+      const version=release.tag_name.slice(prefix.length),officialKey='official-'+kind,prior=cursors.find(c=>c.kind===officialKey);
+      const channelId=kind==='launcher'?'1559334945372250314':env.ADMIN_RELEASE_CHANNEL_ID;
+      const notes='Ya está disponible la versión '+version+'. Actualiza la aplicación para utilizarla.';
+      const enqueue=async d=>{await outbox.enqueue(env,{eventId:'release:'+kind+':'+version+':'+(d.mentionRole?d.roleId:'silent'),guildId:d.guildId,channelId:d.channelId,payload:{kind,name:kind==='launcher'?'VillaWolf Launcher':'VillaWolf Administrador',version,notes,...(d.roleId?{roleId:d.roleId}:{}),mentionRole:d.mentionRole}});queued++;};
+      observed.push({kind,current:prior?.version||null,latest:version});
+      if(!prior){
+        // Cancelar únicamente pendientes oficiales anteriores; nunca anunciar el historial al activar.
+        if(snowflake(channelId))await env.DB.prepare("UPDATE notification_jobs SET status='superseded',claim_token=NULL,lease_until=0 WHERE guild_id=? AND channel_id=? AND json_extract(payload,'$.kind')=? AND status IN ('pending','uncertain','leased')").bind(env.DISCORD_GUILD_ID,channelId,kind).run();
+        await save(officialKey,version);
+      }else if(newer(version,prior.version)&&snowflake(channelId)&&(kind!=='admin'||snowflake(env.ADMIN_RELEASE_ROLE_ID))){
+        await enqueue({guildId:env.DISCORD_GUILD_ID,channelId,mentionRole:kind==='admin',...(kind==='admin'?{roleId:env.ADMIN_RELEASE_ROLE_ID}:{})});
+        await save(officialKey,version);
+      }
+      // Mantener los anuncios configurables y su cursor existentes, independientes del destino oficial.
+      if(kind==='launcher'&&catalog){
+        const current=cursors.find(c=>c.kind===kind)?.version||'0.1.17';
+        if(newer(version,current)||version===current&&newer(version,'0.1.17')){
+          const destinations=catalog.packs.filter(p=>p.enabled&&p.announcements?.launcher?.enabled).map(p=>({guildId:p.guildId||env.DISCORD_GUILD_ID,channelId:p.announcements.launcher.channelId,roleId:p.roleId,mentionRole:!!p.announcements.launcher.mentionRole}));
+          for(const d of destinations.filter((d,i,all)=>all.findIndex(x=>x.guildId===d.guildId&&x.channelId===d.channelId&&x.roleId===d.roleId)===i))await enqueue(d);
+          await save(kind,version);
+        }
+      }
     }return{ok:true,queued,observed};
   }return{check};
 }
@@ -517,7 +532,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
       const url=new URL(request.url);if(url.search)throw new AuthError(400,'Solicitud inválida.');
       if(request.method==='POST'&&url.pathname==='/internal/role-bot')return reply(200,await roleBot.receive(request,env));
       if(request.method==='POST'&&url.pathname==='/internal/notifications')return reply(200,await notifications(request,env));
-      if(request.method==='GET'&&url.pathname==='/health')return reply(200,{ok:true,provider:'discord',storage:'D1',version:'1.2.2',multiGuild:true,notifications:true,audit:true,catalog:true,admin:true,discordRetry:true,catalogSnapshotSeconds:60,curseforgeApi:true,curseforgeConfigured:!!env.CURSEFORGE_API_KEY,githubPublishing:true,githubConfigured:!!env.GITHUB_TOKEN});
+      if(request.method==='GET'&&url.pathname==='/health')return reply(200,{ok:true,provider:'discord',storage:'D1',version:'1.2.3',multiGuild:true,notifications:true,audit:true,catalog:true,admin:true,discordRetry:true,catalogSnapshotSeconds:60,curseforgeApi:true,curseforgeConfigured:!!env.CURSEFORGE_API_KEY,githubPublishing:true,githubConfigured:!!env.GITHUB_TOKEN});
       const cfRoute=/^\/v2\/(?:admin\/)?curseforge\/(?:matches|download)$/.test(url.pathname),ghRoute=url.pathname==='/v2/admin/delete-pack'||url.pathname==='/v2/admin/github'||url.pathname==='/v2/admin/github/status'||url.pathname==='/v2/admin/github/blob';
       const bucket=await digest((request.headers.get('CF-Connecting-IP')||'unknown')+':'+(cfRoute?'curseforge:':ghRoute?'github:':'')+Math.floor(clock()/60000));
       const count=await env.DB.prepare('INSERT INTO discord_limits VALUES(?,1,?) ON CONFLICT(bucket) DO UPDATE SET count=count+1 RETURNING count').bind(bucket,clock()+120000).all();
@@ -539,7 +554,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
       if(request.method==='GET'&&url.pathname==='/v1/session')return reply(200,await session(env,token));
       if(request.method==='POST'&&url.pathname==='/v1/logout'){if(validNonce(token))await env.DB.prepare('DELETE FROM discord_sessions WHERE token_hash=?').bind(await digest(token)).run();return reply(200,{ok:true});}
       throw new AuthError(404,'Ruta no encontrada.');
-    }catch(error){if((!error.status||error.status>=500)&&env.DB&&snowflake(env.DISCORD_GUILD_ID)){try{await applicationReports.record(env,{id:crypto.randomUUID(),app:'service',version:'1.2.2',operation:request.method+' '+new URL(request.url).pathname,error:error.message||'Error interno',log:error.stack||'',occurredAt:new Date(clock()).toISOString()},{id:'service',name:'Servicio VillaWolf'});}catch{}}return reply(error.status||503,{ok:false,message:error.status?error.message:'El servicio no pudo comprobar el acceso. Intenta nuevamente.',...(error.retryAfter?{retryAfter:error.retryAfter}:{})});}
+    }catch(error){if((!error.status||error.status>=500)&&env.DB&&snowflake(env.DISCORD_GUILD_ID)){try{await applicationReports.record(env,{id:crypto.randomUUID(),app:'service',version:'1.2.3',operation:request.method+' '+new URL(request.url).pathname,error:error.message||'Error interno',log:error.stack||'',occurredAt:new Date(clock()).toISOString()},{id:'service',name:'Servicio VillaWolf'});}catch{}}return reply(error.status||503,{ok:false,message:error.status?error.message:'El servicio no pudo comprobar el acceso. Intenta nuevamente.',...(error.retryAfter?{retryAfter:error.retryAfter}:{})});}
   }
   async function cleanup(env){return env.DB.batch(['discord_flows','discord_sessions','discord_limits','bot_requests'].map(table=>env.DB.prepare(`DELETE FROM ${table} WHERE expires_at<=?`).bind(clock())));}
   return {fetch:handle,scheduled:(_event,env,ctx)=>ctx.waitUntil(Promise.all([cleanup(env),releaseAnnouncements.check(env)]))};

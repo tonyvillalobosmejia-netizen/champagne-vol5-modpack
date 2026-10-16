@@ -429,12 +429,32 @@ async function applyUpdates(suppliedManifest = null) {
     validateModPathSets(manifest.files, deletions, previous.files);
     const obsolete = Object.keys(previous.files).filter(relative => !unique.has(relative));
     const allDeletions = [...new Set([...deletions, ...obsolete])];
+    // Historial aditivo por pack y perfil; no adopta archivos por su nombre.
+    const ownershipPath = path.join(metadataDir, "managed-mod-history.json");
+    if (fs.existsSync(ownershipPath) && (!fs.lstatSync(ownershipPath).isFile() || fs.lstatSync(ownershipPath).isSymbolicLink())) throw new Error("Historial de mods no permitido.");
+    const history = fs.existsSync(ownershipPath) ? readJsonFile(ownershipPath) : { packId: manifest.packId, files: {} };
+    if (history.packId !== manifest.packId || !history.files || typeof history.files !== "object" || Array.isArray(history.files)) throw new Error("Historial de mods inválido.");
+    for (const [relative, hashes] of Object.entries(history.files)) {
+      safeTarget(relative);
+      if (!Array.isArray(hashes) || hashes.some(hash => !/^[a-f0-9]{64}$/i.test(hash))) throw new Error("Hash histórico inválido.");
+    }
+    for (const [relative, hash] of Object.entries(previous.files)) history.files[relative] = [...new Set([...(history.files[relative] || []), hash.toLowerCase()])];
+    const removals = [];
     for (const relative of allDeletions) {
-      if (!/^mods\/[^/\\]+\.jar$/i.test(relative)) throw new Error("Ruta antigua de mod inválida.");
-      // Un archivo que el launcher nunca instaló no se elimina automáticamente.
-      if (!Object.prototype.hasOwnProperty.call(previous.files, relative)) {
-        throw new Error(`No se puede eliminar un archivo no administrado: ${relative}`);
+      const target = safeTarget(relative);
+      if (!fs.existsSync(target)) continue; // Una eliminación histórica ya realizada está cumplida.
+      if (!fs.lstatSync(target).isFile()) throw new Error("No es un archivo de mod: " + relative);
+      const identity = sha256(fs.readFileSync(target));
+      const known = (history.files[relative] || []).includes(identity);
+      if (!known) {
+        const answer = await require('./champagne-pack-confirmation').confirmPublication(BrowserWindow.getAllWindows()[0], {
+          title: 'Archivo personal o modificado', message: '¿Apartar este mod con respaldo para continuar?',
+          detail: relative + '\nNo coincide con un archivo administrado conocido. Se conservará una copia recuperable fuera de mods. Si cancelas, no se modificará el paquete.',
+          buttons: ['Cancelar', 'Apartar con respaldo']
+        });
+        if (answer.response !== 1) throw new Error("Actualización cancelada. Se conserva el archivo no administrado: " + relative);
       }
+      removals.push({ target, remove: true, identity, relative, quarantine: !known });
     }
     const pending = [];
     for (const [index, entry] of desired.entries()) {
@@ -488,15 +508,13 @@ async function applyUpdates(suppliedManifest = null) {
     try {
       if (contentBundle) snapshotContent({ content: manifest.content, instanceDir, metadataDir, backupRoot, touched });
       const changes = [...pending.map(e => ({ target: e.target, staged: e.staged })),
-        ...allDeletions.filter(p => {
-          const target = safeTarget(p);
-          return fs.existsSync(target) && fs.statSync(target).isFile() &&
-            sha256(fs.readFileSync(target)) === previous.files[p];
-        }).map(p => ({ target: safeTarget(p), remove: true }))];
+        ...removals];
+      writeAtomic(path.join(backupRoot, 'recovery.json'), Buffer.from(JSON.stringify({ packId: manifest.packId, removals: removals.map(r => ({ path: r.relative, sha256: r.identity, quarantine: r.quarantine, backup: String(pending.length + removals.indexOf(r)) })) }, null, 2)));
       for (let i = 0; i < changes.length; i++) {
         const change = changes[i];
         safeTarget(path.relative(instanceDir, change.target).split(path.sep).join("/"));
         const exists = fs.existsSync(change.target);
+        if (change.remove && (!exists || sha256(fs.readFileSync(change.target)) !== change.identity)) throw new Error("El archivo cambió durante la actualización: " + change.relative);
         if (exists && !fs.statSync(change.target).isFile()) throw new Error(`No es un archivo: ${change.target}`);
         const backup = path.join(backupRoot, String(i));
         if (exists) fs.copyFileSync(change.target, backup);
@@ -515,6 +533,15 @@ async function applyUpdates(suppliedManifest = null) {
       }
       const nextState = { packId: manifest.packId || "mi-servidor", version: manifest.version, manifestSha256, files: {} };
       for (const entry of desired) nextState.files[entry.path] = entry.hash;
+      for (const [relative, hash] of Object.entries(nextState.files)) history.files[relative] = [...new Set([...(history.files[relative] || []), hash])];
+      // El estado y su historial participan de la misma recuperación que los mods.
+      for (const target of [statePath, ownershipPath]) {
+        const backup = path.join(backupRoot, 'metadata-' + path.basename(target));
+        const exists = fs.existsSync(target);
+        if (exists) fs.copyFileSync(target, backup);
+        touched.push({target, backup: exists ? backup : null});
+      }
+      writeAtomic(ownershipPath, Buffer.from(JSON.stringify(history, null, 2)));
       writeAtomic(statePath, Buffer.from(JSON.stringify(nextState, null, 2), "utf8"));
     } catch (error) {
       for (const item of touched.reverse()) {

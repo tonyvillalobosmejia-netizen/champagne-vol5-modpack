@@ -10,6 +10,8 @@ function message(event){
   const titles={modpack:'🐺 Nueva aventura disponible',launcher:'🐺 VillaWolf Launcher se actualiza',admin:'🛠️ VillaWolf Administrador se actualiza',audit:'📋 Publicación confirmada'};
   const embed={color:event.kind==='admin'||event.kind==='audit'?0x27ae60:0xe94b75,title:titles[event.kind],description:'**'+name.replace(/[*_\x60~]/g,'')+' · '+event.version+'**\n\n'+notes,footer:{text:'VillaWolf · '+(event.kind==='modpack'?'Modpack publicado':'Actualización oficial')}};
   if(event.kind==='launcher'||event.kind==='admin')embed.url=REPO+'/releases/tag/'+(event.kind==='admin'?'admin-v':'v')+event.version;
+  if(event.publishedAt)embed.timestamp=new Date(event.publishedAt).toISOString();
+  if(event.downloadUrl)embed.fields=[{name:'Descarga oficial',value:'[Descargar instalador]('+event.downloadUrl+')'}];
   if(event.imageAttachment)embed.image={url:'attachment://portada.jpg'};
   return{content:event.mentionRole?'<@&'+event.roleId+'>':'',embeds:[embed],allowedMentions:{parse:[],roles:event.mentionRole?[event.roleId]:[],users:[],repliedUser:false}};
 }

@@ -27,6 +27,7 @@ function sandbox(t, document, options = {}) {
   const disk = options.disk || fs;
   const context = vm.createContext({
     require: name => {
+      if (name === './champagne-pack-confirmation') return { confirmPublication: async () => ({response: options.approve ? 1 : 0}) };
       if (name === "electron") return {
         app,
         BrowserWindow: { getAllWindows: () => [] }, ipcMain: {}, shell: {}
@@ -309,3 +310,26 @@ test("fallo durante el segundo reemplazo restaura ambos mods", async t => {
 });
 
 test('una operación Microsoft impide arrancar o descargar mientras cambia la identidad',async t=>{const env=sandbox(t,manifest([entry('test.jar')]));vm.runInContext('microsoftOperationBusy=true',env.context);const result=await vm.runInContext('launchForge()',env.context);assert.equal(result.ok,false);assert.match(result.message,/Microsoft/);assert.equal(env.requests(),0);});
+
+for (const version of ['0.1.6','0.1.10']) test('008 eliminación histórica ausente '+version, async t => {
+ const doc=manifest([entry('new.jar')]);doc.version=version;doc.delete=['mods/old.jar'];
+ const env=sandbox(t,doc);assert.equal((await env.run()).ok,true);
+});
+for (const approve of [true,false]) test('008 archivo desconocido consentimiento '+approve, async t => {
+ const doc=manifest([entry('new.jar')]);doc.delete=['mods/personal.jar'];const env=sandbox(t,doc,{approve});
+ fs.writeFileSync(path.join(env.instance,'mods/personal.jar'),'personal');
+ if(!approve){await assert.rejects(env.run(),/cancelada/);assert.equal(fs.readFileSync(path.join(env.instance,'mods/personal.jar'),'utf8'),'personal');}
+ else{await env.run();assert.equal(fs.existsSync(path.join(env.instance,'mods/personal.jar')),false);const dir=fs.readdirSync(env.metadata).find(n=>n.startsWith('update-backup-'));assert.equal(fs.readFileSync(path.join(env.metadata,dir,'1'),'utf8'),'personal');}
+});
+test('008 historial sobrevive saltos y verifica identidad',async t=>{
+ const env=sandbox(t,manifest([entry('old.jar')]));await env.run();
+ env.context.fixture=manifest([entry('new.jar')]);env.context.fixture.version='0.1.10';await env.run();
+ fs.writeFileSync(path.join(env.instance,'mods/old.jar'),'new');env.context.fixture.delete=['mods/old.jar'];await env.run();assert.equal(fs.existsSync(path.join(env.instance,'mods/old.jar')),false);
+});
+
+test('008 actualización 0.1.6 a 0.1.10 conserva mundos y aparta mod alterado',async t=>{
+ const first=manifest([entry('old.jar')]);first.version='0.1.6';const env=sandbox(t,first,{approve:true});await env.run();
+ fs.writeFileSync(path.join(env.instance,'mods/old.jar'),'modificado');fs.mkdirSync(path.join(env.instance,'saves'),{recursive:true});fs.writeFileSync(path.join(env.instance,'saves/world'),'world');
+ env.context.fixture=manifest([entry('new.jar')]);env.context.fixture.version='0.1.10';env.context.fixture.delete=['mods/old.jar','mods/already-removed.jar'];await env.run();
+ assert.equal(fs.readFileSync(path.join(env.instance,'saves/world'),'utf8'),'world');assert.equal(fs.existsSync(path.join(env.instance,'mods/old.jar')),false);assert.equal(JSON.parse(fs.readFileSync(path.join(env.metadata,'installed.json'))).version,'0.1.10');
+});
