@@ -1,4 +1,154 @@
-# Estado de desarrollo de VillaWolf
+# VillaWolf — estado técnico y desarrollo
+
+**Corte documental: 16 de octubre de 2026, 09:17, America/Mexico_City.**
+Este resumen vigente prevalece sobre los antecedentes conservados al final. Las entradas antiguas describen su fecha y no son el estado actual. Esta revisión sólo modifica documentación: no ejecuta nuevas pruebas funcionales, instala aplicaciones, publica releases, cambia modpacks ni despliega servicios.
+
+## Versiones comprobadas y repositorio
+
+| Componente | Público / producción | Instalado en esta PC | Desarrollo local y alcance |
+| --- | --- | --- | --- |
+| Launcher Windows x64 | **0.1.20** (`v0.1.20`) | **0.1.20**, sin marca PRUEBA LOCAL | Escritura segura y diagnóstico del registro de limpieza preparados; no distribuidos. Recuperación automática completa todavía propuesta. |
+| Administrador Windows x64 | **0.1.26** (`admin-v0.1.26`) | **0.1.26**, sin marca PRUEBA LOCAL | Sin nueva versión pública; ampliaciones según ROADMAP. |
+| Bot Windows x64 | **0.2.5** (`bot-v0.2.5`) | **0.2.6**, compilación local | Filtro de diagnósticos antiguos probado e instalado localmente; no hay release pública 0.2.6. |
+| Worker villawolf-auth | **1.2.4** | Servicio remoto | Health público HTTP 200 y versión comprobados; copia central de publicaciones activa. Primera entrega real de esta copia pendiente. |
+| Mundo Conejil | **0.1.11** en stable-v2.json al consultar | No se inspeccionaron todos los juegos instalados | Versiones de modpack independientes; contenido y Error 009 se trabajan en otro flujo. |
+
+- Repositorio oficial: [champagne-vol5-modpack](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack), rama **preparacion-paso97**. El código local corresponde al prefijo remoto `launcher/`; esta carpeta local no tiene `.git`.
+- HEAD observado antes de documentar: `52ef82a9cd8ecd4107da335a0e3c76aca9dad51f` (cambio de diseño de Mundo Conejil). Se preserva ese trabajo; no se modifica su manifiesto.
+- Código del lanzamiento Launcher/Bot: `855bd7ae24f70766b662f0c3dda13a3f9f951947`. Registro central: `083984007707d8aec8719451782c2925b3d10710`, pruebas `b31dfa3c0973a2460d52c4f5258671956a31ed43`, documento `24ef5ec523f6609bca95815e22042664a370a787`.
+- Worker 1.2.4: despliegue `eecab311-1b99-4ded-a585-8dc80e9883cd`; recuperación anterior 1.2.3 `861107e4-0321-4e9d-bbae-c6c7a822ff15`. No se desplegó nada en esta revisión documental.
+- Releases regulares de desarrollo 0.x, no equivalentes a estabilidad 1.0.0: [Launcher](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/v0.1.20), [Administrador](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/admin-v0.1.26), [Bot público](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/bot-v0.2.5).
+
+## Cómo interpretar la evidencia
+
+**Publicado/desplegado**, **instalado**, **implementado local**, **parcial**, **aprobado pendiente**, **propuesto**, **pausado** y **no verificado** son estados distintos. Una prueba simulada no acredita funcionamiento en producción. Los conteos de pruebas citados son ejecuciones históricas identificadas, no se suman como pruebas únicas ni se presentan como repetidas hoy. Las prioridades no autorizan implementar o publicar.
+
+## Inventario vigente por componente
+
+### Launcher
+
+| Función | Estado y evidencia / límite |
+| --- | --- |
+| Discord obligatorio, sesión cifrada y restauración | Publicado. OAuth loopback, propósitos separados y safeStorage; pruebas de sesión. No afirmar renovación real después de vencer. |
+| Microsoft Java Premium opcional | Publicado y parcial en validación: código Microsoft/Xbox/licencia/perfil, UUID y skin; capturas aportadas por el propietario acreditan vinculación y mundo 1.20.1 con identidad oficial. Falta renovación real vencida, más cuentas y servidor online. |
+| Código Microsoft y avatar | Publicado desde 0.1.18: copia automática del código, guía de autorización; avatar Discord o cabeza de skin oficial con Premium. No automatiza contraseña, MFA ni consentimientos. Carga local de avatar PNG retirada del flujo. |
+| Biblioteca y roles por mundo/servidor | Publicado: catálogo autorizado rápido, imágenes posteriores, caché vinculada a cuenta; guildId por lanzador. Jugadores externos no necesitan rol en VillaWolf. Apertura, nuevas descargas y JUGAR mantienen controles; caché visual no autoriza ejecución. |
+| Instancias, carpetas y opciones | Publicado: nombre legible e identidad estable, carpetas separadas, Abrir carpeta de instancia/raíz, descargar, jugar y borrar local con confirmación. Cambio de nombre no fusiona mundos. |
+| Actualización de modpacks e integridad | Publicado: fuentes autorizadas, hashes, preparación, configuración administrada y rollback. Error 008 publicado en 0.1.20: archivo ausente ya eliminado no bloquea; historial de propiedad y consentimiento con respaldo para desconocidos/modificados. |
+| Descargas CurseForge / asistidas | Publicado: coincidencia oficial exacta y restricciones de distribución; SHA-256 obligatorio. No todos los autores permiten descarga automática; la alternativa asistida permanece. |
+| Minecraft / Forge / Java / RAM | Publicado para perfiles admitidos; Java 17/21 y RAM configurable. Compatibilidad individual según tabla inferior, nunca universal. |
+| Reparación y estados de interfaz | Publicado: reparación de componentes, bloqueo de JUGAR mientras se prepara/ejecuta, errores con copiar/registro y actualización del ejecutable. No equivale a recuperar un mundo ni a reparar automáticamente todo JSON dañado. |
+| Limpieza de lanzadores retirados | Publicado, con incidente activo de robustez: cola compartida por todos los modpacks. Datos reparados sólo en esta PC; parche de escritura/aviso aún local. |
+| Diagnósticos de aplicación | Publicado: cola cifrada, saneamiento y envío a registro. Excluye fallos de ejecución de Minecraft. Estados sin sesión/modpack todavía producen ruido y la deduplicación local no persiste entre reinicios. |
+
+Referencias: `src/main.js`, `champagne-auth.js`, `champagne-microsoft.js`, `champagne-library-hydrator.js`, `champagne-game-profile.js`, `champagne-pack-purge.js`, `champagne-problem-reporter.js`, pruebas de versiones, acceso, Microsoft, limpieza y sesión.
+
+### Administrador
+
+| Función | Estado y evidencia / límite |
+| --- | --- |
+| Acceso Discord | Publicado: Administrador **u Owner** del servidor oficial, validado en servicio y operaciones sensibles. No basta una etiqueta admin en un servidor externo; tampoco se exige Gestionar servidor allí: pertenencia y Bot autorizado según decisión aprobada. |
+| Crear lanzador | Publicado: asistente oscuro de cuatro pestañas (Información, Archivos, Discord, Publicación), borrador persistente y flujo para preparar/publicar desde creación. Guardar borrador no publica. La biblioteca sólo lo recibe tras publicación confirmada y permisos. |
+| Edición y menús | Publicado: Edición de interfaz, Carpetas y archivos, Información del servidor y Configuración de Discord. Navegación separada; servidor informativo sigue No disponible. El cuarto menú Discord fue aprobado posteriormente. |
+| Imagen, noticias y diseño | Publicado: fondo, nombre, noticias/notas, vista previa y publicación sin cambiar mods/versión. Imagen inicial existe; editor de icono independiente por modpack no acreditado. |
+| Análisis / preparación / publicación | Publicado: detecta CurseForge, revisión, selección, fuentes, hashes, paquete aislado, comprobación antes de activación y conflictos. Nunca modifica los originales. Error 007 en 0.1.26: hasta tres intentos totales compartidos HTTP/integridad por archivo, caché sólo aprobada. |
+| GitHub central | Publicado: credencial del servicio, permisos limitados a catálogo/manifiestos/historial; no se entrega token a administradores. Token local cifrado como alternativa si el servicio confirma ausencia de conexión central. |
+| Historial / recuperación | Publicado: versiones y manifiestos, recuperación como nueva versión superior; no restaura mundos ni requiere reescribir commits. Respaldos locales de instalación separados del historial del modpack. |
+| Borradores y almacenamiento | Parcial: creación y diseño de borradores guardados, carpeta de origen por pack y preparados. No acredita restauración integral de toda sesión de edición/publicación interrumpida. |
+| Discord por lanzador | Publicado: oficial/externo, rol, canales opcionales y menciones; edición de esas opciones, comprobación de Bot, canales y pertenencia. Sin @everyone/@here automáticos. |
+| Auditoría / eliminación | Publicado: autor verificado, cambios reales de cada publicación y quién elimina. Eliminación definitiva exige confirmar y conserva originales de CurseForge y commits. No utilizar para arreglar autenticación. |
+| Servidor Minecraft / hosting | Pendiente: no hay SFTP/API, preparación automática, reinicio ni respaldo/restauración de hosting implementados y verificados. La interfaz informativa no equivale a estas funciones. |
+
+Referencias: `tools/admin-modpack/main.cjs`, `engine.cjs`, `wizard.js`, `community-editor.js`, `draft-store.cjs`, `verified-content-cache.cjs`, `reliable-request.cjs`; pruebas de creación, catálogo, navegación, integridad y preparación.
+
+### Bot y Cloudflare
+
+| Área | Estado y evidencia / límite |
+| --- | --- |
+| Bot: acceso, identidad, instalador y actualizador | Público 0.2.5, local 0.2.6; Discord central Administrador/Owner, token cifrado guardado, identidad amarilla, versión y Buscar actualización. No crea ni renueva un token Discord revocado. |
+| Bot: roles y varios servidores | Publicado y comprobado en VillaWolf/Racoon: Gateway, Server Members Intent, sincronización independiente, metadatos y latidos firmados. PC y proceso deben permanecer activos. |
+| Bot: conexión y diagnósticos | Publicado: conexión separada de roles/anuncios, latencia si existe, historial saneado/cifrado, clasificación y backoff. Pendiente limpiar campos residuales 503 después de recuperar. |
+| Bot: anuncios y deduplicación | Publicado: cola persistente central, reservas, confirmación, reconciliación, reintentos. Release oficial más instalador/descarga/SHA-256 antes de anunciar. Entrega real Launcher 0.1.20 única comprobada; no prueba todos los escenarios del Error 004. |
+| Bot: filtro de errores antiguos | Sólo 0.2.6 local: diagnósticos mayores de una hora se conservan sin enviar, con retry de 24 h; no se marcan enviados. No es archivo terminal: consume una revisión diaria. Avisos de versiones y auditorías no se filtran. |
+| Cloudflare: autenticación y D1 | Desplegado 1.2.4: sesiones cifradas/hash, roles centrales y por mundo, snapshot breve sólo para navegación y fallback Discord. Antigüedad de Bot máxima 90 s conservada. Health no demuestra por sí solo sesión/roles válidos. |
+| Cloudflare: publicación y CurseForge | Desplegado: comprobaciones del commit/rama/autor y restricciones de rutas, API oficial mediante secretos, catálogos y eliminaciones. No aloja el proceso Gateway del Bot. |
+| Cloudflare: anuncios y auditoría | Desplegado: cola y cursores oficiales independientes de modpacks, notificaciones por comunidad, auditoría central de acciones/cambios. No se activa un anuncio por editar un archivo local. |
+| Copia central de publicaciones | Desplegada 1.2.4: canal 1559335322926710794, versión/notas/portada y administrador del recibo. Independiente del anuncio configurable y sin menciones. 39 pruebas simuladas; primera entrega real de una nueva versión pendiente. |
+| Diagnósticos privados centrales | Parcial en estabilidad: recepción/consulta real con botones verificadas en Discord, acceso administrativo y saneamiento. No registra cuerpos secretos; si D1 falla puede no registrar su propio error. Faltan ruido, agrupación, retención y pruebas de disponibilidad. |
+| Centro de Envíos / alojamiento | Propuesto: no existe una consola completa de reenvío/cancelación/consulta de colas. Inicio automático de Windows y hosting permanente no encontrados implementados; no declararlos operativos. |
+
+Referencias: `auth-server/roles-bot/bridge.cjs`, `notifications.cjs`, `official-release.cjs`, `state.cjs`, `access.cjs`, `diagnostics.cjs`; `auth-server/cloudflare/worker.mjs`, `application-reports.mjs`, esquema y migraciones.
+
+## Compatibilidad de Minecraft y límites externos
+
+| Perfil | Estado verificable |
+| --- | --- |
+| Minecraft 1.20.1 / Forge 47.4.10 / Java 17 | Arranque real anterior en esta PC y evidencia del propietario. No repetido hoy. |
+| Minecraft 1.21.1 / Forge 52.1.0 / Java 21 | Preparación automática probada; juego real pendiente. |
+| Otros Forge modernos desde 1.18 | Validación del motor admite perfiles; cada combinación/modpack sigue sin acreditación individual. |
+| Fabric / NeoForge / Quilt | Sin soporte liberado; controles bloqueados, trabajo pausado hasta soporte y pruebas específicos. |
+
+CurseForge es fuente/gestor, no loader. Una licencia Premium, el rol Discord y la compatibilidad de mods son verificaciones distintas. No todos los archivos CurseForge permiten distribución automática; no se cambian hashes para aceptar discrepancias. Microsoft requiere una licencia/perfil Java válido y aprobación de la aplicación; no se promete acceso a cuentas sin licencia. Discord puede aplicar límites: mantener Retry-After y no reiterar solicitudes para eludirlos.
+
+## Registro consolidado de errores 001–009 y adicionales
+
+| ID / componente | Causa confirmada o límite | Corrección y distribución | Evidencia y estado actual |
+| --- | --- | --- | --- |
+| 001 Bot: conexión confundida con cola/roles | Estados mezclados y diagnósticos genéricos; ready local anticipado | Estados independientes en 0.2.4; bridge/backoff/confirmación reforzados en 0.2.5 | Simulaciones y sincronización real tras reinicios. Resuelto en escenarios comprobados; disponibilidad continua y estado residual pendientes. |
+| 002 Launcher: biblioteca lenta | Tarjetas esperaban imágenes | Hidratación posterior y caché autorizada, incluida 0.1.19 | Pruebas de concurrencia/cambio de cuenta. Mejora implementada/publicada; sin medición representativa en otras PCs. |
+| 003 Aplicaciones: diagnósticos incompletos | Captura/cola/consulta insuficientes | Clientes 0.1.19 / Admin 0.1.26 / Bot 0.2.4+, servicio 1.2.3 | 108 pruebas históricas compartidas y consulta real de botones. Parcial: falsos errores de estado, deduplicación tras reinicio y retención. |
+| 004 Anuncios duplicados | Causa del incidente original no demostrada | Reservas, claves por evento, reconciliación ya operativas | Un anuncio 0.1.20 / un intento / un trabajo comprobados y pruebas de cola. **En observación**, no cerrado globalmente ni reproducido mediante publicaciones. |
+| 005 Administrador: verificaciones/subidas repetidas | Recursos sin cambios se procesaban de nuevo | Caché segura de bytes/comprobantes y blobs idempotentes, 0.1.26 | Pruebas simuladas con hashes, conflictos, caducidad y fuentes. Publicado; ahorro real de red/tiempo pendiente de medir. |
+| 006 Administrador: botones/menús superpuestos | Visibilidad no ligada a vista | Navegación por estado, incluida 0.1.26 | Pruebas e inspección instalada anterior. Resuelto en casos ensayados; tamaños/equipos adicionales pendientes. |
+| 007 Administrador: integridad intermitente | Hashes recibidos en fallos reales no conservados; no atribuible a red/proveedor sin evidencia | Máximo tres intentos por archivo, bytes fallidos descartados, límite HTTP/hash compartido; 0.1.26 | 38 pruebas originales, comprobaciones locales posteriores. Corrección publicada; causa histórica de las discrepancias permanece no confirmada. |
+| 008 Launcher: eliminación histórica bloqueaba actualización | Exigía propiedad en installed.json aun si archivo ya no existía | 0.1.20: ausencia cumplida, historial de propiedad/hash, consentimiento y respaldo para desconocidos/modificados | Pruebas limpias/saltos/rollback/rutas; paquete publicado e instalado. Prueba manual extensa en otras PCs pendiente. |
+| 009 Modpack: Chunky / Distant Horizons | Crash aportado: DistantHorizons 3.3.3 → ChunkyAccessor → Chunky 1.3.146, IllegalStateException | Sin cambio en este flujo; proyecto del modpack | Pendiente diagnóstico/solución en dicho proyecto. No retirar mods ni alterar versiones aquí. |
+| JSON de limpieza / Launcher | deleted-packs.json local con 97 bytes nulos; origen no confirmado | Cuatro IDs restaurados desde catálogo validado en esta PC. Escritura fsync/reemplazo, diagnóstico y antirrepetición sólo locales | 9 pruebas específicas; no distribuido. Recuperación automática completa propuesta, no implementada. Reinstalar 0.1.20 o retirar rol no garantiza reparación en otros equipos. |
+| OAuth / snapshot D1 | Renovación escribe nuevo cifrado; snapshot compara con cifrado anterior de la fila | Sin corrección acreditada | Observación sustentada en worker.mjs, no fallo real reproducido. Falta regresión de renovación/snapshot y evaluación de concurrencia; no modificar en documentación. |
+| Permisos de anuncios | Registros reales Missing Permissions | Excepciones individuales en canales oficiales Launcher/Admin; persistencia verificada | Resuelto para destinos comprobados, sin permiso Administrador. Otros canales requieren validación propia. |
+| Sincronización obsoleta | Instalación antigua; D1 llegó a ~55 min. Causa inicial del cese no recuperada | Bot nuevo, reinicios, diagnóstico y despliegue compatibles | Señales reales dentro de 90 s comprobadas repetidamente. No afirmar una causa inicial concreta ni uptime 24/7. |
+| Diagnósticos tardíos / ruido | Cola conserva hora/versión original, uno por flush; sin sesión/modpack también se captura | Filtro local Bot 0.2.6 para antigüedad; clasificación del cliente aún pendiente | 20 pruebas filtro/envío/sync y cola real vacía al revisar. No confundir entrega tardía, referencia distinta y duplicación de envío. |
+| SignPath / firma | Rechazo registrado por visibilidad/adopción insuficiente según correo citado previamente | Sin certificado concedido; alternativas pendientes | Instaladores públicos consultados devuelven NotSigned. El correo original no se reabrió hoy; véase política. |
+
+Otros antecedentes (conflicto de diseño GitHub, borrador inválido por ID antiguo, nombres con [Forge]/Unicode, arranque del Administrador, catálogo sin refrescar) se conservan en el historial. No convertir sus antiguas limitaciones en el estado vigente.
+
+## Pruebas: automatizadas, manuales y pendientes
+
+- Históricas: tanda 001/002/003/005/006, **108** pruebas y **6** comprobaciones UI; Error 007 **38**; entrega 0.1.20/0.2.5 **92**; JSON **9**; filtro Bot **20**; copia central **39**. Son conjuntos solapados, con fechas/alcance conservados abajo. No se ejecutaron de nuevo durante esta revisión documental.
+- Distribución anterior: instaladores descargados y contrastados por tamaño/SHA-256; actualizadores detectaron versiones; ASAR cotejado. Hoy sólo se consultaron releases/metadatos y firmas locales, no se descargaron otra vez todos los EXE.
+- Manual en esta PC: Launcher 0.1.20, Admin 0.1.26 y Bot 0.2.6 instalados/abiertos en intervenciones anteriores; 6/12/5 archivos protegidos idénticos respectivamente. Bot: reinicio y roles reales; Discord: lectura de diagnósticos y entrega única del anuncio Launcher 0.1.20. El juego no se lanzó hoy para documentar.
+- **Pruebas manuales reportadas por el propietario:** cerró/abrió Launcher y conservó sesiones Discord/Microsoft; comprobó instalador y actualizaciones en versiones anteriores; retiró/reasignó roles y respondió el acceso; comprobó actualización de modpacks. Se registran como testimonio del propietario, no como automatización ni ejecución del agente.
+- Pendientes: tokens realmente vencidos/revocados, renovación y snapshot, cuenta Premium/skin/servidor online en más casos, instalación/actualización en otra PC, cortes de red/energía, recuperación automática de JSON, primera copia central real, permisos/errores de cada servidor externo, rendimiento con bibliotecas grandes y privacidad end-to-end con D1 no disponible.
+
+## Arquitectura, seguridad y límites de operación
+
+Electron separa Launcher (`src/`), Administrador (`tools/admin-modpack/`) y Bot (`auth-server/roles-bot/`). Worker + D1 (`auth-server/cloudflare/`) autentican y autorizan, guardan sesiones cifradas, catálogo/recibos/cola/auditoría. GitHub conserva fuentes/releases y `updates/`; el cliente descarga únicamente fuentes oficiales admitidas y valida hashes. Los originales CurseForge permanecen fuera de las instalaciones VillaWolf. Cambiar identidad Microsoft/offline puede cambiar inventario; no hay migración automática acreditada.
+
+El Bot Gateway se ejecuta en la PC del propietario, no dentro de Cloudflare ni de los launchers de jugadores. Alojamiento Oracle Always Free intentado anteriormente sin capacidad; no hay VM permanente acreditada. No distribuir el token del Bot. Credenciales locales cifradas por Windows y secretos de servicio fuera de Git; informes sin tokens, cuerpos OAuth o logs de Minecraft. Acceso administrativo central no implica aislamiento por dueño/equipo. Respetar rutas, enlaces/junctions, consentimiento y respaldos. Eliminar un lanzador puede borrar sus mundos: no confundir con quitar un rol.
+
+Cron configurado actualmente `*/15 * * * *`, no horario. Logs detallados de solicitudes desactivados. El health confirma vida/versión, no certifica todas las integraciones. Cola y reintentos no equivalen a hosting continuo ni a entrega garantizada sin permisos.
+
+## Decisiones, pendientes y prioridades (no autorizan implementación)
+
+1. **Prioridad de datos:** distribuir tras autorización la protección local JSON; diseñar recuperación sólo con respaldo y catálogo autorizado; revisar OAuth/snapshot, ruido de diagnósticos y campos residuales.
+2. **Validación:** actualizaciones, reversión y cortes en otras PCs; primera copia central real con próxima publicación; diagnósticos y deduplicación persistente; estabilidad de roles dentro de 90 s.
+3. **Seguridad y estabilidad:** firma Windows, revisión de privacidad/retención, permisos mínimos y recuperación ante D1/red caída; no rebajar hashes ni TTL.
+4. **Funciones parciales:** Microsoft completo, más perfiles Forge probados, recuperación integral de edición y observabilidad de envíos.
+5. **Aprobadas pendientes:** automatización de preparación/actualización de servidores y respaldos/SFTP/API, sujeta a proveedor, diseño y pruebas; disponibilidad permanente del Bot. No hay fecha de entrega autorizada.
+6. **Propuestas por decidir:** Centro de Envíos, modelo de equipos/propietarios, icono editable independiente, política de archivo definitivo/retención, hosting concreto e inicio automático. No se inventa aprobación del detalle técnico.
+7. **Pausado:** Fabric, NeoForge y Quilt; Oracle mientras no haya capacidad/alternativa aprobada. Hosting rotativo del Bot desde PCs de jugadores no se adoptó: implicaría exponer credenciales y disponibilidad no garantizada.
+8. **1.0.0 futura:** exigir estabilidad, matriz de compatibilidad real, actualización/rollback, recuperación, auditoría y distribución segura verificadas; sin fecha prometida. La propuesta histórica 1.1.0 no identifica una release actual.
+
+No se descarta trabajo por falta de evidencia: se marca pendiente de confirmación. Véase [ROADMAP.md](ROADMAP.md), [README.md](README.md), [política de firma](CODE_SIGNING_POLICY.md), [guía](docs/tutoriales/GUIA_VILLAWOLF.md), [servicio](auth-server/cloudflare/README.md), [Bot](auth-server/roles-bot/README.md) y [Administrador](tools/admin-modpack/README.md).
+
+## Revisión documental de este corte
+
+Finalización local: 2026-10-16 09:26 -06:00 (America/Mexico_City). Doce documentos revisados, 58 enlaces relativos vigentes comprobados y sin patrones de credenciales detectados. Hash agregado de 213 archivos funcionales sin cambios. Sólo documentación autorizada para sincronizar; sin nuevas pruebas funcionales ni cambios de releases/producción. Se conservaron antecedentes, generalizando rutas del perfil personal. La sincronización se hará con un único commit documental sobre la rama verificada, conservando su HEAD de diseño de modpack.
+
+## Archivo histórico conservado — no representa el estado vigente
+
+Las siguientes entradas se conservaron para no perder decisiones, pruebas, versiones desde 0.1.16 y antecedentes. Frases como «actual», «pendiente», «sigue en 0.x» o «no desplegado» describen el momento de esa entrada; para el corte vigente usar las secciones anteriores. Algunas notas son pasos sucesivos del mismo trabajo, no resultados contradictorios del presente.
+### Informe histórico anterior
 
 **Actualizado:** 16 de octubre de 2026 (America/Mexico_City).
 **Alcance:** VillaWolf Launcher, VillaWolf Administrador, autenticación/publicación central y bot de roles.
@@ -294,7 +444,7 @@ No se atribuyen cambios nuevos al Launcher 0.1.17. Administrador 0.1.19 está as
 **Repositorio remoto:** [tonyvillalobosmejia-netizen/champagne-vol5-modpack](https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack).
 **Rama destino verificada:** preparacion-paso97.
 **HEAD remoto observado antes de sincronizar este informe:** babe69b45ad39899efdbcafabd58028c8addf0d1.
-**Carpeta de edición local:** C:/Users/tonyv/OneDrive/Desktop/mi-launcher-forge-inicial. Esta carpeta no contiene .git; no afirmar que sea un checkout local de la rama.
+**Carpeta de edición local:** %USERPROFILE%/OneDrive/Desktop/mi-launcher-forge-inicial. Esta carpeta no contiene .git; no afirmar que sea un checkout local de la rama.
 **Correspondencia remota:** el proyecto de las aplicaciones está bajo launcher/; el informe local en la raíz del proyecto corresponde a launcher/ESTADO_DESARROLLO.md en GitHub.
 
 | Área | Rutas / responsabilidad |
@@ -746,4 +896,6 @@ Permisos del destino central consultados en metadatos firmados y frescos del Bot
 Despliegue expresamente autorizado por el propietario. Worker villawolf-auth 1.2.4 activo, versión Cloudflare eecab311-1b99-4ded-a585-8dc80e9883cd; health público HTTP 200 y versión 1.2.4 comprobados. Rollback disponible a 861107e4-0321-4e9d-bbae-c6c7a822ff15 (1.2.3). Sin migraciones D1 ni cambios de credenciales o permisos. Bot 0.2.6 local sigue conectado, autorizado y con roles ready.
 
 Las próximas nuevas versiones de modpacks confirmadas generarán su copia independiente en 1559335322926710794, con notas y administrador del recibo verificado, sin menciones. Se mantiene el aviso configurable de cada comunidad y la auditoría de registro. No se hizo backfill de versiones antiguas, no se encoló anuncio de prueba ni se publicó modpack. Treinta y nueve pruebas simuladas aprobadas anteriormente; falta observar la primera entrega real tras una próxima publicación del propietario. No requiere reinstalar aplicaciones.
+
+
 

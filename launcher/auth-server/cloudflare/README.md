@@ -1,63 +1,44 @@
-# VillaWolf: servicio Discord en Cloudflare
+# VillaWolf — servicio Cloudflare Workers + D1
 
-El servicio está desplegado en https://villawolf-auth.tony-villalobos-mejia-973.workers.dev con D1, variables públicas y secretos cifrados. El titular introdujo las credenciales directamente en Cloudflare. La limpieza es horaria y los logs de solicitudes permanecen desactivados.
+Actualizado el 16 de octubre de 2026. **Worker 1.2.4 desplegado** en https://villawolf-auth.tony-villalobos-mejia-973.workers.dev. Health HTTP 200 y versión comprobados en esta revisión de sólo documentación. Health no certifica por sí solo OAuth, roles, bot o permisos.
 
-La autorización real, la comprobación del rol dos veces y el cierre de sesión se verificaron con el cliente del launcher. El titular confirmó el arranque y el rechazo al retirar el rol. Eligió tonymejiavv como nombre de Minecraft; no se migraron automáticamente los inventarios del perfil anterior jaime_12.
+## Arquitectura y configuración vigente
 
-La versión 0.1.8 activa Discord obligatorio en src/config.js. Pasan 76 pruebas automatizadas. El instalador se probó sobre 0.1.7 en esta PC: conserva la identidad de instalación, los accesos directos y los archivos del juego. La prueba de la interfaz instalada utiliza respuestas Discord simuladas y no ejecuta Minecraft.
+- Worker `villawolf-auth`, módulo `worker.mjs`; D1 `villawolf-identidades`, binding `DB`.
+- Configuración pública: `wrangler.json`, app/servidor central, flags ROLE_BOT_ENABLED y ROLE_BOT_MULTI_GUILD, destinos/rol del Administrador. No contiene secretos.
+- Cron vigente `*/15 * * * *`; no es ya el cron horario de la guía inicial. Observabilidad detallada de solicitudes desactivada.
+- Esquemas/migraciones aditivos: identidades, solicitudes, sesiones/límites, sincronización de Bot, comunidades, recibos, cola, cursores/auditoría y eliminaciones. No asumir que producción tiene sólo las cinco tablas del diseño inicial. No recrear D1 para actualizar.
+- Versión activa `eecab311-1b99-4ded-a585-8dc80e9883cd`; anterior 1.2.3 `861107e4-0321-4e9d-bbae-c6c7a822ff15`. No se desplegó ni migró nada durante esta revisión documental.
 
-Workers requiere redirect: manual para estas solicitudes; las respuestas no exitosas se rechazan sin reenviar credenciales. Se retiró el diagnóstico temporal y hay una prueba de regresión.
+## Secretos y seguridad
 
-## Recursos necesarios
+Los nombres de configuración incluyen DISCORD_CLIENT_SECRET, TOKEN_KEY, CURSEFORGE_API_KEY, GITHUB_TOKEN y ROLE_BOT_KEY. Sus valores se introducen sólo por el titular en los almacenes seguros apropiados; nunca en documentos, logs o instaladores. Cambiar claves puede invalidar sesiones/conexiones: no rotarlas como método de diagnóstico sin autorización.
 
-- Worker `villawolf-auth`, usando `worker.mjs` como módulo JavaScript.
-- Base D1 `villawolf-identidades`, creada con `schema.sql`.
-- Binding del Worker: nombre `DB`, tipo D1, apuntando a esa base.
-- Variables de texto:
-  - `DISCORD_CLIENT_ID`: `1558941216773767178`.
-  - `DISCORD_GUILD_ID`: `1007732653035880589`.
-  - `DISCORD_ROLE_ID`: `1558938399300390952`.
-- Secretos del Worker:
-  - `DISCORD_CLIENT_SECRET`: secreto de la aplicación Discord VillaWolf Launcher; configurar directamente en el alojamiento, nunca en el chat, código, capturas ni entregas.
-  - `TOKEN_KEY`: 32 bytes aleatorios representados como 64 caracteres hexadecimales. Conservar una copia privada; cifra los tokens de Discord guardados en D1. Cambiarla invalida las sesiones existentes, pero conserva los nombres.
-- Trigger programado: `0 * * * *`, para limpiar sesiones, solicitudes y límites vencidos.
+OAuth con propósito y vencimiento, credenciales Discord cifradas, tokens de sesión en hash, límites y redirecciones controladas. Sesión local persistente cifrada por Windows. No afirmar que cerrar/abrir prueba renovación tras vencimiento. Observación técnica OAuth/snapshot pendiente: después de renovar puede fallar la comparación con el cifrado anterior al actualizar snapshot; requiere regresión y evaluación de concurrencia.
 
-`wrangler.json` contiene la configuración pública y el ID real de D1 `9d0125b7-3546-44f7-90b7-1c5fed5c9b3d`. No guardar secretos en ese archivo.
+## Roles y catálogos
 
-Usar el plan gratuito y la dirección HTTPS `workers.dev` asignada por Cloudflare. No hace falta comprar un dominio. El servicio no distribuye mods ni instala bots.
+Bot Gateway independiente por servidor; mensajes firmados, secuencia y metadatos. Límite de 90 segundos conservado, sin falsificar fechas. Si falta sincronización, comprobación directa Discord. Snapshot de navegación breve (60 segundos) no sustituye controles sensibles al descargar/jugar/publicar. Administrador u Owner del servidor central para administrar; jugadores usan el rol del modpack en su servidor, incluidos externos.
 
-## Antes de activar
+## Publicación, fuentes y diagnósticos
 
-1. Aplicar el esquema y comprobar que existen las cinco tablas e índices de expiración.
-2. Configurar binding, variables y secretos. Desplegar el código y habilitar la limpieza programada.
-3. Comprobar `/health`, que debe responder HTTP 200 con `ok: true`, `provider: discord` y `storage: D1`. Esto comprueba la configuración; el flujo real de inicio de sesión es el que acredita que las credenciales, base y Discord funcionan juntos.
-4. Confirmar en Discord el retorno exacto `http://127.0.0.1:32146/discord/callback` (ya guardado en la aplicación indicada).
-5. Probar autorización real con una cuenta miembro que tenga el rol, una cuenta sin rol y una ajena al servidor.
-6. Probar quitar el rol durante una sesión, cerrar sesión, cancelar autorización, caducidad y pérdida de conexión. JUGAR debe bloquearse si no puede verificar el permiso.
-7. Probar Minecraft y la actualización desde 0.1.7 en otra PC antes de publicar.
+GitHub central limitado al repositorio `tonyvillalobosmejia-netizen/champagne-vol5-modpack`, rama `preparacion-paso97`, catálogo/manifiestos/historial permitidos. No permite código del Launcher, releases, otra rama ni force push a través de la ruta administrativa. Verifica autor, commit, conflictos y activación; no transmite el token a las aplicaciones.
 
-Solo después configurar `authServerUrl` con la URL HTTPS real, `authProvider: "discord"` y `discordAuthRequired: true` en `src/config.js`.
+API oficial CurseForge: coincidencias y descargas autorizadas desde CDN permitido, respetando restricciones del autor; el cliente verifica SHA-256. No garantiza descarga automática de todos los mods ni aloja JAR.
 
-## Nombres existentes y respaldos
+Diagnósticos de aplicación saneados en la cola existente, lectura privada con autorización. No reporta logs de ejecución de Minecraft. Si D1 no responde, puede no persistir el error del propio servicio. Ruido de estados esperados y retención siguen pendientes.
 
-D1 conserva el nombre de Minecraft vinculado al ID de Discord. El nombre propuesto se obtiene del usuario de Discord y se adapta a los caracteres y longitud permitidos. Los duplicados se resuelven sin distinguir mayúsculas. El nombre no cambia si posteriormente se cambia el usuario visible en Discord.
+## Envíos
 
-Antes del primer inicio de sesión de jugadores existentes, verificar sus identidades y vincular sus nombres actuales para conservar el UUID offline. Desde la consola administrativa D1, consultar primero ambas identidades; después usar una inserción normal en `discord_users(discord_id, username)` con los valores verificados. No usar REPLACE ni sobrescribir un usuario. Las reservas administrativas se guardan en `discord_reservations(username)`. No ejecutar estas operaciones por encargo de un jugador sin comprobar su identidad.
+Cola persistente con reserva, reconciliación y confirmación, nunca declarar envío sin evidencia. Anuncios oficiales requieren release regular, asset/URL válidos, tamaño y SHA-256 descargado; cursores evitan avisos históricos iniciales. Permisos y red pueden demorar la cola.
 
-Respaldar la base D1 antes de cambios de esquema o vínculos. No borrar ni recrear la base para actualizar el Worker. Conservar también el secreto TOKEN_KEY de forma privada.
+1.2.4 añade copia de cada nueva versión de modpack confirmada en `1559335322926710794` de VillaWolf: notas, portada y administrador del recibo, sin menciones; no depende de habilitar el anuncio del pack. El canal configurable y la auditoría `1414678783679795425` permanecen. No anuncia borradores ni cambios sólo de diseño/Discord. Primera entrega real de la copia pendiente; 39 pruebas simuladas aprobadas.
 
-El launcher mantiene su sesión en memoria; al cerrarlo hay que autorizar de nuevo. El servicio persiste sesiones con el token de Discord cifrado y el token del launcher convertido a hash. No se registran tokens en logs. No habilitar captura del contenido de solicitudes de autenticación.
+Bot 0.2.6 local filtra diagnósticos de más de una hora con retry de 24 h; esa política no es archivo terminal del Worker ni significa enviado. La versión pública del Bot sigue 0.2.5.
 
-## Alcance de las pruebas locales
+## Operación y validación
 
-`npm test` comprueba el contrato HTTP, consumo único de solicitudes, cifrado, nombres, rol, revocación, expiración y límites con respuestas Discord simuladas y un emulador D1 sobre SQLite. Esas pruebas no sustituyen un despliegue en Cloudflare ni una autorización real.
+Antes de un cambio autorizado: identificar versión y bindings, conservar punto de recuperación, revisar migraciones aditivas, probar el área afectada y comprobar después health, sesión/roles y cola según corresponda. No registrar cuerpos OAuth ni consultar credenciales de sesión del navegador. Wrangler fue autorizado oficialmente y usa almacén seguro de Windows.
 
-Discord autoriza el uso de este launcher. No expulsa partidas ya iniciadas ni impide usar otro launcher. La protección del servidor Minecraft sigue pendiente y es independiente.
+El servicio no es un servidor Minecraft ni alojamiento permanente para el Bot. Pruebas locales usan mocks/SQLite y no equivalen a disponibilidad real continua. [Estado](../../ESTADO_DESARROLLO.md) · [Discord](../DISCORD.md) · [Bot](../roles-bot/README.md).
 
-
-## Conexiones oficiales compartidas
-Añadir sólo en Production, como Secret: CURSEFORGE_API_KEY (API oficial CurseForge for Studios) y GITHUB_TOKEN (fine-grained, sólo champagne-vol5-modpack, Contents: Read and write). No introducir claves en variables públicas, código o instaladores. /health sólo indica si están configuradas.
-
-POST /v2/admin/curseforge/matches consulta huellas exactas; POST /v2/admin/curseforge/download y /v2/curseforge/download descargan desde el CDN oficial con la clave en la cabecera, respetando distribución y comprobando rol/manifiesto. El jugador valida SHA-256 antes de instalar. Nunca se publican JAR en GitHub.
-
-GET /v2/admin/github/status muestra disponibilidad sin revelar token. POST /v2/admin/github limita API al repositorio y rama fijados. Sólo modifica catálogo/manifiestos/historial; bloquea código, releases, otras ramas, force push y blobs con PAT. Al activar, verifica parent actual, diff limitado y rol fresco. La firma, Microsoft y Fabric no quedan habilitados por estas conexiones.

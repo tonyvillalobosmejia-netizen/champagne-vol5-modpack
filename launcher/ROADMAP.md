@@ -1,3 +1,65 @@
+# VillaWolf — hoja de ruta
+
+Actualizada el 16 de octubre de 2026. Estado verificable en [ESTADO_DESARROLLO.md](ESTADO_DESARROLLO.md). Una prioridad no autoriza programación, instalación, publicación ni despliegue.
+
+## Entregado y límites
+
+- Launcher público/instalado 0.1.20: Discord y roles por mundo/servidor, Microsoft opcional, biblioteca con imágenes posteriores, instancias separadas, Java/RAM, fuentes/hashes, descargas asistidas y Error 008. Falta matriz real de equipos y renovación vencida.
+- Administrador público/instalado 0.1.26: crear/publicar con asistente, editar interfaz/Discord, preparar/verificar, caché y tres intentos por archivo, historial/recuperación, conexión central y auditoría. No administra hosting.
+- Bot público 0.2.5: varios servidores, sincronización/latidos, acceso administrativo, instalador amarillo, estados, anuncios, diagnósticos y botón de actualización. Bot 0.2.6 sólo instalado localmente: filtro de diagnósticos antiguos.
+- Worker 1.2.4 desplegado: autenticación/D1, publicación limitada, CurseForge, cola y copia central independiente de modpacks con autor. Primera entrega real de esa copia pendiente.
+- Comunidades externas y borradores de creación ya existen; no mantenerlos como funciones íntegramente pendientes. No exigen que el administrador tenga Gestionar servidor externo: sí autorización central y pertenencia externa, más Bot y permisos adecuados.
+
+## Prioridad 1 — errores activos y protección de datos
+
+| Trabajo | Estado | Criterio de aceptación propuesto |
+| --- | --- | --- |
+| Protección JSON de limpieza | Implementada local; pendiente autorizar distribución | Escritura segura, archivo dañado no provoca borrados, mensaje único y respaldo verificados en paquete. |
+| Recuperación automática del registro | Propuesta, no implementada | Catálogo autorizado y respaldo; sin red/validación no borrar ni inventar IDs. |
+| OAuth / snapshot D1 | Observación técnica, sin corrección | Reproducir renovación y concurrencia; snapshot persiste sin perder token renovado ni reducir permisos. |
+| Ruido de estados sin sesión/modpack | Pendiente | No enviarlos como fallos técnicos; conservar errores reales. |
+| Estado residual 503 del Bot | Pendiente | Recuperación limpia categoría/HTTP/fecha antiguos sin falsear conexión. |
+| Error 004 | Observación | Verificar duplicados por ID/evento, reinicio y reconciliación sin publicaciones masivas. |
+| Error 009 | Otro proyecto: modpack | No modificar mods desde este plan documental. |
+
+## Prioridad 2 — actualizaciones, diagnósticos y recuperación
+
+- Distribuir Bot 0.2.6 sólo con autorización. Política actual: diagnósticos mayores de una hora no se anuncian; se conservan/revisan cada 24 h. Proponer archivo terminal y retención sin confundirlos con enviados.
+- Probar instaladores/actualización y restauración en otra PC, fallos de red y cierres inesperados. Mantener identidad y datos.
+- Observar copia central de modpack con la próxima publicación real, autor correcto, notas y un único trabajo por versión/destino; conservar canal configurable.
+- Mejorar agrupación y deduplicación persistente de diagnósticos. Centro de Envíos completo es propuesta pendiente, no una función existente.
+
+## Prioridad 3 — estabilidad y seguridad
+
+Firma Authenticode pendiente; solicitud SignPath rechazada según antecedente documentado. Evaluar alternativas/elegibilidad sin prometer aprobación. Validar cifrado, secretos, permisos mínimos, caída de D1 y fallback Discord. Medir rendimiento real sin registrar credenciales. El límite de Bot de 90 segundos se conserva.
+
+## Prioridad 4 — completar funciones parciales
+
+- Microsoft: vinculación y arranque Premium ya acreditados por el propietario; falta vencimiento/renovación real, varias cuentas, cambio de skin y servidor online en matriz de pruebas.
+- Minecraft: 1.20.1 Forge 47.4.10 Java 17 con arranque real previo; 1.21.1 Forge 52.1.0 Java 21 sólo preparación probada. Más perfiles necesitan ensayo propio.
+- Borradores: creación y diseño local existen; recuperar toda una sesión de edición/publicación es parcial.
+- Información del servidor: menú No disponible; definir campos y alcance antes de habilitar.
+
+## Prioridad 5 — ampliaciones aprobadas / decisiones necesarias
+
+La preparación/actualización de servidores Minecraft, SFTP/API, copias y restauración son un objetivo aprobado, todavía sin implementación acreditada. Antes de desarrollar: proveedor, rutas, secretos, permisos, mods exclusivos del cliente, Java/loader, pruebas, ventana de reinicio y restauración. No publicar para jugadores si una operación dependiente deja el servidor incompatible.
+
+Disponibilidad permanente del Bot pendiente: esta PC es alojamiento temporal, no 24/7. Inicio automático de Windows y hosting concreto necesitan diseño/elección; no encontrados activos en código. Oracle se intentó sin capacidad, sin contratar Pago por uso.
+
+Modelo de equipos/propietarios, iconos editables por modpack y Centro de Envíos: propuestas a concretar/aprobar. La autorización central actual no separa propietarios por modpack. La portada e iconos corporativos ya existen; no son un editor de iconos individuales.
+
+## Pausado / no adoptado
+
+Fabric, NeoForge y Quilt bloqueados hasta soporte real; Oracle sin capacidad; no se adoptó alojar el Bot rotando PCs de jugadores. No repartir credenciales del Bot.
+
+## Prioridad 6 — futuro estable 1.0.0
+
+Sin fecha. Requiere cerrar bloqueos de datos/seguridad, matriz real de compatibilidad y equipos, renovación de sesiones, actualización y recuperación, disponibilidad operativa y firma/distribución revisada. 0.x sigue siendo desarrollo/pruebas. «1.1.0» fue una propuesta histórica, no la versión actual.
+
+## Antecedentes conservados
+
+La lista siguiente es histórica (12–13 de octubre); sus pendientes y nombres no sustituyen el estado anterior. Se mantiene para preservar requisitos y decisiones originales.
+
 # Lista de desarrollo de VillaWolf
 
 Actualizada el 12 de octubre de 2026. Esta lista reúne cambios solicitados y pendientes; no afirma que estén implementados ni asigna una fecha de publicación. La denominación VillaWolf 1.1.0 corresponde a la propuesta de ampliación.
@@ -104,3 +166,5 @@ Se preparan Launcher y Administrador 1.1.0, todavía sin activar los canales de 
 - Borrado local con mundos conservados por defecto; retirada administrativa del catálogo con historial conservado.
 
 Falta la prueba manual de los nuevos instaladores, el acceso Discord del Administrador y el flujo de descarga por lote con un modpack real en otra PC antes de publicar. Microsoft, firma del instalador y automatización de hosting continúan pendientes y fuera de esta entrega.
+
+
