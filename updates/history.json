@@ -1,5 +1,21 @@
 [
   {
+    "version": "0.1.11",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-16T06:37:48.679Z",
+    "notes": "prueba",
+    "mods": 116,
+    "content": 202,
+    "changes": {
+      "added": [],
+      "changed": [],
+      "removed": [
+        "mods/DistantHorizons-3.3.3-1.20.1-fabric-forge.jar"
+      ]
+    },
+    "restoredFrom": null
+  },
+  {
     "version": "0.1.10",
     "packName": "Mundo Conejil",
     "publishedAt": "2026-10-15T22:47:55.805Z",
