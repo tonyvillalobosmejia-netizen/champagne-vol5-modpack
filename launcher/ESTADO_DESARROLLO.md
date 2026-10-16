@@ -126,10 +126,10 @@ El propietario aportó el 14 de octubre de 2026 una captura del correo «AppID R
 
 | Componente | Publicada | En desarrollo local | Situación |
 | --- | --- | --- | --- |
-| Launcher Windows x64 | **0.1.20** | **0.1.20** | Error 008 incluido. Descarga SHA-256, arranque aislado y detección desde 0.1.19 verificados. Instalación local anterior sin reinstalar. |
-| Administrador Windows x64 | **0.1.26** | **0.1.26** | Publicado y detectado desde 0.1.25 por su canal existente. Incluye 005, 006 y 007. Instalación local sigue como PRUEBA LOCAL 20261015.2. |
-| Servicio Cloudflare villawolf-auth | **1.2.3** | **1.2.3** | Desplegado; health y sincronización firmada comprobados. |
-| VillaWolf Bot Windows x64 | **0.2.5** | **0.2.5** | Publicado, detectado desde 0.2.4 e instalado localmente conservando cuenta; reinicio comprobado. |
+| Launcher Windows x64 | **0.1.20** | **0.1.20** | Error 008 incluido. Descarga SHA-256, arranque aislado y detección desde 0.1.19 verificados. Instalado localmente el 16 de octubre; apertura y seis archivos protegidos idénticos comprobados. |
+| Administrador Windows x64 | **0.1.26** | **0.1.26** | Publicado y detectado desde 0.1.25 por su canal existente. Incluye 005, 006 y 007. Instalación local actualizada a 0.1.26 el 16 de octubre; apertura y conservación de 12 archivos protegidos verificadas. |
+| Servicio Cloudflare villawolf-auth | **1.2.4** | **1.2.4** | Desplegado; copia central de nuevas publicaciones de modpacks activa. |
+| VillaWolf Bot Windows x64 | **0.2.5** | **0.2.6** | 0.2.6 instalado sólo en esta PC: filtro de diagnósticos antiguos, cuenta y roles conservados. Sin release pública nueva. |
 
 Publicaciones verificadas:
 
@@ -698,4 +698,52 @@ Se comprobó que las cinco releases anteriores mantienen sus IDs y assets origin
 Pendientes: Error 003 central requiere autorización/despliegue/pruebas del Worker; firma pública Windows pendiente; pruebas manuales en otras computadoras todavía no realizadas. Las instalaciones PRUEBA LOCAL de esta PC conservan intencionalmente sus bloqueos de actualización: para pasar a la distribución publicada hay que ejecutar su instalador, no se quitaron esos bloqueos remotamente. La conservación de datos se validó previamente en las instalaciones locales de prueba y se cotejaron identidad y módulo de almacenamiento cifrado entre los paquetes actuales y los instalados; no se afirma una instalación real de estas releases en otra PC.
 
 GitHub CI posterior al ajuste del simulador también terminó correctamente: npm test y compilación Windows aprobados en https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/actions/runs/38815563979. Fue ejecutado por el workflow existente del repositorio, sin despliegue ni publicación automática de nuevas versiones.
+
+
+## 2026-10-16 — Launcher 0.1.20 instalado en esta PC
+
+Instalador oficial contrastado por SHA-256, instalación NSIS finalizada con código 0. ASAR instalado: versión 0.1.20 sin marca PRUEBA LOCAL, src/main.js idéntico al código publicado. Aplicación abierta con ventana VillaWolf Launcher y proceso respondiendo. Seis archivos locales de configuración/estado protegidos permanecieron idénticos antes de abrir. Respaldo de instalación anterior y datos en .champagne-admin/instalacion-launcher-020-20261016-001020. No se modificaron instancias, mundos ni modpacks, ni se reinstalaron Bot o Administrador. No se comprobó en esta operación renovación de sesiones vencidas ni arranque de Minecraft. Actualización documental local; pendiente sincronizar esta entrada con futuros cambios autorizados.
+
+
+## 2026-10-16 — Registro de limpieza dañado tras abrir Launcher 0.1.20
+
+Causa confirmada del error JSON repetido cada cinco segundos: metadata/deleted-packs.json contenía 97 bytes nulos; instance-folders.json y selected-pack.json eran JSON válidos. No se determinó el origen de la corrupción. Se cerró únicamente Launcher y se respaldó el archivo dañado en .champagne-admin/registro-limpieza-danado-20261016-1792131221911.bin. Se recuperaron los cuatro IDs del catálogo público oficial validado (también 97 bytes), mediante temporal, fsync y reemplazo. Launcher 0.1.20 reabierto y respondiendo; lectura de cola válida. La comprobación controlada no ejecutó limpieza. No se editaron mods, mundos, sesiones ni originales de CurseForge.
+
+Protección permanente preparada únicamente en código local: escritura temporal con fsync/reemplazo para cola y registro de instancias, diagnóstico que identifica el archivo dañado sin interpretar bytes inválidos como órdenes de borrado y supresión del mismo aviso repetido por el temporizador hasta recuperarse. Sin recuperación automática inventada de IDs. Archivos: champagne-pack-purge.js, main.js, verificar-limpieza-lanzador.cjs. Nueve pruebas específicas aprobadas, cero fallidas; sintaxis de main.js correcta. Incluye archivo nulo sin borrado, fallo de reemplazo conservando registro anterior, persistencia, rutas, enlaces y aislamiento de otros mundos. No se generaron instaladores, publicaron versiones ni desplegaron servicios. La protección nueva requiere futura compilación; el arreglo de datos sí está aplicado a esta PC.
+
+
+## 2026-10-16 — Comprobación de avisos en Discord
+
+Consulta autorizada mediante UI del canal registro, sin borrar mensajes ni enviar anuncios. Diagnósticos privados comprobados: Launcher 0.1.20 pack-catalog (06:11:17.412Z): Inicia sesión con Discord para ver tus mundos; refresh-presentation (06:11:17.398Z): Elige un modpack autorizado en tu biblioteca; launcher (06:11:21.491Z): error JSON de limpieza. Se entregaron aproximadamente a las 00:21–00:23 locales, después de generarse a las 00:11 y antes de la reparación en cuanto a origen. Las referencias distintas no demuestran duplicación de entrega del Bot. El código guarda hasta diez reportes cifrados, envía uno por flush y conserva versión/fecha originales; deduplicación local de cinco minutos sólo en memoria. La instrumentación genérica captura también resultados ok=false de estados esperados (sin sesión/sin modpack), generando ruido. Pendiente clasificar esos estados y mejorar agrupación/persistencia de deduplicación; sin modificar código ni publicar por esta comprobación. No se atribuyen todos los avisos al registro dañado: los dos estados de acceso son diferentes.
+
+
+## 2026-10-16 — Administrador público 0.1.26 instalado en esta PC
+
+Actualización autorizada desde PRUEBA LOCAL 20261015.2 mediante el instalador oficial existente, contrastado por SHA-256 b994097ab85007f0967dea8faa5c10b45ba83251837f49ec9ec765ce469827ae. NSIS terminó con código 0; doce archivos protegidos de datos, configuración y borradores permanecieron idénticos antes de abrir. Respaldo de binarios anteriores y datos en .champagne-admin/instalacion-admin-026-20261016-003934. Ventana del Administrador abierta y respondiendo sin marca PRUEBA LOCAL; versión 0.1.26 del paquete comprobada. No se comprobó renovación de tokens ni se publicó un modpack para probar. Launcher y Bot no se reinstalaron, ni hubo despliegues o releases. Los preparados y originales de CurseForge permanecen en su ubicación. Entrada documental local pendiente de próxima sincronización autorizada.
+
+
+## 2026-10-16 — Bot: evitar envío tardío de diagnósticos antiguos
+
+Implementado localmente en Bot 0.2.6: sólo los trabajos kind=diagnostic con fecha válida de hasta una hora se publican al canal. Los de más de una hora, sin fecha o con fecha futura mayor de cinco minutos no consultan ni envían al canal. Se conserva el payload y se confirma con el resultado existente retry a 24 horas, nunca como sent: el servicio conserva el registro para consulta. En cada revisión posterior el diagnóstico seguirá fuera de la ventana y no se publicará. No es un borrado ni un archivado terminal; por compatibilidad con Worker 1.2.3 consume una comprobación diaria por trabajo antiguo. No cambia avisos de versiones/modpacks ni auditorías. La política evita avisos tardíos, pero un diagnóstico que tarde más de una hora tampoco anunciará aunque sea real: permanece registrado.
+
+Consulta real autorizada de D1: no había diagnósticos pending/uncertain/leased al comprobar; no se cancelaron ni eliminaron filas ni mensajes existentes. El Bot se detuvo brevemente y volvió a arrancar durante la preparación. Veinte pruebas específicas aprobadas, cero fallidas: filtro, fecha, frontera de una hora, reinicio, continuidad a reporte reciente, envío/reconciliación/menciones y regresión de sincronización. Fuentes: notifications.cjs, package.json y package-lock.json del Bot; compilar-bot.cjs; verificar-diagnosticos-antiguos.cjs. No cambia Launcher, Administrador ni Cloudflare para este filtro. Instalación local aún pendiente al registrar esta entrada; no se publicó release.
+
+
+Instalación local de Bot 0.2.6 completada el 16 de octubre: compilación NSIS exitosa, cinco archivos protegidos idénticos antes de abrir; respaldo en .champagne-admin/instalacion-bot-026-20261016-005345. ASAR instalado 0.2.6 y notifications.cjs idéntico al fuente probado. Estado real: autorizado, ejecutándose, conectado y roles del servidor oficial listos. No se enviaron mensajes reales de prueba ni se crearon releases/despliegues. Versión pública del Bot sigue siendo 0.2.5; desarrollo e instalación de esta PC 0.2.6. Para restaurar binarios, cerrar sólo Bot y recuperar la carpeta instalacion del respaldo conservando datos actuales; no restaurar credenciales automáticamente. El filtro se comprobó con simulaciones, no con una inyección de errores en producción.
+
+
+## 2026-10-16 — Copia central de nuevas versiones de modpacks (preparada localmente)
+
+Worker 1.2.4 local prepara un mensaje independiente en VillaWolf, canal publicaciones-modpack 1559335322926710794, por cada nueva versión confirmada en GitHub. Incluye notas, nombre/versión, portada a través del Bot existente y Publicado por con el nombre del administrador tomado del recibo y la sesión verificada (no del formulario). Sin menciones. Destino fijo independiente de los anuncios configurables por comunidad, incluso si están desactivados. Conserva la auditoría en registro; no anuncia borradores ni simples cambios de interfaz/Discord, ni reproduce versiones históricas. ID persistente por pack/versión/destino evita duplicados al reintentar.
+
+Treinta y nueve pruebas seleccionadas aprobadas, cero fallidas: publicación confirmada y autoría, aviso central con externos activados/desactivados, anti-suplantación, deduplicación, auditoría, colas, entrega y menciones. Pruebas con mocks/SQLite; no se publicó modpack ni se envió anuncio de prueba. Cambios: worker.mjs y verificar-catalogo-discord.cjs. No requiere reinstalar Bot, Launcher ni Administrador. Pendiente autorización de despliegue del Worker por la restricción previa del propietario; producción sigue 1.2.3.
+
+Permisos del destino central consultados en metadatos firmados y frescos del Bot (3 segundos): Ver canal, Enviar mensajes, Insertar enlaces, Adjuntar archivos y Leer historial permitidos; Administrador desactivado. No se modificaron permisos.
+
+
+## 2026-10-16 — Copia central de publicaciones activada en producción
+
+Despliegue expresamente autorizado por el propietario. Worker villawolf-auth 1.2.4 activo, versión Cloudflare eecab311-1b99-4ded-a585-8dc80e9883cd; health público HTTP 200 y versión 1.2.4 comprobados. Rollback disponible a 861107e4-0321-4e9d-bbae-c6c7a822ff15 (1.2.3). Sin migraciones D1 ni cambios de credenciales o permisos. Bot 0.2.6 local sigue conectado, autorizado y con roles ready.
+
+Las próximas nuevas versiones de modpacks confirmadas generarán su copia independiente en 1559335322926710794, con notas y administrador del recibo verificado, sin menciones. Se mantiene el aviso configurable de cada comunidad y la auditoría de registro. No se hizo backfill de versiones antiguas, no se encoló anuncio de prueba ni se publicó modpack. Treinta y nueve pruebas simuladas aprobadas anteriormente; falta observar la primera entrega real tras una próxima publicación del propietario. No requiere reinstalar aplicaciones.
 
