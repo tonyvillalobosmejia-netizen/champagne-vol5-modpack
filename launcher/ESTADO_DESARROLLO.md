@@ -1,5 +1,21 @@
 # VillaWolf — estado técnico y desarrollo
 
+## Lanzamiento autorizado en preparación — Launcher 0.1.21
+
+El propietario autorizó publicar la corrección del Launcher. Código local identificado como 0.1.21: reintentos de SHA-256 por archivo, presentación sin selección y corrección local previa de escritura atómica del registro de limpieza, con diagnóstico de JSON dañado y supresión de errores idénticos cada cinco segundos. **40/40 pruebas finales aprobadas, ninguna fallida** (integridad, limpieza, descargas asistidas, fuentes oficiales, sesiones y versiones/actualizador). Compilación y publicación en curso: esta entrada todavía no acredita una release publicada ni instalación en esta PC u otra. No cambia el modpack.
+
+**Bot, corrección local independiente:** se leyó el diagnóstico del 16 de octubre, 17:58, referencia `3e754dd0a7d9120b8e5e0f0a`: timeout al consultar/confirmar anuncios; el log también contiene fallos de transporte de heartbeat/reset en tres servidores. La referencia `b5dec696f557d9b3cb3c7b68` había perdido la causa original. Se conserva ahora la etapa real (poll/ack/reset/metadata/heartbeat), se clasifican códigos de transporte permitidos sin mensajes sensibles y se rechazan respuestas JSON/incompletas sin confirmar éxito. Poll dispone de 45 s en lugar de 15 s porque el servicio consulta upstreams con presupuesto individual de 15 s; ack y sincronización mantienen 15 s. **26/26 pruebas específicas y regresiones aprobadas, 0 fallidas**, sin envíos reales ni despliegue. No se demostró qué originó los fallos históricos de red: no afirmar que se corrigió la conexión de la otra PC. Se conserva el límite de seguridad remoto de 90 s, la alternativa directa de Discord, las firmas y los mecanismos contra duplicados. Bot no compilado/publicado/instalado con estos cambios.
+
+**Mensaje personalizado por lanzador:** en desarrollo; existen el modelo y el servicio local inicial, pero faltan conexión con los menús del Administrador, entrega completa mediante el Bot y pruebas. El anuncio VillaWolf × YFATY22 sigue como borrador local; no se envió.
+
+## Corrección local posterior — errores de la otra PC, 16 de octubre de 2026
+
+- **Evidencia leída en el registro privado de Discord:** Launcher 0.1.20, 18:11 hora local: SHA-256 incorrecto en `mods/oculus-mc1.20.1-1.8.0.jar` y `mods/fastasyncworldsave-1.20.1-2.6.jar`. Referencias `618d2b0733ff938badedcb03` y `240029c02ae5bbe52968ca28`. El propietario identifica la PC como otra computadora; el diagnóstico no identifica por sí solo el equipo. Los registros no contienen los hashes recibidos ni los bytes de esas descargas: la causa de la discrepancia sigue sin determinarse, sin atribuirla al proveedor o a la red.
+- **Implementado y probado localmente, sin publicar ni instalar:** el Launcher reintenta sólo el mod cuya descarga completada no coincide con SHA-256, hasta tres intentos totales, esperas de 400/800 ms y misma URL mediante el transporte autorizado existente. No reintenta rechazos de permisos, transporte o redirecciones. Descarta bytes incorrectos y mantiene el staging previo a instalar. Un fallo permanente detiene la actualización con archivo, intentos, hash esperado/recibido y tamaño; nunca cambia el hash esperado. Los archivos ya aprobados en el mismo recorrido no vuelven a descargarse. No se añadió caché persistente entre recorridos fallidos.
+- **Presentación corregida localmente:** referencia `ac9a76cfeb12fbda7c5c3043`, 18:06: «Elige un modpack autorizado en tu biblioteca». La consulta automática no se ejecuta cuando el catálogo está activo y aún no hay un pack seleccionado. Con selección activa se conservan las verificaciones y errores de acceso.
+- **Pruebas ejecutadas:** 9/9 específicas (`verificar-integridad-launcher.cjs`), 16/16 regresiones de descargas asistidas, fuentes oficiales y eliminación de modpacks; 0 fallidas. Comprobación sintáctica de `src/main.js` aprobada. Se usaron buffers y descargas simulados para los reintentos; no una actualización de modpack real.
+- **Pendiente:** distribuir una actualización autorizada y confirmar el comportamiento en la otra PC. Los ejecutables instalados/publicados siguen sin esta corrección. No se modificaron modpacks, originales CurseForge, mundos, sesiones, Bot ni Cloudflare. Se conserva el trabajo local previo, incluido el menú de anuncios por lanzador en desarrollo.
+
 **Corte documental: 16 de octubre de 2026, 09:17, America/Mexico_City.**
 Este resumen vigente prevalece sobre los antecedentes conservados al final. Las entradas antiguas describen su fecha y no son el estado actual. Esta revisión sólo modifica documentación: no ejecuta nuevas pruebas funcionales, instala aplicaciones, publica releases, cambia modpacks ni despliega servicios.
 
@@ -896,6 +912,5 @@ Permisos del destino central consultados en metadatos firmados y frescos del Bot
 Despliegue expresamente autorizado por el propietario. Worker villawolf-auth 1.2.4 activo, versión Cloudflare eecab311-1b99-4ded-a585-8dc80e9883cd; health público HTTP 200 y versión 1.2.4 comprobados. Rollback disponible a 861107e4-0321-4e9d-bbae-c6c7a822ff15 (1.2.3). Sin migraciones D1 ni cambios de credenciales o permisos. Bot 0.2.6 local sigue conectado, autorizado y con roles ready.
 
 Las próximas nuevas versiones de modpacks confirmadas generarán su copia independiente en 1559335322926710794, con notas y administrador del recibo verificado, sin menciones. Se mantiene el aviso configurable de cada comunidad y la auditoría de registro. No se hizo backfill de versiones antiguas, no se encoló anuncio de prueba ni se publicó modpack. Treinta y nueve pruebas simuladas aprobadas anteriormente; falta observar la primera entrega real tras una próxima publicación del propietario. No requiere reinstalar aplicaciones.
-
 
 

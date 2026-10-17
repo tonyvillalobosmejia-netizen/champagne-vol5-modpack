@@ -497,7 +497,9 @@ async function applyUpdates(suppliedManifest = null) {
     for (let i = 0; i < pending.length; i++) {
       const entry = pending[i];
       sendStatus(`Verificando descarga ${i + 1}/${pending.length}: ${entry.path}…`);
-      const bytes = validateAcquisition(entry) === "manual" ? manual.read(entry) : await requestBuffer(entry.url);
+      const bytes = validateAcquisition(entry) === "manual" ? manual.read(entry) : await require('./champagne-launcher-integrity').downloadVerifiedMod(entry, requestBuffer, {
+        onRetry: ({path: file, nextAttempt, maxAttempts}) => sendStatus(`Integridad no confirmada para ${file}. Reintentando el mismo archivo (${nextAttempt}/${maxAttempts})…`)
+      });
       if (sha256(bytes) !== entry.hash) throw new Error(`SHA-256 incorrecto para ${entry.path}. No se instaló nada.`);
       entry.staged = path.join(stagingRoot, `${i}.jar`);
       fs.writeFileSync(entry.staged, bytes);
@@ -1309,7 +1311,7 @@ app.whenReady().then(() => {
     try{if(typeof id!=='string'||!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id))throw Error('Lanzador inválido.');const localPack=authorizedCatalog.find(p=>p.id===id),name=localPack?.name||(currentGame.serverId===id?currentGame.packName:id);const {confirmPublication}=require('./champagne-pack-confirmation');const answer=await confirmPublication(BrowserWindow.fromWebContents(event.sender),{title:'Borrar instalación y mundos',message:'¿Eliminar la instalación local de '+name+'?',detail:'Se borrarán permanentemente los mods, configuraciones, mundos, capturas y archivos de este lanzador en esta PC. No se puede deshacer desde VillaWolf. No cambia el catálogo ni las instalaciones de otros jugadores.',buttons:['Cancelar','Eliminar definitivamente']});if(answer.response!==1)return{ok:true,cancelled:true};const result=require('./champagne-pack-purge').purgePack({root:appRoot,userData:app.getPath('userData'),id});downloadInboxSession=null;packCardImages.delete(id);const item=authorizedCatalog.find(p=>p.id===id);if(item)item.installed=false;publishCatalog();return{ok:true,...result,message:'Instalación, mundos y configuraciones locales eliminados.'};}catch(error){return{ok:false,message:error.message};}finally{libraryOperationBusy=false;publishPlayState();}
   });
   handleLauncher('pack-open-folder',async(_event,id)=>{try{await selectPack(id);ensureDirs();await shell.openPath(instanceDir);return{ok:true};}catch(error){return{ok:false,message:error.message};}});
-  const deletionTimer=setInterval(()=>{try{hideDeletedPacks();deletionQueue.flush();}catch(error){sendStatus('Limpieza pendiente: '+error.message,'error');}},5000);deletionTimer.unref();
+  let lastCleanupError=null;const deletionTimer=setInterval(()=>{try{hideDeletedPacks();deletionQueue.flush();lastCleanupError=null;}catch(error){if(error.message!==lastCleanupError){lastCleanupError=error.message;sendStatus('Limpieza pendiente: '+error.message,'error');}}},5000);deletionTimer.unref();
   const catalogTimer=setInterval(()=>{if(authClient.status().user&&!minecraftProcess&&!launchBusy&&!libraryOperationBusy&&!packUpdateBusy)refreshCatalog().catch(()=>{});},60000);catalogTimer.unref();
   handleLauncher("pack-catalog",()=>refreshCatalog());
   handleLauncher("select-pack",async(_event,id)=>{try{return await selectPack(id);}catch(error){if(error.code==='LAUNCHER_UPDATE_REQUIRED')return launchProblem(error);return {ok:false,message:error.message};}});
@@ -1322,6 +1324,7 @@ app.whenReady().then(() => {
   }));
   handleLauncher('refresh-presentation',async()=>{
     try{
+      if(config.catalogEnabled&&!selectedPack)return{ok:true,skipped:true,reason:'no-pack-selected'};
       const manifest=await assistedManifest();
       const game=validateGame(manifest.game,defaultGame,config.launcherVersion);
       const presentation=validatePresentation(manifest.presentation);
