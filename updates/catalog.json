@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "packs": [
+    {
+      "id": "champagne-vol5",
+      "name": "Mundo Conejil",
+      "roleId": "1560478988214993056",
+      "enabled": true,
+      "manifestPath": "updates/stable-v2.json",
+      "guildId": "751907899336556574",
+      "announcements": {
+        "modpack": {
+          "enabled": true,
+          "channelId": "1560778156045242390",
+          "mentionRole": true
+        },
+        "launcher": {
+          "enabled": true,
+          "channelId": "1560778156045242390",
+          "mentionRole": true
+        }
+      }
+    }
+  ],
+  "deletedPacks": [
+    "pack-790dd9d5947e4626",
+    "pack-1686e2b84fd253dc",
+    "pack-23ef14fa486fe361",
+    "pack-3fe40dba223c8ac3"
+  ]
+}

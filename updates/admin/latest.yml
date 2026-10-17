@@ -1,0 +1,12 @@
+version: 0.1.27
+files:
+  - url: >-
+      https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/download/admin-v0.1.27/VillaWolf.Administrador.Setup.0.1.27.exe
+    sha512: >-
+      TJlPnMKDbICRnpXWN3POe2Isy7qbMKJtebL9sN9XDbpL1X7258xZfbMGKahAKPdjHUf+3uoLzXHO1zkvdW2gUg==
+    size: 115491547
+path: >-
+  https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/download/admin-v0.1.27/VillaWolf.Administrador.Setup.0.1.27.exe
+sha512: >-
+  TJlPnMKDbICRnpXWN3POe2Isy7qbMKJtebL9sN9XDbpL1X7258xZfbMGKahAKPdjHUf+3uoLzXHO1zkvdW2gUg==
+releaseDate: '2026-10-17T01:17:42.434Z'

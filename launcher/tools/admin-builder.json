@@ -1,0 +1,41 @@
+{
+  "extends": null,
+  "appId": "com.villawolf.administrador",
+  "productName": "VillaWolf Administrador",
+  "electronVersion": "44.7.0",
+  "directories": {
+    "app": ".champagne-admin/admin-build/app",
+    "output": "dist-admin"
+  },
+  "files": [
+    "**/*"
+  ],
+  "asar": true,
+  "publish": [
+    {
+      "provider": "generic",
+      "url": "https://raw.githubusercontent.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/preparacion-paso97/updates/admin"
+    }
+  ],
+  "win": {
+    "artifactName": "VillaWolf.Administrador.Setup.${version}.${ext}",
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "icon": "tools/admin-modpack/assets/villawolf-admin-transparent.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "VillaWolf Administrador",
+    "deleteAppDataOnUninstall": false
+  }
+}

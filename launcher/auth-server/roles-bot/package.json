@@ -1,0 +1,9 @@
+{
+  "name": "villawolf-roles-bot",
+  "private": true,
+  "version": "0.2.7",
+  "main": "main.cjs",
+  "dependencies": {
+    "discord.js": "^14.27.0"
+  }
+}

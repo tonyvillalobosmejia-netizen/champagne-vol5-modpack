@@ -1,0 +1,342 @@
+{
+  "packId": "champagne-vol5",
+  "version": "0.1.2",
+  "expectedFiles": 67,
+  "files": [
+    {
+      "path": "config/aiimprovements-common.toml",
+      "bytes": 6211,
+      "sha256": "08a9f7c6f63bd35d49b15fa5bccd8cdf667f21af0c9a8cb2ab5998eb598ee7c3"
+    },
+    {
+      "path": "config/alltheleaks.json",
+      "bytes": 278,
+      "sha256": "ed68f0c0b35f9ebbb3d3f93a4913e314b04bfdeab480fc7683bd6ae392cd2e0e"
+    },
+    {
+      "path": "config/appleskin-client.toml",
+      "bytes": 1361,
+      "sha256": "e6609ffbea927ee6390b1317bb6f3abb3f31ee591ca5c1d5e748f5e625fefea1"
+    },
+    {
+      "path": "config/betterchunkloading.json",
+      "bytes": 2049,
+      "sha256": "5c77c279bb5b3f74ae8ecd8cace949ff87276f1a6753a0c5595721802b209c70"
+    },
+    {
+      "path": "config/c2me.toml",
+      "bytes": 6366,
+      "sha256": "ca11eaa68572d70337aeb03e98e41a2901faa2daab004e851fb69215d902cd33"
+    },
+    {
+      "path": "config/carbonconfig.cfg",
+      "bytes": 1081,
+      "sha256": "0aa66b32d1306a14b057b4e40e7ff209ecc0049e06823bff43b8bd1c0cb74642"
+    },
+    {
+      "path": "config/chloride-client.json",
+      "bytes": 1904,
+      "sha256": "6eb9ecdf9439e1887b5f311ad7ae73b9e18be79bb2919db73aa708496425b1af"
+    },
+    {
+      "path": "config/chunksending.json",
+      "bytes": 301,
+      "sha256": "e589c5988aa0f23e08400df47ef156a61eea1978f2161ba014da278c28a60ac7"
+    },
+    {
+      "path": "config/chunky/config.json",
+      "bytes": 146,
+      "sha256": "c7384a22595488f79f3125b22cc175eb729267267807a084479419349797abc8"
+    },
+    {
+      "path": "config/connectivity.json",
+      "bytes": 1763,
+      "sha256": "6b95731807c56659d67f5c439439493834d0c42ad33baf23ef60d45bb7e73202"
+    },
+    {
+      "path": "config/crash_assistant/config.toml",
+      "bytes": 21159,
+      "sha256": "3d2382f13bf77cf021d647aff8e0ac4da867615c50d5d7e3c2532fdad064eb27"
+    },
+    {
+      "path": "config/cull-less-leaves.json",
+      "bytes": 35,
+      "sha256": "6bc92f3695f35c601c2adfa1f51e9f616df379288f2a260fd1f4011c5bad50ee"
+    },
+    {
+      "path": "config/cupboard.json",
+      "bytes": 1304,
+      "sha256": "937698438af081495eebab187013f66570218e1443f35db8a2ca0b4cb6d9638b"
+    },
+    {
+      "path": "config/drippyloadingscreen/options.txt",
+      "bytes": 2465,
+      "sha256": "8d0edcad69219e217683bde3437b11318db348c7cce676c7c67de99b58f0ccd5"
+    },
+    {
+      "path": "config/embeddium-mixins.properties",
+      "bytes": 269,
+      "sha256": "09ff183e061d93b79514bc171bf9118497578757e7a5c45946039487656e2619"
+    },
+    {
+      "path": "config/embeddium-options.json",
+      "bytes": 853,
+      "sha256": "6339ae95c1b2d4cad8661d200436ca77b71eadf4c07252ec37e849d014e85a5f"
+    },
+    {
+      "path": "config/entityculling.json",
+      "bytes": 1897,
+      "sha256": "ceb5b3624c3269bef037b2914da8ab0d1c368abdd466156292a5d82db8803b0e"
+    },
+    {
+      "path": "config/fancymenu/custom_gui_screens.txt",
+      "bytes": 51,
+      "sha256": "ff492043eaf454c46e949d5eef32ece90cc5a19feb50a161dd29a43b5732c880"
+    },
+    {
+      "path": "config/fancymenu/customizablemenus.txt",
+      "bytes": 99,
+      "sha256": "a83e520716f7d5fa43025d5991acd6e2160fc43ba604bd4c258b9f5c0812830f"
+    },
+    {
+      "path": "config/fancymenu/legacy_checklist.txt",
+      "bytes": 42,
+      "sha256": "9a25d3dc708e43eabafce5479a13c02dae15bc7f673afb2745b8b2ba48a97dc0"
+    },
+    {
+      "path": "config/fancymenu/options.txt",
+      "bytes": 4399,
+      "sha256": "8ab246f419b5b363ab186db80fad034e743675450c90cca80f1f4aef1dd813c6"
+    },
+    {
+      "path": "config/fastpaintings-common.toml",
+      "bytes": 133,
+      "sha256": "4cce6e2bd5d9440c7a6f4618dc05eeb82cc2fc293afa892a3010efe21405ac79"
+    },
+    {
+      "path": "config/ferritecore-mixin.toml",
+      "bytes": 1516,
+      "sha256": "c164439c632aa7c95c07edec5cfef74b8e2d5671a8445a781deeb4de7ad0c8b6"
+    },
+    {
+      "path": "config/flerovium.json",
+      "bytes": 100,
+      "sha256": "f8f7b6978ff358427c0e3ca886513abe22cbb782bdda63b1634fa6d304098ca6"
+    },
+    {
+      "path": "config/flywheel-client.toml",
+      "bytes": 622,
+      "sha256": "0c767e68a9702d1141ce8e0f5940c06c4a9ef5a06508e81b0f37ac011a765ed7"
+    },
+    {
+      "path": "config/fml.toml",
+      "bytes": 1148,
+      "sha256": "506f0c4c714bf1528d45ab8202f303bde6ba5f9e53778c92a679efbc185afb12"
+    },
+    {
+      "path": "config/forge-client.toml",
+      "bytes": 1628,
+      "sha256": "0b1b3c45343435184c9dde3149b38afcdb97953e287686ecda54385f53ebcddc"
+    },
+    {
+      "path": "config/immediatelyfast.json",
+      "bytes": 1060,
+      "sha256": "f2b7f219198f0a911d04b09f545f2c1256e8d114951443924878dc10963e16aa"
+    },
+    {
+      "path": "config/immersive_optimization.json",
+      "bytes": 923,
+      "sha256": "eb9877ca65a0f08665927d7b3d87ec1c54056d9f895434c23a47c167e3f063b5"
+    },
+    {
+      "path": "config/leaky.json",
+      "bytes": 1132,
+      "sha256": "ad988e8c437867dc1cfad16ca0b37484bca8abecf4fdacc69f6d398504ab1174"
+    },
+    {
+      "path": "config/letmedespawn.json",
+      "bytes": 72,
+      "sha256": "6af411644e22ede34383135509cb96b2a636d8ed45494b28976514a95537105e"
+    },
+    {
+      "path": "config/limitedchunks.json",
+      "bytes": 498,
+      "sha256": "1a5929cfa7c9ad1b2842fd5ea9aa0d107785a1d4b9e92ba62ffac9e3f7245947"
+    },
+    {
+      "path": "config/lmft.json",
+      "bytes": 33,
+      "sha256": "4846032c4ea16277b5ba5622f77017472c15b6b23a60fc144c3e2959f91f6ee9"
+    },
+    {
+      "path": "config/logbegone.toml",
+      "bytes": 155,
+      "sha256": "3f693b6b3efd8f6cccddb3f307fd896b4a2049676c36ebd90bcb63ef0315755e"
+    },
+    {
+      "path": "config/modernfix-common.toml",
+      "bytes": 107,
+      "sha256": "fad9aea710ec3508eab562cd8f2b5f8e2dda6ee1c5fb1fe818f90ce253017f66"
+    },
+    {
+      "path": "config/modernfix-mixins.properties",
+      "bytes": 5885,
+      "sha256": "3553628f1b539f859fbe7c06e482cfec74ab66b1214bb0f713902f317b6f8fb7"
+    },
+    {
+      "path": "config/moonlight-client.toml",
+      "bytes": 1027,
+      "sha256": "47297d47ca3fa4525d1adbc7234b9b0dc2ee490b87216fe6002e34ff69acac08"
+    },
+    {
+      "path": "config/moonlight-common.toml",
+      "bytes": 1023,
+      "sha256": "02cd35fbcc371cf63303ae1264ad9f4613b3f73ace93417af825baf7d3ac7baf"
+    },
+    {
+      "path": "config/oculus.properties",
+      "bytes": 292,
+      "sha256": "832a42dfb765c163fffe742ca3ba017f8f0584cfde8f590af6162ba08308cbcb"
+    },
+    {
+      "path": "config/recipeessentials.json",
+      "bytes": 1389,
+      "sha256": "d5e9999392e13549752157c6cb574c761cd323414d8eda96b31bfc6c42f98d25"
+    },
+    {
+      "path": "config/RuOK.toml",
+      "bytes": 1676,
+      "sha256": "ebbfddf530ed01d548ba66c056cb8422cfd6cf404a9a140d61d5fe8185df6454"
+    },
+    {
+      "path": "config/servercore/config.yml",
+      "bytes": 10569,
+      "sha256": "52fe845721d4ee151721b01c920020ab60b2de220f1c79fb67c413021fcc1e47"
+    },
+    {
+      "path": "config/servercore/optimizations.yml",
+      "bytes": 1204,
+      "sha256": "299965ce464b4c0bb4a79dfd2dba2cdfd63f3360628b0d5b0d3b3988003f4f0d"
+    },
+    {
+      "path": "config/smoothboot.json",
+      "bytes": 198,
+      "sha256": "0dc746fb3afca8b1f21e6fead005760d25e2c73dc006c9cb932364dd2b5d86ea"
+    },
+    {
+      "path": "config/smoothchunk.json",
+      "bytes": 585,
+      "sha256": "5f85b2c857c2561cf720745f724d20befce7bb58732083259a798263c0af99f2"
+    },
+    {
+      "path": "config/structureessentials.json",
+      "bytes": 3787,
+      "sha256": "54826c1ce55156e6a3d19a22949d733668806c7ed4a77218cc1d26bb6c5fa7bd"
+    },
+    {
+      "path": "config/transition.json",
+      "bytes": 62,
+      "sha256": "6c0060c7301372bbc414f86a139b383e34fb620f0621badd71bb19efc3f26767"
+    },
+    {
+      "path": "config/trender.json",
+      "bytes": 44,
+      "sha256": "fe0bed19bd0927b3d519816c73378730689080a8f07e66a6167c266ffde29dd2"
+    },
+    {
+      "path": "config/vanillin-client.toml",
+      "bytes": 1546,
+      "sha256": "6d3d9b2404c5ea32dcd429da4e36d5ac34be9953e8975f1f99ed4b4a32ba4c17"
+    },
+    {
+      "path": "config/waystones-common.toml",
+      "bytes": 6956,
+      "sha256": "4cf1d13d8827bcdce75acadb1f3ea24732fd6fa6575ec8a261a37b21c481674d"
+    },
+    {
+      "path": "config/xaero/lib/client.cfg",
+      "bytes": 26,
+      "sha256": "43ed9dbfa5b4d6f0f3d2e8c2ced17ad298164b22c68ff11d415257a39b074336"
+    },
+    {
+      "path": "config/xaero/lib/common.cfg",
+      "bytes": 236,
+      "sha256": "98f698d96a6d21d830a455b4ad045b70516fa63c298021742d8499e7f0366cd2"
+    },
+    {
+      "path": "config/xaero/lib/profiles/default.cfg",
+      "bytes": 121,
+      "sha256": "34ae854b17d896d7cb853bdc28c27231a3947e91cb9f0991f372846ee3c2a907"
+    },
+    {
+      "path": "config/xaero/lib/server_profiles/default.cfg",
+      "bytes": 75,
+      "sha256": "d438aea41ca41e93697e059f523686935c0add482f6abe96b532bbf10c6ed80a"
+    },
+    {
+      "path": "config/xaero/minimap/client.cfg",
+      "bytes": 235,
+      "sha256": "c0915eff5d1a7905cd1038d646eb9086fd1a29e2f637d53535e4da161de17b9f"
+    },
+    {
+      "path": "config/xaero/minimap/common.cfg",
+      "bytes": 147,
+      "sha256": "2b49df024c03a369c62a303c72755e7fedeb4f4653ff53a12fd37bd83ccd4ed0"
+    },
+    {
+      "path": "config/xaero/minimap/default_radar_categories_client.json",
+      "bytes": 5531,
+      "sha256": "b54c6eedcb752d1235c6ea60dc365d4d1621c4c80768faaac4347e76d4e10a13"
+    },
+    {
+      "path": "config/xaero/minimap/default_radar_categories_server.json",
+      "bytes": 4597,
+      "sha256": "a4c652cafa7dea324e5f5cf3b1df46a84e54b6d4f877195857bce55a559c1cfd"
+    },
+    {
+      "path": "config/xaero/minimap/profiles/default.cfg",
+      "bytes": 3825,
+      "sha256": "f1ff62b22cfc97486d00e8bd3367a3207f0a8da235e7b365c5aa2a54e3f8dc25"
+    },
+    {
+      "path": "config/xaero/minimap/profiles/info_display_config/default.cfg.txt",
+      "bytes": 684,
+      "sha256": "184e654fa1fc8ad09943c97c4e65ab78acb5b3cfca22417a831513d1b6d9bbc6"
+    },
+    {
+      "path": "config/xaero/minimap/server_profiles/default.cfg",
+      "bytes": 75,
+      "sha256": "d438aea41ca41e93697e059f523686935c0add482f6abe96b532bbf10c6ed80a"
+    },
+    {
+      "path": "config/xaerohud.txt",
+      "bytes": 123,
+      "sha256": "58c9270f258d0b224bb7d0f7c927544d5fbe5f1b8027c820e1e14ecbf48fb88c"
+    },
+    {
+      "path": "config/xaeropatreon.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "kubejs/client_scripts/example.js",
+      "bytes": 126,
+      "sha256": "152019ed6e0410a82805a95ea10f1ad1a17beaf2b50864d89b8fa9d172129ac7"
+    },
+    {
+      "path": "kubejs/config/client.properties",
+      "bytes": 375,
+      "sha256": "49d21eb3151cc2efe075113add5f85f2eb515de011f327df07612edda79f0dc8"
+    },
+    {
+      "path": "kubejs/config/common.properties",
+      "bytes": 342,
+      "sha256": "277abe882f6698291c133fd835897d755ade24ccf4a77d67cd1143abb80c8a32"
+    },
+    {
+      "path": "kubejs/startup_scripts/example.js",
+      "bytes": 127,
+      "sha256": "395c96d3ddd178821db851f387e91560e606ea752177f66d2016f12bd0542b8f"
+    }
+  ]
+}
