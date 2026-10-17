@@ -1,5 +1,6 @@
 const {contextBridge,ipcRenderer}=require('electron');
 contextBridge.exposeInMainWorld('admin',{
+  announcementLoad:input=>ipcRenderer.invoke('admin-announcement-load',input),announcementOptions:input=>ipcRenderer.invoke('admin-announcement-options',input),announcementSave:input=>ipcRenderer.invoke('admin-announcement-save',input),announcementImage:input=>ipcRenderer.invoke('admin-announcement-image',input),announcementSend:input=>ipcRenderer.invoke('admin-announcement-send',input),announcementHistory:input=>ipcRenderer.invoke('admin-announcement-history',input),
   communityLoad:()=>ipcRenderer.invoke('admin-community-load'),communityCheck:input=>ipcRenderer.invoke('admin-community-check',input),communitySave:input=>ipcRenderer.invoke('admin-community-save',input),
   wizardLoad:()=>ipcRenderer.invoke('admin-wizard-load'),wizardSave:input=>ipcRenderer.invoke('admin-wizard-save',input),
   wizardFolder:input=>ipcRenderer.invoke('admin-wizard-folder',input),wizardInspect:input=>ipcRenderer.invoke('admin-wizard-inspect',input),

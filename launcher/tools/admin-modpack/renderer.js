@@ -77,11 +77,12 @@ function updateNavigation(){
   $('adminLibrary').hidden=!navigation.library;$('adminLibraryTitle').hidden=!navigation.libraryControls;$('adminLibraryStatus').hidden=!navigation.libraryControls;$('adminPackChoice').hidden=!navigation.libraryControls;$('adminReloadPacks').hidden=!navigation.libraryControls;
   $('menuToolbar').hidden=!navigation.toolbar;
   $('createLauncherWizard').hidden=!navigation.wizard;document.body.classList.toggle('wizard-open',navigation.wizard);
-  const menuNames={profile:'Mi perfil',appearance:'Edición de interfaz',modpack:modpackView==='history'?'Historial de versiones':'Nueva actualización',server:'Información del servidor',community:'Configuración de Discord'};
+  const menuNames={profile:'Mi perfil',appearance:'Edición de interfaz',modpack:modpackView==='history'?'Historial de versiones':'Nueva actualización',server:'Información del servidor',community:'Configuración de Discord',announcements:'Anuncios Discord'};
   $('openMenuTitle').textContent=menuNames[currentMenu]||'';
   $('closeAdminMenu').disabled=locked;
   $('adminEditorMenus').hidden=!navigation.editorMenus;$('wizardEntry').hidden=!navigation.creation;$('adminDeletePack').hidden=!navigation.deletePack;
   $('workspace').hidden=!currentMenu||['server','profile'].includes(currentMenu);
+  $('status').hidden=currentMenu==='announcements';
   $('modpackSubmenu').hidden=currentMenu!=='modpack';
   for(const panel of document.querySelectorAll('[data-panel]'))panel.hidden=panel.dataset.panel!==currentMenu;
   const newUpdate=currentMenu==='modpack'&&modpackView==='new';
@@ -96,7 +97,7 @@ function updateNavigation(){
   updateFileSteps(newUpdate);
   $('communityEditor').hidden=currentMenu!=='community'||!activePackId;
 }
-for(const button of document.querySelectorAll('[data-menu]'))button.onclick=()=>{if(locked)return;currentMenu=button.dataset.menu;currentView=currentMenu==='profile'?'profile':'editor';updateNavigation();if(currentMenu==='appearance'&&data?.mode!=='presentation')return loadDesignDirectly();if(currentMenu==='modpack'&&modpackView==='history')return loadHistoryDirectly();};
+for(const button of document.querySelectorAll('[data-menu]'))button.onclick=()=>{if(locked)return;currentMenu=button.dataset.menu;currentView=currentMenu==='profile'?'profile':'editor';updateNavigation();if(currentMenu==='announcements')return window.VillaWolfManual.open(activePackId);if(currentMenu==='appearance'&&data?.mode!=='presentation')return loadDesignDirectly();if(currentMenu==='modpack'&&modpackView==='history')return loadHistoryDirectly();};
 for(const button of document.querySelectorAll('[data-modpack-view]'))button.onclick=()=>{if(locked)return;modpackView=button.dataset.modpackView;updateNavigation();if(modpackView==='history')return loadHistoryDirectly();};
 updateNavigation();
 

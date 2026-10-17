@@ -1,0 +1,17 @@
+'use strict';
+const ID=/^[0-9]{17,20}$/,PACK=/^[a-z0-9][a-z0-9-]{0,63}$/,UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
+function fail(message){throw Object.assign(Error(message),{status:400});}
+function launcherLink(url){return url===''||/^https:\/\/github\.com\/tonyvillalobosmejia-netizen\/champagne-vol5-modpack\/releases\/download\/v(\d+\.\d+\.\d+)\/VillaWolf\.Launcher\.Setup\.\1\.exe$/.test(url);}
+function validate(input){
+ if(!input||typeof input!=='object'||!PACK.test(input.packId||'')||!ID.test(input.channelId||'')||!UUID.test(input.id||''))fail('Identificador del anuncio o destino inválido.');
+ if(typeof input.title!=='string'||!input.title.trim()||input.title.length>160||typeof input.text!=='string'||!input.text.trim()||input.text.length>3500)fail('Escribe título (hasta 160) y mensaje (hasta 3500 caracteres).');
+ if(typeof input.mentionEveryone!=='boolean'||typeof input.mentionRole!=='boolean')fail('Elige explícitamente las menciones.');
+ if(/<@|@everyone|@here/i.test(input.title+'\n'+input.text))fail('Usa las casillas de menciones, no menciones dentro del texto.');
+ if(/github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9]{12,}|\b[A-Za-z0-9_-]{20,30}\.[A-Za-z0-9_-]{6,8}\.[A-Za-z0-9_-]{20,50}\b|(?:access_token|refresh_token|client_secret|password|syncKey|role_bot_key|authorization)\s*[:=]|(?:Bot|Bearer)\s+[A-Za-z0-9_.-]{20,}/i.test(input.title+'\n'+input.text))fail('El anuncio parece contener credenciales; retíralas antes de continuar.');
+ const downloadUrl=input.downloadUrl||'';if(typeof downloadUrl!=='string'||!launcherLink(downloadUrl))fail('Usa el enlace oficial del instalador de VillaWolf Launcher.');
+ let image=null;if(input.image){const x=input.image;if(!['image/png','image/jpeg'].includes(x.mime)||typeof x.base64!=='string'||x.base64.length>699052||x.base64.length%4!==0||!/^[A-Za-z0-9+/]*={0,2}$/.test(x.base64)||!/^[a-f0-9]{64}$/.test(x.sha256||''))fail('Imagen inválida o mayor de 512 KiB.');const raw=atob(x.base64);if(raw.length<24||raw.length>524288||btoa(raw)!==x.base64)fail('Imagen inválida.');const png=raw.startsWith('\x89PNG\r\n\x1a\n'),jpg=raw.startsWith('\xff\xd8\xff')&&raw.endsWith('\xff\xd9');if(x.mime==='image/png'?!png:!jpg)fail('El contenido no coincide con el formato de imagen.');image={mime:x.mime,base64:x.base64,sha256:x.sha256};}
+ return{id:input.id,packId:input.packId,channelId:input.channelId,title:input.title.trim(),text:input.text.trim(),downloadUrl,mentionEveryone:input.mentionEveryone,mentionRole:input.mentionRole,image};
+}
+function permissions(channel){const bits=BigInt(channel.permissions||'0'),admin=!!(bits&8n),has=n=>admin||!!(bits&(1n<<BigInt(n)));return{view:has(10),send:has(11),embed:has(14),attach:has(15),history:has(16),mentionEveryone:has(17)};}
+function assertPermissions(channel,role,input){const p=permissions(channel);if(![0,5].includes(channel.type)||!p.view||!p.send||!p.embed||!p.history||input.image&&!p.attach)throw Object.assign(Error('El bot necesita ver el canal, enviar, insertar enlaces, leer historial y adjuntar archivos si hay imagen.'),{status:403});if(input.mentionEveryone&&!p.mentionEveryone)throw Object.assign(Error('El bot no puede mencionar @everyone en este canal.'),{status:403});if(input.mentionRole&&!role.mentionable&&!p.mentionEveryone)throw Object.assign(Error('El rol no es mencionable y el bot no puede mencionarlo.'),{status:403});return p;}
+module.exports={validate,permissions,assertPermissions,launcherLink};

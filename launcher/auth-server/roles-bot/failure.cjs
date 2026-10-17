@@ -5,6 +5,8 @@ function serviceError(status, stage) {
 }
 function describe(error,stage='unknown') {
  const status=Number(error?.status||error?.statusCode),code=String(error?.code||'');
+ const networkCodes=new Set(['ECONNRESET','ECONNREFUSED','ENOTFOUND','EAI_AGAIN','ETIMEDOUT','ENETUNREACH','EHOSTUNREACH','UND_ERR_CONNECT_TIMEOUT','UND_ERR_HEADERS_TIMEOUT','UND_ERR_BODY_TIMEOUT','UND_ERR_SOCKET']);
+ const transportCode=[error?.code,error?.cause?.code].find(value=>networkCodes.has(value));
  let category='connection',reason='No se pudo completar la conexión; consulta el diagnóstico privado.';
  if(error?.origin==='service') {
   category='service';reason='El servicio VillaWolf no está disponible.';
@@ -19,8 +21,11 @@ function describe(error,stage='unknown') {
  else if(code==='DisallowedIntents'||code==='4014'){category='configuration';reason='Discord rechazó los intents solicitados; revisar Server Members Intent.';}
  else if(status===429){category='rate-limit';reason='Discord solicita una pausa.';}
  else if(error?.name==='TimeoutError'||error?.name==='AbortError'){reason='Tiempo de espera agotado.';}
- return {category,stage:error?.stage||stage,...(Number.isInteger(status)&&status>=100&&status<=599?{httpStatus:status}:{}),reason};
+ else if(transportCode){category='connection';reason='No se completó el transporte al servicio o Discord. Código: '+transportCode+'.';}
+ else if(error?.code==='ERR_SERVICE_RESPONSE'){category='service-response';reason='El servicio devolvió una respuesta no válida; no se confirmó la operación.';}
+ return {category,stage:error?.stage||stage,...(transportCode?{transportCode}:{}),...(Number.isInteger(status)&&status>=100&&status<=599?{httpStatus:status}:{}),reason};
 }
+async function atStage(stage,action){try{return await action();}catch(error){if(error&&typeof error==='object'&&!error.stage)error.stage=stage;throw error;}}
 function delay(error,failures){const d=describe(error);const base=['configuration','permissions'].includes(d.category)?300000:30000;return Math.max(Math.min(900000,base*2**Math.min(Math.max(failures-1,0),5)),Math.min(3600000,Math.max(0,Number(error?.retryAfterMs)||0)));}
 function summary(d){return d.reason+(d.httpStatus?' HTTP '+d.httpStatus+'.':'')+' Etapa: '+d.stage+'.';}
-module.exports={serviceError,describe,delay,summary};
+module.exports={serviceError,describe,delay,summary,atStage};

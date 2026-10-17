@@ -2,24 +2,32 @@
 const failure=require('./failure.cjs');
 const crypto=require('node:crypto'),{message,auditMessage,diagnosticMessage}=require('./announcement.cjs');
 function createNotificationClient({endpoint,key,fetcher=fetch,clock=Date.now}){
- let releaseStatus=null;
+ let releaseStatus=null,manualBlocked=false;
  const url=new URL(endpoint);if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash||!/^[a-f0-9]{64}$/.test(key||''))throw Error('Conexión de anuncios inválida.');
  async function request(action,fields){
    const body=JSON.stringify({action,...fields,sentAt:clock(),nonce:crypto.randomBytes(32).toString('base64url')});
    const signature=crypto.createHmac('sha256',Buffer.from(key,'hex')).update(body).digest('hex');
-   const r=await fetcher(new URL('/internal/notifications',url),{method:'POST',redirect:'manual',headers:{'Content-Type':'application/json','x-villawolf-signature':signature},body,signal:AbortSignal.timeout(15000)});
+   // Poll also checks GitHub releases and the catalog on the service; its
+   // end-to-end budget must exceed a single upstream request's 15 s budget.
+   const r=await failure.atStage('announcements-'+action,()=>fetcher(new URL('/internal/notifications',url),{method:'POST',redirect:'manual',headers:{'Content-Type':'application/json','x-villawolf-signature':signature},body,signal:AbortSignal.timeout(action==='poll'?45000:15000)}));
    if(!r.ok){const error=failure.serviceError(r.status,'announcements-'+action);const retry=Number(r.headers?.get('retry-after'));if(Number.isFinite(retry))error.retryAfterMs=retry*1000;throw error;}
-   return r.json();
+   return failure.atStage('announcements-'+action,async()=>{let value;try{value=await r.json();}catch(error){if(error instanceof SyntaxError)error.code='ERR_SERVICE_RESPONSE';throw error;}if(value?.ok!==true)throw Object.assign(Error('Respuesta del servicio inválida.'),{code:'ERR_SERVICE_RESPONSE'});return value;});
  }
- return{releaseStatus:()=>releaseStatus,problem:report=>request('problem',{report}),diagnostic:id=>request('diagnostic',{id}),poll:async guildIds=>{const value=await request('poll',{guildIds});releaseStatus=value.releases||null;return value.job;},ack:result=>request('ack',{result})};
+ return{releaseStatus:()=>releaseStatus,manualBlocked:()=>manualBlocked,problem:report=>request('problem',{report}),diagnostic:id=>request('diagnostic',{id}),poll:async guildIds=>{const value=await request('poll',{guildIds});releaseStatus=value.releases||null;manualBlocked=value.manualBlocked===true;return value.job;},ack:result=>request('ack',{result})};
 }
-async function deliver(job,{client,ack,fetcher=fetch,onProblem=()=>{}}){
+function diagnosticIsHistorical(payload,now){
+ if(payload?.kind!=='diagnostic')return false;
+ const occurred=Date.parse(payload.occurredAt);
+ return !Number.isFinite(occurred)||occurred>now+300000||now-occurred>3600000;
+}
+async function deliver(job,{client,ack,fetcher=fetch,onProblem=()=>{},clock=Date.now}){
  const problem=error=>{if(job.payload.kind!=='diagnostic')onProblem(error,'announcement-delivery');};
  const marker='Ref '+job.id.slice(0,24);
  const report=(outcome,extra={})=>ack({id:job.id,claimToken:job.claimToken,outcome,...extra});
+ if(diagnosticIsHistorical(job.payload,clock()))return report('retry',{retryAfterMs:86400000,reason:'historical-diagnostic'});
  let channel;
  try{
-   channel=await client.channels.fetch(job.channelId);
+   channel=await client.channels.fetch(job.channelId,...(job.payload.kind==='manual'?[{force:true}]:[]));
    if(!channel||channel.guildId!==job.guildId||!channel.isTextBased()||channel.isThread?.())return report('retry',{retryAfterMs:300000});
    if(job.reconcile){
      const messages=await channel.messages.fetch({limit:100});
@@ -36,7 +44,7 @@ async function deliver(job,{client,ack,fetcher=fetch,onProblem=()=>{}}){
    if(job.guildId==='1007732653035880589'&&job.channelId==='1559334945372250314'&&job.payload.kind==='launcher')job={...job,payload:{...job.payload,mentionRole:false,roleId:undefined}};
    // Rol real confirmado desde la interfaz de VillaWolf; no altera comunidades externas.
    if(job.guildId==='1007732653035880589'&&job.channelId==='1559347693245956189'&&job.payload.kind==='admin')job={...job,payload:{...job.payload,mentionRole:true,roleId:'1559330834278781048'}};
-   payload=job.payload.kind==='diagnostic'?{...diagnosticMessage(job.payload),components:require('./diagnostics.cjs').diagnosticButtons(job.id)}:job.payload.kind==='audit'?auditMessage(job.payload):message(job.payload);
+   payload=job.payload.kind==='manual'?await require('./manual-announcement.cjs').prepare(job.payload,channel,client,fetcher,clock):job.payload.kind==='diagnostic'?{...diagnosticMessage(job.payload),components:require('./diagnostics.cjs').diagnosticButtons(job.id)}:job.payload.kind==='audit'?auditMessage(job.payload):message(job.payload);
    for(const embed of payload.embeds)embed.footer={text:embed.footer.text+' · '+marker};
    if(job.payload.kind==='modpack'&&job.payload.manifestPath&&job.payload.commit){
      if(!/^[a-f0-9]{40}$/.test(job.payload.commit)||!/^updates\/(?:stable-v2\.json|packs\/[a-z0-9][a-z0-9-]{0,63}\/stable\.json)$/.test(job.payload.manifestPath))throw Error('Ruta de imagen inválida.');
@@ -65,7 +73,7 @@ async function deliver(job,{client,ack,fetcher=fetch,onProblem=()=>{}}){
 }
 function startNotifications({client,endpoint,key,onStatus=()=>{},onProblem=()=>{},fetcher=fetch,clock=Date.now}){
  const service=createNotificationClient({endpoint,key,fetcher,clock});const onInteraction=i=>require('./diagnostics.cjs').diagnosticInteraction(i,{service}).catch(()=>{});client.on('interactionCreate',onInteraction);let stopped=false,busy=false,lastAnnouncement='unknown',failures=0,retryAt=0;
- async function tick(){if(stopped||busy||!client.isReady()||clock()<retryAt)return;busy=true;try{const guildIds=[...client.guilds.cache.keys()].slice(0,50),job=await service.poll(guildIds);if(job)await deliver(job,{client,fetcher,onProblem,ack:async result=>{const value=await service.ack(result);lastAnnouncement=result.outcome==='sent'?'sent':'pending';onStatus(lastAnnouncement==='sent'?'Anuncio entregado.':'Anuncio pendiente; se reintentará sin duplicarlo.',{domain:'announcements'});return value;}});else onStatus(service.releaseStatus()?.ok===false?'Cola consultada; sin envíos disponibles ahora. La comprobación de nuevas versiones oficiales no pudo completarse.':'Cola consultada; sin envíos disponibles ahora.',{domain:'announcements'});failures=0;retryAt=0;}catch(error){failures++;const wait=failure.delay(error,failures);retryAt=clock()+wait;const diagnostic=failure.describe(error,'announcements');onProblem(new Error(failure.summary(diagnostic)),'announcements');onStatus('No se pudo consultar o confirmar la cola; no se afirma que haya anuncios pendientes. '+failure.summary(diagnostic)+' Reintento en '+Math.ceil(wait/1000)+' s.',{domain:'announcements',phase:'unavailable',...diagnostic,retryAt});}finally{busy=false;}}
+ async function tick(){if(stopped||busy||!client.isReady()||clock()<retryAt)return;busy=true;try{const guildIds=[...client.guilds.cache.keys()].slice(0,50),job=await service.poll(guildIds);if(job)await deliver(job,{client,fetcher,onProblem,clock,ack:async result=>{const value=await service.ack(result);if(result.reason==='historical-diagnostic'){onStatus('Diagnóstico antiguo conservado para consulta; no se publica en el canal.',{domain:'announcements'});}else{lastAnnouncement=result.outcome==='sent'?'sent':'pending';onStatus(lastAnnouncement==='sent'?'Anuncio entregado.':'Anuncio pendiente; se reintentará sin duplicarlo.',{domain:'announcements'});}return value;}});else onStatus(service.manualBlocked?.()?'Anuncio personalizado en espera: revisar autorización, sincronización y permisos del destino.':service.releaseStatus()?.ok===false?'Cola consultada; sin envíos disponibles ahora. La comprobación de nuevas versiones oficiales no pudo completarse.':'Cola consultada; sin envíos disponibles ahora.',{domain:'announcements'});failures=0;retryAt=0;}catch(error){failures++;const wait=failure.delay(error,failures);retryAt=clock()+wait;const diagnostic=failure.describe(error,'announcements');onProblem(new Error(failure.summary(diagnostic)),'announcements');onStatus('No se pudo consultar o confirmar la cola; no se afirma que haya anuncios pendientes. '+failure.summary(diagnostic)+' Reintento en '+Math.ceil(wait/1000)+' s.',{domain:'announcements',phase:'unavailable',...diagnostic,retryAt});}finally{busy=false;}}
  const timer=setInterval(tick,15000);timer.unref?.();return{tick,stop:()=>{stopped=true;clearInterval(timer);client.off?.('interactionCreate',onInteraction);}};
 }
-module.exports={createNotificationClient,deliver,startNotifications};
+module.exports={createNotificationClient,deliver,startNotifications,diagnosticIsHistorical};

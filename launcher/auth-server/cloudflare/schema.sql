@@ -18,3 +18,6 @@ CREATE TABLE IF NOT EXISTS bot_requests(nonce TEXT PRIMARY KEY,expires_at INTEGE
 CREATE TABLE IF NOT EXISTS admin_actions(id TEXT PRIMARY KEY,actor_id TEXT NOT NULL,actor_name TEXT NOT NULL,action TEXT NOT NULL,pack_id TEXT,commit_sha TEXT,version TEXT,created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS release_cursors(kind TEXT PRIMARY KEY,version TEXT NOT NULL,checked_at INTEGER NOT NULL DEFAULT 0);
 INSERT OR IGNORE INTO release_cursors(kind,version) VALUES('launcher','0.1.17'),('admin','0.1.20');
+-- Additive: manual Discord announcements, no changes to identities, worlds or existing queues.
+CREATE TABLE IF NOT EXISTS manual_announcements(request_id TEXT PRIMARY KEY,actor_id TEXT NOT NULL,pack_id TEXT NOT NULL,guild_id TEXT NOT NULL,channel_id TEXT NOT NULL,fingerprint TEXT NOT NULL,payload TEXT NOT NULL,image TEXT,created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS manual_announcements_pack ON manual_announcements(pack_id,created_at);

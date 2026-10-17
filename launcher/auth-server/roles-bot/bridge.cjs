@@ -8,8 +8,8 @@ function createBridge({endpoint,key,fetcher=fetch,clock=Date.now}){
  function begin(guildId){const state={generation:crypto.randomUUID(),sequence:0};states.set(guildId,state);return state;}
  async function send(guildId,kind,members,metadata){const state=states.get(guildId);if(!state)throw Error('Primero inicia la sincronización.');const sentAt=Math.max(clock(),lastTime+1);lastTime=sentAt;
   const body=JSON.stringify({guildId,generation:state.generation,sequence:++state.sequence,sentAt,kind,...(members?{members}:{}),...(metadata?{metadata}:{})}),signature=crypto.createHmac('sha256',Buffer.from(key,'hex')).update(body).digest('hex');
-  const r=await fetcher(new URL('/internal/role-bot',url),{method:'POST',redirect:'manual',headers:{'Content-Type':'application/json','x-villawolf-signature':signature},body,signal:AbortSignal.timeout(15000)});
-  if(!r.ok){const error=failure.serviceError(r.status,kind);const retry=Number(r.headers?.get('retry-after'));if(Number.isFinite(retry))error.retryAfterMs=retry*1000;throw error;}const result=await r.json();if(result.ok!==true||result.sequence!==state.sequence)throw Error('Respuesta del servicio inválida.');return result;
+  const r=await failure.atStage(kind,()=>fetcher(new URL('/internal/role-bot',url),{method:'POST',redirect:'manual',headers:{'Content-Type':'application/json','x-villawolf-signature':signature},body,signal:AbortSignal.timeout(15000)}));
+  if(!r.ok){const error=failure.serviceError(r.status,kind);const retry=Number(r.headers?.get('retry-after'));if(Number.isFinite(retry))error.retryAfterMs=retry*1000;throw error;}return failure.atStage(kind,async()=>{let result;try{result=await r.json();}catch(error){if(error instanceof SyntaxError)error.code='ERR_SERVICE_RESPONSE';throw error;}if(result.ok!==true||result.sequence!==state.sequence)throw Object.assign(Error('Respuesta del servicio inválida.'),{code:'ERR_SERVICE_RESPONSE'});return result;});
  }
  return{begin,send};
 }

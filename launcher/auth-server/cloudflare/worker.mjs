@@ -1,5 +1,6 @@
 import {createApplicationReports} from './application-reports.mjs';
 import {publicationMetadata} from './publication-metadata.mjs';
+import {createManualAnnouncements} from './manual-announcements.mjs';
 // Servicio gratuito Workers + D1. Sin contraseñas, bot ni permisos de administrador.
 const catalogUrl='https://raw.githubusercontent.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/preparacion-paso97/updates/catalog.json';
 const adminRoles=['1559330834278781048','1559330540820373535'];
@@ -163,6 +164,7 @@ export function createReleaseAnnouncements({fetchImpl=fetch,clock=Date.now,outbo
 
 export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
   const roleBot=createRoleBotStore({clock}),outbox=createNotificationOutbox({clock});
+  const manualAnnouncements=createManualAnnouncements({authorize:(env,token)=>accessSession(env,token,'/v2/admin/session'),packFor:async(env,id)=>(await catalog(env)).packs.find(p=>p.id===id),metadata:roleBot.metadata,membership:roleBot.membership,outbox,clock,digest});
   const discordCooldown=new Map(),discordPending=new Map();
   async function discord(route,options={}){
     const key=await digest(route+'|'+String(options.headers?.Authorization||''));
@@ -523,7 +525,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
     const key=await crypto.subtle.importKey('raw',Uint8Array.from(env.ROLE_BOT_KEY.match(/../g),b=>parseInt(b,16)),{name:'HMAC',hash:'SHA-256'},false,['verify']);
     if(!await crypto.subtle.verify('HMAC',key,Uint8Array.from(signature.match(/../g),b=>parseInt(b,16)),encoder.encode(JSON.stringify(input))))throw new AuthError(401,'Firma inválida.');
     const consumed=await env.DB.prepare('INSERT INTO bot_requests(nonce,expires_at) VALUES(?,?) ON CONFLICT(nonce) DO NOTHING RETURNING nonce').bind(input.nonce,clock()+120000).all();if(!consumed.results.length)throw new AuthError(409,'Solicitud ya atendida.');
-    if(input.action==='poll'){const releases=await releaseAnnouncements.check(env).catch(error=>({ok:false,message:error instanceof AuthError?error.message:'Comprobación de avisos pendiente.'}));return{ok:true,releases,job:await outbox.claim(env,input.guildIds)};}
+    if(input.action==='poll'){const releases=await releaseAnnouncements.check(env).catch(error=>({ok:false,message:error instanceof AuthError?error.message:'Comprobación de avisos pendiente.'}));let job=await outbox.claim(env,input.guildIds);if(job?.payload?.kind==='manual'){try{job=await manualAnnouncements.enrich(env,job);}catch{await outbox.acknowledge(env,{id:job.id,claimToken:job.claimToken,outcome:'retry',retryAfterMs:300000});return{ok:true,releases,job:null,manualBlocked:true};}}return{ok:true,releases,job};}
     if(input.action==='problem'){if(input.report?.app!=='bot')throw new AuthError(403,'Aplicación inválida.');return applicationReports.record(env,input.report,{id:'bot',name:'VillaWolf Bot'});}
     if(input.action==='diagnostic')return applicationReports.read(env,input.id);
     if(input.action==='ack')return outbox.acknowledge(env,input.result||{});
@@ -536,7 +538,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
       const url=new URL(request.url);if(url.search)throw new AuthError(400,'Solicitud inválida.');
       if(request.method==='POST'&&url.pathname==='/internal/role-bot')return reply(200,await roleBot.receive(request,env));
       if(request.method==='POST'&&url.pathname==='/internal/notifications')return reply(200,await notifications(request,env));
-      if(request.method==='GET'&&url.pathname==='/health')return reply(200,{ok:true,provider:'discord',storage:'D1',version:'1.2.4',multiGuild:true,notifications:true,audit:true,catalog:true,admin:true,discordRetry:true,catalogSnapshotSeconds:60,curseforgeApi:true,curseforgeConfigured:!!env.CURSEFORGE_API_KEY,githubPublishing:true,githubConfigured:!!env.GITHUB_TOKEN});
+      if(request.method==='GET'&&url.pathname==='/health')return reply(200,{ok:true,provider:'discord',storage:'D1',version:'1.2.5',multiGuild:true,notifications:true,audit:true,catalog:true,admin:true,discordRetry:true,catalogSnapshotSeconds:60,curseforgeApi:true,curseforgeConfigured:!!env.CURSEFORGE_API_KEY,githubPublishing:true,githubConfigured:!!env.GITHUB_TOKEN});
       const cfRoute=/^\/v2\/(?:admin\/)?curseforge\/(?:matches|download)$/.test(url.pathname),ghRoute=url.pathname==='/v2/admin/delete-pack'||url.pathname==='/v2/admin/github'||url.pathname==='/v2/admin/github/status'||url.pathname==='/v2/admin/github/blob';
       const bucket=await digest((request.headers.get('CF-Connecting-IP')||'unknown')+':'+(cfRoute?'curseforge:':ghRoute?'github:':'')+Math.floor(clock()/60000));
       const count=await env.DB.prepare('INSERT INTO discord_limits VALUES(?,1,?) ON CONFLICT(bucket) DO UPDATE SET count=count+1 RETURNING count').bind(bucket,clock()+120000).all();
@@ -548,6 +550,9 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
       if(request.method==='POST'&&url.pathname==='/v2/admin/audit/event')return reply(200,await auditEvent(env,token,await body(request)));
       if(request.method==='POST'&&url.pathname==='/v2/admin/publication/event')return reply(200,await publicationEvent(env,token,await body(request)));
       if(request.method==='POST'&&url.pathname==='/v2/admin/community/check')return reply(200,await communityCheck(env,token,await body(request)));
+      if(request.method==='POST'&&url.pathname==='/v2/admin/announcements/options')return reply(200,await manualAnnouncements.options(env,token,await body(request)));
+      if(request.method==='POST'&&url.pathname==='/v2/admin/announcements/send')return reply(200,await manualAnnouncements.submit(env,token,await body(request,750000)));
+      if(request.method==='POST'&&url.pathname==='/v2/admin/announcements/history')return reply(200,await manualAnnouncements.history(env,token,await body(request)));
       if(request.method==='POST'&&url.pathname==='/v2/admin/delete-pack')return reply(200,await deletePublishedPack(env,token,await body(request)));
       if(request.method==='GET'&&url.pathname==='/v2/admin/github/status'){await accessSession(env,token,'/v2/admin/catalog');return reply(200,{ok:true,configured:!!env.GITHUB_TOKEN});}
       if(request.method==='POST'&&url.pathname==='/v2/admin/github/blob')return reply(200,await ghBlobUpload(env,token,request));
@@ -558,10 +563,9 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
       if(request.method==='GET'&&url.pathname==='/v1/session')return reply(200,await session(env,token));
       if(request.method==='POST'&&url.pathname==='/v1/logout'){if(validNonce(token))await env.DB.prepare('DELETE FROM discord_sessions WHERE token_hash=?').bind(await digest(token)).run();return reply(200,{ok:true});}
       throw new AuthError(404,'Ruta no encontrada.');
-    }catch(error){if((!error.status||error.status>=500)&&env.DB&&snowflake(env.DISCORD_GUILD_ID)){try{await applicationReports.record(env,{id:crypto.randomUUID(),app:'service',version:'1.2.4',operation:request.method+' '+new URL(request.url).pathname,error:error.message||'Error interno',log:error.stack||'',occurredAt:new Date(clock()).toISOString()},{id:'service',name:'Servicio VillaWolf'});}catch{}}return reply(error.status||503,{ok:false,message:error.status?error.message:'El servicio no pudo comprobar el acceso. Intenta nuevamente.',...(error.retryAfter?{retryAfter:error.retryAfter}:{})});}
+    }catch(error){if((!error.status||error.status>=500)&&env.DB&&snowflake(env.DISCORD_GUILD_ID)){try{await applicationReports.record(env,{id:crypto.randomUUID(),app:'service',version:'1.2.5',operation:request.method+' '+new URL(request.url).pathname,error:error.message||'Error interno',log:error.stack||'',occurredAt:new Date(clock()).toISOString()},{id:'service',name:'Servicio VillaWolf'});}catch{}}return reply(error.status||503,{ok:false,message:error.status?error.message:'El servicio no pudo comprobar el acceso. Intenta nuevamente.',...(error.retryAfter?{retryAfter:error.retryAfter}:{})});}
   }
   async function cleanup(env){return env.DB.batch(['discord_flows','discord_sessions','discord_limits','bot_requests'].map(table=>env.DB.prepare(`DELETE FROM ${table} WHERE expires_at<=?`).bind(clock())));}
   return {fetch:handle,scheduled:(_event,env,ctx)=>ctx.waitUntil(Promise.all([cleanup(env),releaseAnnouncements.check(env)]))};
 }
 export default createWorker();
-

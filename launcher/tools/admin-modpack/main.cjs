@@ -23,6 +23,8 @@ app.setAppUserModelId('com.villawolf.administrador');
 app.setPath('userData',path.join(adminRoot,'app-data'));
 const packSourceStore=require('./pack-source-store.cjs').createPackSourceStore(adminRoot);
 const draftStore=require('./draft-store.cjs').createDraftStore(adminRoot);
+const announcementDrafts=require('./announcement-drafts.cjs').createStore(adminRoot);
+require('./manual-announcements.cjs').register({handle,getPack:()=>activePack&&({...activePack,published:activePack.published??adminPacks.find(p=>p.id===activePack.id)?.published??false}),auth:{manualAnnouncement:(...args)=>adminAuth.manualAnnouncement(...args)},store:announcementDrafts,confirm:options=>confirmPublication(win,options),chooseImage:async()=>{const result=await dialog.showOpenDialog(win,{title:'Imagen para el anuncio',properties:['openFile'],filters:[{name:'Imágenes PNG o JPG',extensions:['png','jpg','jpeg']}]});if(result.canceled)return undefined;return require('./announcement-drafts.cjs').prepareImage(result.filePaths[0],nativeImage);}});
 const wizardModel=require('./wizard-model.cjs');
 const community=require('../../src/champagne-community');
 
@@ -40,6 +42,7 @@ async function officialFetch(url,options={}){if(require('../../src/champagne-cur
 const adminCatalogAccess=require('./catalog-access.cjs').createAdminCatalogAccess(adminAuth);
 const localActions=new Set(['admin-folder','admin-source-save','admin-analyze','admin-design','admin-history','admin-restore','admin-image','admin-clear-image','admin-prepare','admin-output','admin-wizard-load','admin-wizard-save','admin-wizard-folder','admin-wizard-inspect','admin-wizard-analyze','admin-wizard-discord','admin-wizard-image','admin-wizard-create']);
 const publicActions=new Set(['admin-info','admin-auth-status','admin-auth-login','admin-auth-logout','admin-update-check']);
+for(const name of ['admin-announcement-load','admin-announcement-save','admin-announcement-image'])localActions.add(name);
 handle('admin-auth-status',async()=>{try{if(adminAuth.status().user)await adminCatalogAccess.status();return{...adminAuth.status(),authorized:!!adminAuth.status().user};}catch(error){return{...adminAuth.status(),authorized:false,message:error.message,retryAfter:error.retryAfter||0};}});
 handle('admin-auth-login',async()=>{const result=await adminAuth.loginDiscord();if(!result.ok)throw Error(result.message);return{...result,authorized:true};});
 handle('admin-auth-logout',async()=>{publicationConnection.clear();plan=prepared=designPlan=null;background=null;output=null;adminCatalogAccess.clear();return adminAuth.logout();});
