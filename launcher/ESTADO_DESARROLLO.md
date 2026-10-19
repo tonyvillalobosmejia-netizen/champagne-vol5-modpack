@@ -1,5 +1,12 @@
 # VillaWolf — estado técnico y desarrollo
 
+## Vinculación del Bot recuperada — 19 de octubre de 2026
+
+- **Verificado en producción:** después de que el propietario volvió a guardar ROLE_BOT_KEY y desplegó el cambio, se detuvo e inició el Bot 0.2.8 mediante su interfaz. Discord conectado, roles sincronizados y cola recuperada; la interfaz confirmó «Anuncio entregado». No se creó un mensaje de prueba para esta comprobación.
+- **Confirmación independiente:** consulta de sólo lectura en D1: los tres servidores activos presentaron ready=1 y antigüedad real de 24–26 segundos, dentro del límite de 90 segundos. Un registro histórico adicional sigue ready=0; no se afirma que ese servidor esté sincronizado.
+- **Seguridad:** el propietario introdujo el secreto; no se extrajo ni se comparó su valor. Se conservan la comprobación directa con Discord y los límites de seguridad. Esta recuperación resuelve el bloqueo 401/503 de vinculación registrado más abajo; no demuestra por sí sola que todos los errores históricos ni todos los anuncios se hayan resuelto.
+- **Versiones sin cambios adicionales:** Launcher 0.1.23, Administrador 0.1.28, Bot 0.2.8 y Worker 1.2.6. No se generó otra release ni se modificaron modpacks.
+
 ## Actualización de las instalaciones y biblioteca — 19 de octubre de 2026
 
 - **Comprobación posterior a la vinculación:** el propietario informó que guardó ROLE_BOT_KEY; tras detener e iniciar el Bot, las peticiones nuevas de roles y anuncios devolvieron HTTP 503. En producción ROLE_BOT_ENABLED sigue en true. El control de entrada del Worker devuelve ese estado si la clave no cumple el formato hexadecimal de 64 caracteres o el bot no está habilitado; se solicitó corregir la entrada sin leer el secreto. Sincronización y anuncios permanecen pendientes. Los app.asar de las tres instalaciones coinciden por SHA-256 con sus paquetes compilados.
