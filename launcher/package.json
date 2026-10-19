@@ -1,6 +1,6 @@
 {
   "name": "mi-launcher-forge",
-  "version": "0.1.22",
+  "version": "0.1.23",
   "description": "VillaWolf Launcher: Minecraft Forge y actualizaciones del modpack",
   "main": "src/main.js",
   "scripts": {
