@@ -1,0 +1,1 @@
+const {contextBridge,ipcRenderer}=require('electron');contextBridge.exposeInMainWorld('confirmation',{info:()=>ipcRenderer.invoke('admin-confirmation-data'),answer:value=>ipcRenderer.invoke('admin-confirmation-answer',value)});

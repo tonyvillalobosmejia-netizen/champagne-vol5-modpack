@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "packs": [
+    {
+      "id": "champagne-vol5",
+      "name": "Mundo Conejil",
+      "roleId": "1559431805096960020",
+      "enabled": true,
+      "manifestPath": "updates/stable-v2.json"
+    }
+  ]
+}
