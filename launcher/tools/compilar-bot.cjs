@@ -8,7 +8,7 @@ const stage=path.join(root,'.champagne-admin/bot-build/app-'+outputId);
 if(fs.existsSync(stage))throw Error('Ya existe la carpeta de compilación del bot. Usa una etapa limpia.');
 function copy(relative){const input=path.join(root,relative),output=path.join(stage,relative);fs.mkdirSync(path.dirname(output),{recursive:true});fs.copyFileSync(input,output);}
 fs.mkdirSync(stage,{recursive:true});
-for(const file of ['failure.cjs','official-release.cjs','state.cjs','diagnostics.cjs','package.json','updates.cjs','access.cjs','main.cjs','bridge.cjs','community.cjs','announcement.cjs','notifications.cjs','manual-announcement.cjs','preload.cjs','renderer.js','style.css','index.html'])copy('auth-server/roles-bot/'+file);
+for(const file of ['transport.cjs','failure.cjs','official-release.cjs','state.cjs','diagnostics.cjs','package.json','updates.cjs','access.cjs','main.cjs','bridge.cjs','community.cjs','announcement.cjs','notifications.cjs','manual-announcement.cjs','preload.cjs','renderer.js','style.css','index.html'])copy('auth-server/roles-bot/'+file);
 for(const file of ['champagne-diagnostic.js','champagne-manual-announcement.cjs','champagne-problem-reporter.js','champagne-problem-monitor.js','champagne-auth.js','champagne-discord-callback.js','champagne-curseforge-api.js','champagne-session-store.js','champagne-community.js','champagne-presentation.js'])copy('src/'+file);
 for(const file of ['villawolf-bot-yellow.png','villawolf-bot-yellow.ico'])copy('auth-server/roles-bot/assets/'+file);
 for(const file of ['LICENSE','THIRD_PARTY_NOTICES.md','PRIVACY.md'])copy(file);

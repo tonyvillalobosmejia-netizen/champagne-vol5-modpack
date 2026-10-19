@@ -8,7 +8,7 @@ test('Bot recupera conexión y sincronización sin mezclar sus estados ni expone
  class Client extends EventEmitter{constructor(){super();this.ws={status:0,ping:19};this.guilds={cache:new Map([[guild.id,guild]])};}isReady(){return ready;}async login(){}destroy(){this.destroyed=true;}}
  const context={module:{exports:{}},require:localRequire,URL,AbortSignal,Buffer,crypto:require('node:crypto'),setInterval:fn=>{timers.push(fn);return timers.length;},clearInterval(){},fetch:async(_url,options)=>{const value=JSON.parse(options.body);requests.push(value);return Response.json({ok:true,sequence:value.sequence});}};
  vm.runInNewContext(fs.readFileSync(file,'utf8'),context,{filename:file});
- const bot=context.module.exports.startRoleBot({clock:()=>now,token:'not-a-real-token',endpoint:'https://roles.invalid',key:'a'.repeat(64),guildIds:[guild.id],ClientClass:Client,discordModule:{Client,GatewayIntentBits:{Guilds:1,GuildMembers:2},Events:events,Status:{Ready:0}},onStatus:(message,details)=>statuses.push({message,...details})});
+ const bot=context.module.exports.startRoleBot({fetcher:context.fetch,clock:()=>now,token:'not-a-real-token',endpoint:'https://roles.invalid',key:'a'.repeat(64),guildIds:[guild.id],ClientClass:Client,discordModule:{Client,GatewayIntentBits:{Guilds:1,GuildMembers:2},Events:events,Status:{Ready:0}},onStatus:(message,details)=>statuses.push({message,...details})});
  const settle=async predicate=>{for(let i=0;i<50&&!predicate();i++)await new Promise(r=>setImmediate(r));assert.ok(predicate());};
  bot.client.emit('ready');await settle(()=>requests.some(r=>r.kind==='ready'));
  const firstGeneration=requests.find(r=>r.kind==='ready').generation;

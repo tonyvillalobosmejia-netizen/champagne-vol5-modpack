@@ -3,6 +3,25 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const failure=require('../auth-server/roles-bot/failure.cjs');
 const {createBridge}=require('../auth-server/roles-bot/bridge.cjs');
 const endpoint='https://service.invalid',key='a'.repeat(64),guild='1007732653035880589';
+
+test('transporte reintenta sólo conexión no establecida, conserva cuerpo, firma y presupuesto',async()=>{
+ const {createTransport}=require('../auth-server/roles-bot/transport.cjs');
+ const calls=[],waits=[],options={method:'POST',body:'signed-body',headers:{signature:'unchanged'},signal:AbortSignal.timeout(1000)};
+ const fetcher=createTransport({pause:async ms=>waits.push(ms),fetcher:async(url,opts)=>{calls.push(opts);if(calls.length===1)throw Object.assign(Error('connect'),{cause:{code:'UND_ERR_CONNECT_TIMEOUT'}});return Response.json({ok:true});}});
+ assert.equal((await fetcher(endpoint,options)).status,200);assert.equal(calls.length,2);assert.equal(calls[0],options);assert.equal(calls[1],options);assert.deepEqual(waits,[250]);
+});
+
+test('transporte limita intentos y no repite respuestas HTTP, abortos ni errores ambiguos',async()=>{
+ const {createTransport}=require('../auth-server/roles-bot/transport.cjs');
+ for(const code of ['UND_ERR_CONNECT_TIMEOUT','EAI_AGAIN','ECONNRESET','ENOTFOUND','UND_ERR_SOCKET']){
+  let calls=0;const request=createTransport({pause:async()=>{},fetcher:async()=>{calls++;throw Object.assign(Error('failure'),{cause:{code}});}});
+  await assert.rejects(request(endpoint));assert.equal(calls,['UND_ERR_CONNECT_TIMEOUT','EAI_AGAIN'].includes(code)?2:1);
+ }
+ let calls=0;const http=createTransport({fetcher:async()=>{calls++;return new Response(null,{status:401});}});assert.equal((await http(endpoint)).status,401);assert.equal(calls,1);
+ const controller=new AbortController();controller.abort();calls=0;
+ const aborted=createTransport({fetcher:async()=>{calls++;throw Object.assign(Error('failure'),{cause:{code:'UND_ERR_CONNECT_TIMEOUT'}});}});
+ await assert.rejects(aborted(endpoint,{signal:controller.signal}));assert.equal(calls,1);
+});
 test('diagnóstico conserva la versión pública del Bot sin permitir credenciales en el encabezado',()=>{const {reportText}=require('../src/champagne-diagnostic');const value={app:'bot',version:'0.2.6',operation:'roles-sync',error:'Error',log:'Bot '+'a'.repeat(40),occurredAt:new Date().toISOString()};const text=reportText(value);assert.ok(text.startsWith('VillaWolf bot 0.2.6\n'));assert.ok(!text.includes('a'.repeat(40)));assert.throws(()=>reportText({...value,version:'token secreto'}));});
 test('clasifica causa de transporte sin copiar mensajes, URLs ni credenciales',()=>{
  for(const code of ['ECONNRESET','ENOTFOUND','UND_ERR_CONNECT_TIMEOUT']){

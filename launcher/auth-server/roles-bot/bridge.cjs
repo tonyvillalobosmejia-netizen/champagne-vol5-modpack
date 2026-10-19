@@ -1,7 +1,8 @@
 'use strict';
+const serviceFetch=require('./transport.cjs').createTransport();
 const crypto=require('node:crypto');
 const failure=require('./failure.cjs');
-function createBridge({endpoint,key,fetcher=fetch,clock=Date.now}){
+function createBridge({endpoint,key,fetcher=serviceFetch,clock=Date.now}){
  const url=new URL(endpoint);if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash)throw Error('Dirección de servicio inválida.');
  if(!/^[a-f0-9]{64}$/.test(key))throw Error('Clave de conexión inválida.');
  const states=new Map();let lastTime=0;
@@ -13,7 +14,7 @@ function createBridge({endpoint,key,fetcher=fetch,clock=Date.now}){
  }
  return{begin,send};
 }
-function startRoleBot({token,endpoint,key,guildIds,syncAllGuilds=false,notificationsEnabled=false,onProblem=()=>{},onStatus=()=>{},ClientClass,discordModule,fetcher=fetch,clock=Date.now}){
+function startRoleBot({token,endpoint,key,guildIds,syncAllGuilds=false,notificationsEnabled=false,onProblem=()=>{},onStatus=()=>{},ClientClass,discordModule,fetcher=serviceFetch,clock=Date.now}){
  const discord=discordModule||require('discord.js'),{Client,GatewayIntentBits,Events,Status}=discord;
  const client=new (ClientClass||Client)({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMembers]});
  const bridge=createBridge({endpoint,key,fetcher,clock}),allowed=new Set(guildIds),queues=new Map(),states=new Map();let stopping=false;

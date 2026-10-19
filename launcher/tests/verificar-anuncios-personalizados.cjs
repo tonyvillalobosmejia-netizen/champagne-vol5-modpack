@@ -44,6 +44,15 @@ test('cola guarda autor real e imagen aparte; misma referencia no duplica y cont
  // Reintentar tras reinicio conserva la misma entrega confirmada.
  await f.service.submit(f.env,'session',v);assert.equal(await f.outbox.claim(f.env,[guild]),null);
 });
+
+test('entrega usa el destino del sobre real del Worker, sin channelId en payload',async t=>{
+ const f=await fixture(t);await f.service.submit(f.env,'session',input());
+ const claimed=await f.outbox.claim(f.env,[guild]),job=await f.service.enrich(f.env,claimed);
+ assert.equal(job.payload.channelId,undefined);
+ const bot=botFixture(job.payload);bot.job=job;
+ await require('../auth-server/roles-bot/notifications.cjs').deliver(job,bot);
+ assert.equal(bot.sent.length,1);assert.equal(bot.acks[0].outcome,'sent');
+});
 test('canal ajeno, autorización, confirmación, sincronización e imagen alterada bloquean antes de encolar',async t=>{
  const f=await fixture(t);await assert.rejects(f.service.submit(f.env,'s',{...input(),confirmed:false}));
  await assert.rejects(f.service.submit(f.env,'s',{...input(),channelId:'1560778156045242391'}));
