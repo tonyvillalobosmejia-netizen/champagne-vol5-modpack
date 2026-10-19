@@ -10,7 +10,14 @@ async function downloadVerifiedMod(entry, download, {sleep = ms => new Promise(r
   if (validateAcquisition(entry) !== 'direct') throw Error('La descarga manual debe importarse y verificarse por separado.');
   const expectedSha256 = entry.sha256.toLowerCase();
   for (let attempt = 1; attempt <= 3; attempt++) {
-    let bytes = Buffer.from(await download(entry.url));
+    let bytes;
+    try { bytes = Buffer.from(await download(entry.url)); }
+    catch(error) {
+      if(error.code!=='ERR_INCOMPLETE_DOWNLOAD')throw error;
+      if(attempt===3){error.attempts=attempt;error.message=`Descarga incompleta para ${entry.path}. Intentos realizados: 3. ${error.message} Actualización detenida para proteger la integridad del modpack. No se instaló nada.`;throw error;}
+      onRetry({path:entry.path,nextAttempt:attempt+1,maxAttempts:3,incomplete:true});
+      await sleep(attempt*400);continue;
+    }
     const receivedSha256 = crypto.createHash('sha256').update(bytes).digest('hex');
     const receivedBytes = bytes.length;
     if (receivedSha256 === expectedSha256) return bytes;

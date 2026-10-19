@@ -6,7 +6,16 @@ function isCurseForgeFile(raw){try{const u=new URL(raw);return ['https://edge.fo
 function downloadThroughService({endpoint,token,input,admin=false,onProgress=()=>{}}){
  if(!endpoint||!/^[A-Za-z0-9_-]{43}$/.test(token||''))return Promise.reject(Error('Inicia sesión con Discord para descargar.'));
  const http=require('node:http'),https=require('node:https'),payload=JSON.stringify(input),url=new URL(admin?'/v2/admin/curseforge/download':'/v2/curseforge/download',endpoint);
- return new Promise((resolve,reject)=>{const req=(url.protocol==='https:'?https:http).request(url,{method:'POST',headers:{Authorization:'Bearer '+token,Accept:'application/octet-stream','Content-Type':'application/json','Content-Length':Buffer.byteLength(payload)}},res=>{const chunks=[];let size=0;const good=res.statusCode===200,limit=good?128*1024*1024:65536,total=Number(res.headers['content-length']||0);res.on('data',b=>{size+=b.length;if(size>limit){req.destroy(Error('La descarga supera el límite permitido.'));return;}chunks.push(b);if(good)onProgress({bytes:size,totalBytes:total});});res.on('aborted',()=>reject(Error('Descarga interrumpida. Puedes reintentar.')));res.on('error',reject);res.on('end',()=>{if(!good){let message='No se pudo descargar desde CurseForge.';try{message=JSON.parse(Buffer.concat(chunks)).message||message;}catch{}const error=Error(message);error.status=res.statusCode;return reject(error);}if(total&&size!==total)return reject(Error('Descarga oficial incompleta.'));resolve(Buffer.concat(chunks));});});req.setTimeout(120000,()=>req.destroy(Error('CurseForge tardó demasiado. Puedes reintentar.')));req.on('error',reject);req.end(payload);});
+ return new Promise((resolve,reject)=>{const req=(url.protocol==='https:'?https:http).request(url,{method:'POST',headers:{Authorization:'Bearer '+token,Accept:'application/octet-stream','Content-Type':'application/json','Content-Length':Buffer.byteLength(payload)}},res=>{
+  const chunks=[];let size=0;const good=res.statusCode===200,limit=good?128*1024*1024:65536;
+  const rawLength=res.headers['x-villawolf-file-length']??res.headers['content-length'],total=rawLength===undefined?0:Number(rawLength);
+  const incomplete=()=>Object.assign(Error('Descarga oficial incompleta: '+size+' de '+(total||'tamaño no indicado')+' bytes. No se aceptó el archivo.'),{code:'ERR_INCOMPLETE_DOWNLOAD',receivedBytes:size,expectedBytes:total||undefined});
+  if(good&&rawLength!==undefined&&(!/^[1-9][0-9]*$/.test(rawLength)||!Number.isSafeInteger(total)||total>limit)){res.resume();reject(Error('Tamaño oficial de descarga inválido.'));return;}
+  res.on('data',b=>{size+=b.length;if(size>limit){req.destroy(Error('La descarga supera el límite permitido.'));return;}chunks.push(b);if(good)onProgress({bytes:size,totalBytes:total});});
+  res.on('aborted',()=>{chunks.length=0;reject(good?incomplete():Error('Respuesta del servicio interrumpida.'));});
+  res.on('error',error=>{chunks.length=0;reject(good?incomplete():error);});
+  res.on('end',()=>{if(!good){let message='No se pudo descargar desde CurseForge.';try{message=JSON.parse(Buffer.concat(chunks)).message||message;}catch{}const error=Error(message);error.status=res.statusCode;return reject(error);}if(!size||total&&size!==total){chunks.length=0;return reject(incomplete());}resolve(Buffer.concat(chunks));});
+ });req.setTimeout(120000,()=>req.destroy(Error('CurseForge tardó demasiado. Puedes reintentar.')));req.on('error',reject);req.end(payload);});
 }
 
 

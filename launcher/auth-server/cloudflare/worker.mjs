@@ -1,4 +1,5 @@
 import {createApplicationReports} from './application-reports.mjs';
+import {officialDownloadResponse} from './official-download-stream.mjs';
 import {publicationMetadata} from './publication-metadata.mjs';
 import {createManualAnnouncements} from './manual-announcements.mjs';
 // Servicio gratuito Workers + D1. Sin contraseñas, bot ni permisos de administrador.
@@ -350,8 +351,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
     for(let hop=0;hop<4;hop++){response=await fetchImpl(url,{redirect:'manual',signal:AbortSignal.timeout(120000),headers:{'x-api-key':env.CURSEFORGE_API_KEY}});if(![301,302,303,307,308].includes(response.status))break;const next=new URL(response.headers.get('location')||'',url);await response.body?.cancel();if(!cfUrl(next.href)||decodeURIComponent(next.pathname)!==decodeURIComponent(new URL(file.downloadUrl).pathname))throw new AuthError(503,'Redirección de CurseForge inválida.');url=next.href;}
     if(!response.ok||[301,302,303,307,308].includes(response.status)||!response.body)throw new AuthError(503,'No se pudo descargar desde CurseForge. Usa su página oficial.');
     const declared=Number(response.headers.get('content-length'));if(declared&&declared!==file.fileLength){await response.body.cancel();throw new AuthError(503,'Tamaño oficial de descarga incorrecto.');}
-    let bytes=0;const stream=new TransformStream({transform(chunk,controller){bytes+=chunk.byteLength;if(bytes>file.fileLength||bytes>128*1024*1024)throw Error('Descarga excedida');controller.enqueue(chunk);},flush(){if(bytes!==file.fileLength)throw Error('Descarga incompleta');}});
-    return new Response(response.body.pipeThrough(stream),{headers:{'Content-Type':'application/octet-stream','Content-Length':String(file.fileLength),'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+    return officialDownloadResponse(response.body,file.fileLength);
   }
 
 
@@ -538,7 +538,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
       const url=new URL(request.url);if(url.search)throw new AuthError(400,'Solicitud inválida.');
       if(request.method==='POST'&&url.pathname==='/internal/role-bot')return reply(200,await roleBot.receive(request,env));
       if(request.method==='POST'&&url.pathname==='/internal/notifications')return reply(200,await notifications(request,env));
-      if(request.method==='GET'&&url.pathname==='/health')return reply(200,{ok:true,provider:'discord',storage:'D1',version:'1.2.5',multiGuild:true,notifications:true,audit:true,catalog:true,admin:true,discordRetry:true,catalogSnapshotSeconds:60,curseforgeApi:true,curseforgeConfigured:!!env.CURSEFORGE_API_KEY,githubPublishing:true,githubConfigured:!!env.GITHUB_TOKEN});
+      if(request.method==='GET'&&url.pathname==='/health')return reply(200,{ok:true,provider:'discord',storage:'D1',version:'1.2.6',multiGuild:true,notifications:true,audit:true,catalog:true,admin:true,discordRetry:true,catalogSnapshotSeconds:60,curseforgeApi:true,curseforgeConfigured:!!env.CURSEFORGE_API_KEY,githubPublishing:true,githubConfigured:!!env.GITHUB_TOKEN});
       const cfRoute=/^\/v2\/(?:admin\/)?curseforge\/(?:matches|download)$/.test(url.pathname),ghRoute=url.pathname==='/v2/admin/delete-pack'||url.pathname==='/v2/admin/github'||url.pathname==='/v2/admin/github/status'||url.pathname==='/v2/admin/github/blob';
       const bucket=await digest((request.headers.get('CF-Connecting-IP')||'unknown')+':'+(cfRoute?'curseforge:':ghRoute?'github:':'')+Math.floor(clock()/60000));
       const count=await env.DB.prepare('INSERT INTO discord_limits VALUES(?,1,?) ON CONFLICT(bucket) DO UPDATE SET count=count+1 RETURNING count').bind(bucket,clock()+120000).all();
@@ -563,7 +563,7 @@ export function createWorker({fetchImpl=fetch,clock=Date.now}={}){
       if(request.method==='GET'&&url.pathname==='/v1/session')return reply(200,await session(env,token));
       if(request.method==='POST'&&url.pathname==='/v1/logout'){if(validNonce(token))await env.DB.prepare('DELETE FROM discord_sessions WHERE token_hash=?').bind(await digest(token)).run();return reply(200,{ok:true});}
       throw new AuthError(404,'Ruta no encontrada.');
-    }catch(error){if((!error.status||error.status>=500)&&env.DB&&snowflake(env.DISCORD_GUILD_ID)){try{await applicationReports.record(env,{id:crypto.randomUUID(),app:'service',version:'1.2.5',operation:request.method+' '+new URL(request.url).pathname,error:error.message||'Error interno',log:error.stack||'',occurredAt:new Date(clock()).toISOString()},{id:'service',name:'Servicio VillaWolf'});}catch{}}return reply(error.status||503,{ok:false,message:error.status?error.message:'El servicio no pudo comprobar el acceso. Intenta nuevamente.',...(error.retryAfter?{retryAfter:error.retryAfter}:{})});}
+    }catch(error){if((!error.status||error.status>=500)&&env.DB&&snowflake(env.DISCORD_GUILD_ID)){try{await applicationReports.record(env,{id:crypto.randomUUID(),app:'service',version:'1.2.6',operation:request.method+' '+new URL(request.url).pathname,error:error.message||'Error interno',log:error.stack||'',occurredAt:new Date(clock()).toISOString()},{id:'service',name:'Servicio VillaWolf'});}catch{}}return reply(error.status||503,{ok:false,message:error.status?error.message:'El servicio no pudo comprobar el acceso. Intenta nuevamente.',...(error.retryAfter?{retryAfter:error.retryAfter}:{})});}
   }
   async function cleanup(env){return env.DB.batch(['discord_flows','discord_sessions','discord_limits','bot_requests'].map(table=>env.DB.prepare(`DELETE FROM ${table} WHERE expires_at<=?`).bind(clock())));}
   return {fetch:handle,scheduled:(_event,env,ctx)=>ctx.waitUntil(Promise.all([cleanup(env),releaseAnnouncements.check(env)]))};
