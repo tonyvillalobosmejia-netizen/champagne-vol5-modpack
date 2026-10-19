@@ -23,7 +23,7 @@ const RAW = `https://raw.githubusercontent.com/${REPO}`;
 const hash = (b, algorithm = 'sha256') => crypto.createHash(algorithm).update(b).digest('hex');
 const uploadedBlobs=new WeakMap();
 const contentCaches=new WeakMap(),verificationReceipts=new WeakMap();
-function retryProgress(entry,onProgress=()=>{}){return ({nextAttempt,integrity})=>onProgress((integrity?'SHA-256 incorrecto; volviendo a descargar: ':'Reintentando descarga: ')+entry.path+' (intento '+nextAttempt+'/3).');}
+function retryProgress(entry,onProgress=()=>{}){return ({nextAttempt,integrity,incomplete})=>onProgress((incomplete?'Descarga incompleta; volviendo a descargar: ':integrity?'SHA-256 incorrecto; volviendo a descargar: ':'Reintentando descarga: ')+entry.path+' (intento '+nextAttempt+'/3).');}
 function verifiedContent(entry,fetcher,onProgress){let cache=contentCaches.get(fetcher);if(!cache){cache=require('./verified-content-cache.cjs').createVerifiedContentCache();contentCaches.set(fetcher,cache);}return cache(entry,url=>request(url,{fetcher,limit:128*1024*1024,retry:false}),retryProgress(entry,onProgress));}
 const clone = v => JSON.parse(JSON.stringify(v));
 function nextVersion(v) { const n = v.split('.').map(Number); n[2]++; return n.join('.'); }
