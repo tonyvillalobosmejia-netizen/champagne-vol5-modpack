@@ -11,12 +11,12 @@
       "announcements": {
         "modpack": {
           "enabled": true,
-          "channelId": "1560778156045242390",
+          "channelId": "1561784081740730518",
           "mentionRole": true
         },
         "launcher": {
           "enabled": true,
-          "channelId": "1560778156045242390",
+          "channelId": "1561784081740730518",
           "mentionRole": true
         }
       }
