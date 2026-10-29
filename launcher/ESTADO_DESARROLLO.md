@@ -1010,3 +1010,12 @@ Publicación confirmada el 29 de octubre de 2026 a las 12:55 de Ciudad de Méxic
 Ejecución final exitosa: https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/actions/runs/40935013738. Pruebas remotas: 185 generales y 9 de integridad; compilación NSIS exitosa. El flujo descargó y verificó por SHA-256 los cuatro assets del borrador y luego sus cuatro URLs públicas. Instalador público: VillaWolf.Launcher.Setup.0.1.24.exe, 115095756 bytes, SHA-256 e54c20497260ff385ee0e39c8bdaec1b6872e7bfd9369f0e0c043e9c3ef6751f. También publicados blockmap, latest.yml y SHA256SUMS.txt. El binario remoto se compiló de nuevo en CI; su hash difiere del instalador local y el hash público anterior es el aplicable a la distribución.
 
 No se instaló la nueva versión en esta PC ni se utilizó el escritorio; pendiente prueba manual con descarga oficial y arranque de Minecraft. No se alteraron permisos del proveedor, servicios, canales de modpacks ni versiones de Administrador/Bot. La firma Authenticode continúa pendiente conforme a la política existente.
+
+
+## 2026-10-29 — Launcher 0.1.25 publicado: menú oficial antes de iniciar Minecraft
+
+Publicación confirmada a las 14:59 de Ciudad de México (20:59 UTC). Release pública no borrador y latest: https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/v0.1.25. Commit de código y compilación: bbbedefe1729c0183a1b9dbebbf2c2b668ece7e8. Flujo exitoso: https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/actions/runs/40953264430. Pasaron 190 pruebas generales y 9 de integridad; compilación NSIS Windows y verificación SHA-256 de los cuatro assets tanto en borrador como mediante sus URLs públicas completadas.
+
+Instalador público VillaWolf.Launcher.Setup.0.1.25.exe: 115096346 bytes, SHA-256 5ebbbd1d5bd36cd4de99f18ba1a2072b10b223aea3374b5bc4b2c407502d6156. Publicados también blockmap, latest.yml y SHA256SUMS.txt. Se confirmó que el menú del manifiesto público de Mundo Conejil 0.1.15 está activo (is_enabled=true). No se cambió ese manifiesto ni se publicó otra versión del modpack.
+
+Al recibir 0.1.25 y pulsar JUGAR, cada cliente verifica y restaura el menú oficial y sus recursos antes de crear Java, con respaldo de versiones locales diferentes. Esta garantía se probó con proceso Java interceptado en pruebas; no es evidencia de ejecución real en todos los equipos. No se instaló 0.1.25 en esta PC ni se tocó su instancia activa o escritorio. Los clientes desconectados, aún sin actualizar o que no pulsen JUGAR no han sido activados remotamente.
