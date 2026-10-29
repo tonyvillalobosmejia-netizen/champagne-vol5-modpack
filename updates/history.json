@@ -1,5 +1,23 @@
 [
   {
+    "version": "0.1.14",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-29T19:24:43.854Z",
+    "notes": "correcion en errores  y chat de voz de implementado",
+    "mods": 115,
+    "content": 206,
+    "changes": {
+      "added": [
+        "mods/voicechat-forge-1.20.1-2.6.22.jar"
+      ],
+      "changed": [],
+      "removed": [
+        "mods/modfixer-0.0.5.jar"
+      ]
+    },
+    "restoredFrom": null
+  },
+  {
     "version": "0.1.13",
     "packName": "Mundo Conejil",
     "publishedAt": "2026-10-19T17:34:36.869Z",
