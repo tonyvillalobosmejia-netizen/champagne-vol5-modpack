@@ -1,0 +1,13 @@
+# JARs de terceros y archivos de trabajo local
+*.jar
+mods/
+mods.zip
+**/mods.zip
+node_modules/
+*.log
+*.tmp
+.DS_Store
+
+# No activar automáticamente el manifiesto de distribución
+manifest.json
+manifest.VERIFICADO.json

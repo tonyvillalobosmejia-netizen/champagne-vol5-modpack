@@ -1,0 +1,184 @@
+[
+  {
+    "version": "0.1.16",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-29T21:16:41.823Z",
+    "notes": "Discord muestra Mundo Conejil y su imagen automáticamente. Se conservan los menús publicados y todas las demás configuraciones y mods.",
+    "mods": 115,
+    "content": 213,
+    "changes": {
+      "added": [],
+      "changed": [],
+      "removed": []
+    },
+    "restoredFrom": null
+  },
+  {
+    "version": "0.1.15",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-29T20:45:20.205Z",
+    "notes": "Menu corregido",
+    "mods": 115,
+    "content": 213,
+    "changes": {
+      "added": [],
+      "changed": [],
+      "removed": []
+    },
+    "restoredFrom": null
+  },
+  {
+    "version": "0.1.14",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-29T19:24:43.854Z",
+    "notes": "correcion en errores  y chat de voz de implementado",
+    "mods": 115,
+    "content": 206,
+    "changes": {
+      "added": [
+        "mods/voicechat-forge-1.20.1-2.6.22.jar"
+      ],
+      "changed": [],
+      "removed": [
+        "mods/modfixer-0.0.5.jar"
+      ]
+    },
+    "restoredFrom": null
+  },
+  {
+    "version": "0.1.13",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-19T17:34:36.869Z",
+    "notes": "# 🐺🐰 ¡VILLAWOLF × YFATY22! 🎮\n\n### 🚀 ¡NUESTRO LANZADOR Y MODPACK YA ESTÁN DISPONIBLES!\n\n¡La espera terminó! 🎉 Ya pueden disfrutar de **nuestro lanzador y modpack de Minecraft**, preparados especialmente para la comunidad de **Faty**. ❤️\n\nEsperamos de corazón que disfruten esta aventura tanto como nosotros disfrutamos preparándola. Hemos trabajado en este proyecto con muchísimo cariño, dedicación y entusiasmo para que puedan vivir momentos increíbles junto a **Faty y toda su comunidad**. 🐰✨\n\n🛠️ **¡Y esto apenas comienza!** Prepárense, porque se vienen muchas más actualizaciones, mejoras, nuevas aventuras y sorpresas que harán de esta experiencia algo cada vez más especial.\n\n🌎⛏️ **¡Ahora sí, unamos fuerzas y enseñémosle a Faty lo maravilloso que puede ser el mundo de Minecraft!**\n\nGracias por formar parte de esta aventura. ¡Nos vemos dentro del juego! 💚\n\n**🐺 VillaWolf Launcher × 🐰 YFATY22**",
+    "mods": 115,
+    "content": 209,
+    "changes": {
+      "added": [],
+      "changed": [],
+      "removed": []
+    },
+    "restoredFrom": null
+  },
+  {
+    "version": "0.1.12",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-17T05:48:04.503Z",
+    "notes": "# 🐺🐰 ¡VILLAWOLF × YFATY22! 🎮\n\n### 🚀 ¡NUESTRO LANZADOR Y MODPACK YA ESTÁN DISPONIBLES!\n\n¡La espera terminó! 🎉 Ya pueden disfrutar de **nuestro lanzador y modpack de Minecraft**, preparados especialmente para la comunidad de **Faty**. ❤️\n\nEsperamos de corazón que disfruten esta aventura tanto como nosotros disfrutamos preparándola. Hemos trabajado en este proyecto con muchísimo cariño, dedicación y entusiasmo para que puedan vivir momentos increíbles junto a **Faty y toda su comunidad**. 🐰✨\n\n🛠️ **¡Y esto apenas comienza!** Prepárense, porque se vienen muchas más actualizaciones, mejoras, nuevas aventuras y sorpresas que harán de esta experiencia algo cada vez más especial.\n\n🌎⛏️ **¡Ahora sí, unamos fuerzas y enseñémosle a Faty lo maravilloso que puede ser el mundo de Minecraft!**\n\nGracias por formar parte de esta aventura. ¡Nos vemos dentro del juego! 💚\n\n**🐺 VillaWolf Launcher × 🐰 YFATY22**",
+    "mods": 115,
+    "content": 209,
+    "changes": {
+      "added": [],
+      "changed": [],
+      "removed": [
+        "mods/chloride-FORGE-mc1.20.1-v1.7.5.jar"
+      ]
+    },
+    "restoredFrom": null
+  },
+  {
+    "version": "0.1.11",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-16T06:37:48.679Z",
+    "notes": "prueba",
+    "mods": 116,
+    "content": 202,
+    "changes": {
+      "added": [],
+      "changed": [],
+      "removed": [
+        "mods/DistantHorizons-3.3.3-1.20.1-fabric-forge.jar"
+      ]
+    },
+    "restoredFrom": null
+  },
+  {
+    "version": "0.1.10",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-15T22:47:55.805Z",
+    "notes": "Me equivoque en un mod XD",
+    "mods": 117,
+    "content": 202,
+    "changes": {
+      "added": [
+        "mods/jei-1.20.1-forge-15.71.0.223.jar",
+        "mods/mezz_config-1.20.1-forge-0.6.8.jar"
+      ],
+      "changed": [],
+      "removed": [
+        "mods/jei-1.20.1-forge-15.56.0.205.jar"
+      ]
+    },
+    "restoredFrom": null
+  },
+  {
+    "version": "0.1.9",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-15T21:51:52.263Z",
+    "notes": "🚀 Novedades\n\n⚡ Integración de mods de optimización para mejorar el rendimiento.\n\n🎮 Preparación del modpack para supervivencia multijugador.\n\n🖥️ Personalización del menú principal y de la pantalla de carga.\n\n🛠️ Incorporación de herramientas de administración y configuración.\n\nNueva forma de ver el mundo \n\n⚙️ Mejoras\n\nOptimización de la carga de chunks.\n\nMejoras en el rendimiento gráfico.\n\nOptimización del uso de memoria.\n\nMejoras en el procesamiento de entidades.\n\nAjustes para reducir el lag durante las partidas.\n\nIntegración de herramientas de diagnóstico y rendimiento.\n\n🔧 Correcciones y ajustes\n\nRevisión de configuraciones gráficas y de resolución.\n\nAjustes de compatibilidad entre los mods instalados.\n\nOrganización de archivos y dependencias del modpack.\n\n🔮 Próximas actualizaciones\n\n🌍 Nuevas estructuras, biomas y lugares por explorar.\n\n⚔️ Nuevos enemigos, jefes y desafíos.\n\n⚙️ Sistemas de automatización y tecnología.\n\n🏡 Más bloques decorativos y opciones de construcción.\n\n🌾 Nuevos alimentos, cultivos y mecánicas de supervivencia.\n\n🐺 VillaWolf Modpack — La aventura apenas comienza.",
+    "mods": 116,
+    "content": 196,
+    "changes": {
+      "added": [
+        "mods/DistantHorizons-3.3.3-1.20.1-fabric-forge.jar",
+        "mods/jei-1.20.1-forge-15.56.0.205.jar"
+      ],
+      "changed": [],
+      "removed": []
+    },
+    "restoredFrom": null
+  },
+  {
+    "version": "0.1.8",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-15T21:01:50.925Z",
+    "notes": "🚀 Novedades\n\n⚡ Integración de mods de optimización para mejorar el rendimiento.\n\n🎮 Preparación del modpack para supervivencia multijugador.\n\n🖥️ Personalización del menú principal y de la pantalla de carga.\n\n🛠️ Incorporación de herramientas de administración y configuración.\n\n⚙️ Mejoras\n\nOptimización de la carga de chunks.\n\nMejoras en el rendimiento gráfico.\n\nOptimización del uso de memoria.\n\nMejoras en el procesamiento de entidades.\n\nAjustes para reducir el lag durante las partidas.\n\nIntegración de herramientas de diagnóstico y rendimiento.\n\n🔧 Correcciones y ajustes\n\nRevisión de configuraciones gráficas y de resolución.\n\nAjustes de compatibilidad entre los mods instalados.\n\nOrganización de archivos y dependencias del modpack.\n\n🔮 Próximas actualizaciones\n\n🌍 Nuevas estructuras, biomas y lugares por explorar.\n\n⚔️ Nuevos enemigos, jefes y desafíos.\n\n⚙️ Sistemas de automatización y tecnología.\n\n🏡 Más bloques decorativos y opciones de construcción.\n\n🌾 Nuevos alimentos, cultivos y mecánicas de supervivencia.\n\n🐺 VillaWolf Modpack — La aventura apenas comienza.",
+    "mods": 114,
+    "content": 196,
+    "changes": {
+      "added": [
+        "mods/better_tab-2.2.1+1.20.1-forge.jar",
+        "mods/betterfpsdist-1.20.1-6.0.jar",
+        "mods/chat_heads-0.15.7-forge-1.20.jar",
+        "mods/Controlling-forge-1.20.1-12.0.2.jar",
+        "mods/craft_config-1.1.12+1.20.1-forge.jar",
+        "mods/ftb-chunks-forge-2001.3.8.jar",
+        "mods/ftb-essentials-forge-2001.2.4.jar",
+        "mods/ftb-library-forge-2001.2.13.jar",
+        "mods/ftb-quests-forge-2001.4.22.jar",
+        "mods/ftb-ranks-forge-2001.1.7.jar",
+        "mods/ftb-teams-forge-2001.3.2.jar",
+        "mods/ftb-xmod-compat-forge-2.1.3.jar",
+        "mods/ftbbackups2-forge-1.20-1.0.23.jar",
+        "mods/incontrol-1.20-9.5.0.jar",
+        "mods/Item-Obliterator-NeoForge-MC1.20.1-2.3.1.jar",
+        "mods/MouseTweaks-forge-mc1.20.1-2.25.1.jar",
+        "mods/Necronomicon-Forge-1.6.0+1.20.1.jar",
+        "mods/polylib-forge-2000.0.3-build.143.jar",
+        "mods/polymorph-forge-0.49.11+1.20.1.jar",
+        "mods/RenderScale-forge-1.20.1-1.0.jar",
+        "mods/Searchables-forge-1.20.1-1.0.3.jar",
+        "mods/SimpleDiscordRichPresence-forge-4.0.3-build.40+mc1.20.1.jar",
+        "mods/spark-1.10.53-forge.jar"
+      ],
+      "changed": [],
+      "removed": []
+    },
+    "restoredFrom": null
+  },
+  {
+    "version": "0.1.7",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-15T07:20:50.294Z",
+    "notes": "Mod para hacer zoom\npueba",
+    "mods": 91,
+    "content": 182,
+    "changes": {
+      "added": [
+        "mods/justzoom_forge_3.0.1_MC_1.20.1.jar"
+      ],
+      "changed": [],
+      "removed": []
+    },
+    "restoredFrom": null
+  }
+]

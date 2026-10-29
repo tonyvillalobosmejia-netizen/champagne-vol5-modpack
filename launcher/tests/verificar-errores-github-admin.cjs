@@ -1,0 +1,6 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');const {request}=require('../tools/admin-modpack/engine.cjs');
+const url='https://api.github.com/repos/test/test';
+test('401 indica token rechazado sin revelar credenciales',async()=>{await assert.rejects(request(url,{token:'FAKE_CREDENTIAL_TEST_ONLY',fetcher:async()=>new Response('',{status:401})}),e=>e.message.includes('GitHub rechazó el token (401)')&&!e.message.includes('FAKE_CREDENTIAL')&&!e.message.includes('límite de consultas'));});
+test('403 distingue permisos de límites de consultas',async()=>{await assert.rejects(request(url,{fetcher:async()=>new Response('',{status:403})}),/Contents: Read and write/);await assert.rejects(request(url,{fetcher:async()=>new Response('',{status:403,headers:{'x-ratelimit-remaining':'0'}})}),/no cambies el token/);await assert.rejects(request(url,{fetcher:async()=>new Response('',{status:429})}),/límite de consultas/);});
+test('401 de descarga externa no culpa al token de GitHub',async()=>{await assert.rejects(request('https://cdn.modrinth.com/file',{fetcher:async()=>new Response('',{status:401})}),e=>e.message.includes('servicio respondió 401')&&!e.message.includes('token'));});

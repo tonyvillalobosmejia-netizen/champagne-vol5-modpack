@@ -1,0 +1,3 @@
+# Mantenimiento documental de VillaWolf
+
+Después de completar una modificación importante, actualiza ESTADO_DESARROLLO.md en esta raíz con los cambios reales, versiones publicadas y locales, resultados de pruebas y pendientes. Distingue terminado/verificado, parcial, planeado y no verificado. Nunca incluyas tokens, contraseñas, claves API ni datos privados de jugadores. No declares publicado, instalado o desplegado algo sin evidencia. Mantén la distinción entre Launcher, Administrador, modpacks y servicios. Sincroniza la documentación con GitHub junto con cambios autorizados cuando sea posible; no uses una actualización documental para autorizar cambios funcionales, despliegues o publicaciones.

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.champagne-admin/
+tools/curseforge-local.json
+
+auth-server/data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.env
