@@ -1,7 +1,9 @@
 "use strict";
 /* Champagne Vol.5 — Configuraciones locales administradas por el launcher.
    Crea configuraciones ausentes; solo cambia/elimina las previamente gestionadas
-   y SIN modificaciones del jugador. Nunca toca options.txt, saves ni mods. */
+   y SIN modificaciones del jugador. El menú oficial de Mundo Conejil se restaura
+   con respaldo antes de jugar, incluso si FancyMenu lo desactivó localmente.
+   Nunca toca options.txt de Minecraft, saves ni mods. */
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
@@ -63,6 +65,11 @@ function readState(file) {
   }
   return value;
 }
+function isOfficialMenu(packId, name) {
+  return packId === 'champagne-vol5' &&
+    (name === 'config/fancymenu/customization/title_screen_layout.txt' ||
+     name.startsWith('config/fancymenu/assets/recursos_mundo_conejil/'));
+}
 function syncBundledConfigs({ instanceDir, metadataDir, bundleDir, status = () => {} }) {
   if (!instanceDir || !metadataDir || !bundleDir) throw new Error("Faltan rutas de sincronización.");
   const manifest = JSON.parse(fs.readFileSync(path.join(bundleDir, "manifest.json"), "utf8"));
@@ -93,7 +100,7 @@ function syncBundledConfigs({ instanceDir, metadataDir, bundleDir, status = () =
   const previous = readState(statePath);
   if(previous.packId&&previous.packId!==manifest.packId)throw Error("El estado de configuraciones pertenece a otro modpack.");
   const next = { packId: manifest.packId, version: manifest.version, files: {} };
-  const changes = [], report = { installed:0, updated:0, removed:0, keptModified:0, keptUnmanaged:0, unchanged:0, backupDir:null };
+  const changes = [], report = { installed:0, updated:0, removed:0, keptModified:0, keptUnmanaged:0, unchanged:0, menuRestored:0, backupDir:null };
   for (const [name, item] of desired) {
     const target = checkedTarget(instanceDir, name);
     const oldHash = previous.files[name];
@@ -108,6 +115,11 @@ function syncBundledConfigs({ instanceDir, metadataDir, bundleDir, status = () =
       // Se puede administrar un archivo existente SOLO si coincide exactamente con el empaquetado.
       next.files[name] = item.hash;
       report.unchanged++;
+    } else if (isOfficialMenu(manifest.packId, name)) {
+      // Only files present in the verified official bundle; personal layouts and
+      // FancyMenu editor/preferences stay untouched. The prior bytes are backed up.
+      changes.push({ name, target, bytes:item.bytes, action:'updated', officialMenu:true });
+      next.files[name] = item.hash;
     } else if (oldHash && currentHash === oldHash) {
       changes.push({ name, target, bytes:item.bytes, action:"updated" });
       next.files[name] = item.hash;
@@ -131,6 +143,10 @@ function syncBundledConfigs({ instanceDir, metadataDir, bundleDir, status = () =
   if (changes.length) {
     backupDir = fs.mkdtempSync(path.join(metadataDir, "config-backup-"));
     report.backupDir = backupDir;
+    writeAtomic(path.join(backupDir, 'recovery.json'), Buffer.from(JSON.stringify({
+      packId:manifest.packId, version:manifest.version,
+      files:changes.map((change, i) => ({path:change.name, backup:fs.existsSync(change.target) ? `${i}.bak` : null}))
+    }, null, 2)));
   }
   try {
     for (let i = 0; i < changes.length; i++) {
@@ -141,6 +157,7 @@ function syncBundledConfigs({ instanceDir, metadataDir, bundleDir, status = () =
       if (change.action === "removed") fs.unlinkSync(change.target);
       else writeAtomic(change.target, change.bytes);
       report[change.action]++;
+      if (change.officialMenu) report.menuRestored++;
     }
     writeAtomic(statePath, Buffer.from(JSON.stringify(next, null, 2) + "\n", "utf8"));
   } catch (error) {
@@ -153,6 +170,7 @@ function syncBundledConfigs({ instanceDir, metadataDir, bundleDir, status = () =
     throw error;
   }
   status(`Configuraciones cliente ${manifest.version}: ${report.installed} nuevas, ${report.updated} actualizadas, ${report.removed} retiradas, ${report.keptModified + report.keptUnmanaged} personales conservadas.`, "success");
+  if (report.menuRestored) status(`Menú oficial de Mundo Conejil restaurado: ${report.menuRestored} archivo(s). Copia anterior guardada en ${backupDir}.`, 'success');
   return report;
 }
 module.exports = { syncBundledConfigs, validatePath, checkedTarget, MANAGED_ROOTS, MAX_FILE_BYTES, MAX_TOTAL_BYTES, MAX_CONTENT_FILES };

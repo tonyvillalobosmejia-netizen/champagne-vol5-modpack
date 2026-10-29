@@ -1,6 +1,6 @@
 {
   "name": "mi-launcher-forge",
-  "version": "0.1.24",
+  "version": "0.1.25",
   "description": "VillaWolf Launcher: Minecraft Forge y actualizaciones del modpack",
   "main": "src/main.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "test:admin": "node --test tests/verificar-admin-modpack.cjs",
     "dist": "electron-builder --win nsis",
     "importar-curseforge": "node tools/importar-curseforge.js",
-    "test": "node --test tests/verificar-sesion-persistente.cjs src/tests/verificar-config.js src/tests/verificar-actualizador.js tests/verificar-empaquetador-curseforge.js tests/verificar-importar-curseforge.js tests/verificar-preparacion.js tests/verificar-cuentas.cjs tests/verificar-descargas-asistidas.cjs tests/verificar-versiones-launcher.cjs tests/verificar-soporte.cjs tests/verificar-discord.cjs tests/verificar-discord-worker.cjs tests/verificar-desinstalacion.cjs tests/verificar-admin-modpack.cjs tests/verificar-microsoft.cjs tests/verificar-fuentes-oficiales.cjs tests/verificar-token-admin.cjs tests/verificar-catalogo-discord.cjs tests/verificar-admin-multipack.cjs tests/verificar-curseforge-lote.cjs tests/verificar-eliminar-modpack.cjs tests/verificar-crear-lanzador-e2e.cjs",
+    "test": "node --test tests/verificar-sesion-persistente.cjs src/tests/verificar-config.js src/tests/verificar-actualizador.js tests/verificar-empaquetador-curseforge.js tests/verificar-importar-curseforge.js tests/verificar-preparacion.js tests/verificar-cuentas.cjs tests/verificar-descargas-asistidas.cjs tests/verificar-versiones-launcher.cjs tests/verificar-soporte.cjs tests/verificar-discord.cjs tests/verificar-discord-worker.cjs tests/verificar-desinstalacion.cjs tests/verificar-admin-modpack.cjs tests/verificar-microsoft.cjs tests/verificar-fuentes-oficiales.cjs tests/verificar-token-admin.cjs tests/verificar-catalogo-discord.cjs tests/verificar-admin-multipack.cjs tests/verificar-curseforge-lote.cjs tests/verificar-eliminar-modpack.cjs tests/verificar-crear-lanzador-e2e.cjs tests/verificar-menu-oficial.cjs",
     "cuentas:servidor": "node auth-server/server.cjs",
     "cuentas:probar": "node tools/probar-cuentas.cjs",
     "cuentas:discord": "node auth-server/discord-server.cjs",

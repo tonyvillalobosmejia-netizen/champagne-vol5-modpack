@@ -1,5 +1,13 @@
 # VillaWolf — estado técnico y desarrollo
 
+## 2026-10-29 — Launcher 0.1.25: menú oficial al pulsar JUGAR (preparado)
+
+Solicitud expresa: aplicar y activar el menú oficial de Mundo Conejil para todos los usuarios al pulsar JUGAR. Causa comprobada en esta PC: modpack 0.1.15 y caché de contenido correctos, pero title_screen_layout.txt local distinto tanto del hash gestionado como del publicado, con is_enabled=false frente al true publicado. La sincronización anterior conservaba esa modificación local por diseño.
+
+Corrección preparada: en champagne-vol5 se restauran desde el contenido oficial verificado el archivo exacto config/fancymenu/customization/title_screen_layout.txt y los recursos publicados bajo config/fancymenu/assets/recursos_mundo_conejil/. Antes de reemplazarlos se conserva copia y recovery.json con correspondencia entre rutas y respaldos. No se fuerza ningún otro layout, opciones del editor ni preferencias de Minecraft. Otros modpacks mantienen su política anterior. La llamada existente antes de iniciar Java aplica la corrección incluso si el paquete ya figura actualizado; las ejecuciones posteriores sin cambios no generan respaldos nuevos. Se mantiene el rechazo de hashes incorrectos, enlaces y rutas inválidas.
+
+Pruebas añadidas: JUGAR real en entorno aislado con barrera antes de crear Java, restauración de menú desactivado con paquete ya actualizado; respaldo recuperable y recursos; instalación previa sin historial; conservación de mundos/opciones/layouts personales; aislamiento de otros packs; bloqueo por contenido corrupto. No se modificó una instancia real mientras Minecraft está en ejecución. Publicación de 0.1.25 pendiente al redactar esta entrada; los usuarios requieren recibir esa actualización del launcher y luego pulsar JUGAR. No se puede afirmar activación simultánea en equipos ajenos o desconectados.
+
 ## Vinculación del Bot recuperada — 19 de octubre de 2026
 
 - **Verificado en producción:** después de que el propietario volvió a guardar ROLE_BOT_KEY y desplegó el cambio, se detuvo e inició el Bot 0.2.8 mediante su interfaz. Discord conectado, roles sincronizados y cola recuperada; la interfaz confirmó «Anuncio entregado». No se creó un mensaje de prueba para esta comprobación.

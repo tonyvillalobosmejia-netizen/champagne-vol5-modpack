@@ -59,6 +59,7 @@ function sandbox(t, document, options = {}) {
       if (name === "./champagne-game-identity") return require("../champagne-game-identity");
       if (name === "./champagne-official-sources") return require("../champagne-official-sources");
       if (name === "node:fs") return disk;
+      if (name === 'node:child_process' && options.beforeSpawn) return {...require(name), spawn:() => { options.beforeSpawn(); throw Error('barrera proceso de prueba'); }};
       if(name==='./champagne-session-store')return require('../champagne-session-store');
       if(name.startsWith('./'))return require(path.resolve(__dirname,'..',name));
       return require(name);
@@ -145,6 +146,19 @@ function content(files) {
   return { packId: 'champagne-vol5', version: '0.1.2', expectedFiles: files.length,
     files: files.map(([relative,bytes]) => ({ path: relative, bytes: Buffer.byteLength(bytes), sha256: hash(bytes), base64: Buffer.from(bytes).toString('base64') })) };
 }
+
+test('JUGAR restaura el menú oficial desactivado aun con modpack actualizado, antes de iniciar Java', async t => {
+  const layout='config/fancymenu/customization/title_screen_layout.txt';
+  const official='layout {\n  is_enabled = true\n}\n';
+  const doc=manifest([entry('a.jar')]);doc.content=content([[layout,official]]);
+  let env,checked=false;
+  env=sandbox(t,doc,{beforeSpawn:()=>{assert.equal(fs.readFileSync(path.join(env.instance,layout),'utf8'),official);checked=true;}});
+  await env.assisted();
+  fs.writeFileSync(path.join(env.instance,layout),'layout {\n  is_enabled = false\n}\n');
+  vm.runInContext('getLocalProfile=()=>({username:"Tester"});automaticPreparation.prepare=async()=>({ok:true});buildForgeLaunch=()=>({java:"fixture",args:[]});checkJava17=async()=>{};',env.context);
+  await assert.rejects(vm.runInContext('launchForge()',env.context),/barrera proceso de prueba/);
+  assert.equal(checked,true);
+});
 
 test('JUGAR instala y verifica el modpack antes de construir el arranque Java', async t => {
   const env = sandbox(t, manifest([entry('a.jar')]));
