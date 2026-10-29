@@ -358,7 +358,9 @@ async function assistedManifest({freshPermission=false}={}) {
     : JSON.parse(fs.readFileSync(path.join(__dirname, "champagne-assisted-manifest.json"), "utf8"));
   return validateAssistedManifest(document);
 }
+function downloadRecovery() { return require('./champagne-download-recovery').createDownloadRecovery(path.join(metadataDir, 'manual-downloads')); }
 function manualDownloads(manifest) {
+  manifest = downloadRecovery().normalize(manifest);
   return createManualDownloads({ manifest, instanceDir, cacheDir: path.join(metadataDir, "manual-downloads") });
 }
 async function assistedStatus() {
@@ -383,7 +385,7 @@ async function applyUpdates(suppliedManifest = null) {
     if (!suppliedManifest && !config.manifestUrl) return { ok: false, message: "Falta configurar manifestUrl en src/config.js con una URL HTTPS." };
     if (!suppliedManifest && !/^https:\/\//i.test(config.manifestUrl)) throw new Error("El manifiesto debe utilizar HTTPS.");
     sendStatus("Buscando actualizaciones del modpack…");
-    const manifest = suppliedManifest || JSON.parse((await requestBuffer(config.manifestUrl)).toString("utf8"));
+    let manifest = suppliedManifest || JSON.parse((await requestBuffer(config.manifestUrl)).toString("utf8"));
     if (!manifest || !Array.isArray(manifest.files) || typeof manifest.version !== "string") {
       throw new Error("El manifiesto no tiene el formato esperado.");
     }
@@ -392,6 +394,7 @@ async function applyUpdates(suppliedManifest = null) {
       throw new Error("El manifiesto del modpack está incompleto o es incorrecto. No se instaló nada.");
     }
     validateAssistedManifest(manifest);
+    manifest = downloadRecovery().normalize(manifest);
     // La instancia se selecciona antes de bloquear el actualizador.
     // Los llamadores seleccionan un perfil compatible antes de entrar aquí.
     const expectedGame = validateGame(manifest.game,defaultGame,config.launcherVersion || "0.1.4");
@@ -497,10 +500,28 @@ async function applyUpdates(suppliedManifest = null) {
     for (let i = 0; i < pending.length; i++) {
       const entry = pending[i];
       sendStatus(`Verificando descarga ${i + 1}/${pending.length}: ${entry.path}…`);
-      const bytes = validateAcquisition(entry) === "manual" ? manual.read(entry) : await require('./champagne-launcher-integrity').downloadVerifiedMod(entry, requestBuffer, {
-        onRetry: ({path: file, nextAttempt, maxAttempts}) => sendStatus(`Integridad no confirmada para ${file}. Reintentando el mismo archivo (${nextAttempt}/${maxAttempts})…`)
-      });
-      if (sha256(bytes) !== entry.hash) throw new Error(`SHA-256 incorrecto para ${entry.path}. No se instaló nada.`);
+      let bytes;
+      try {
+        bytes = validateAcquisition(entry) === 'manual' ? manual.read(entry) : downloadRecovery().read(entry);
+        if (!bytes) bytes = await require('./champagne-launcher-integrity').downloadVerifiedMod(entry, requestBuffer, {
+          onRetry: ({path: file, nextAttempt, maxAttempts}) => sendStatus(`Integridad no confirmada para ${file}. Reintentando el mismo archivo (${nextAttempt}/${maxAttempts})…`)
+        });
+        if (sha256(bytes) !== entry.hash) throw Error('SHA-256 incorrecto.');
+        downloadRecovery().save(entry, bytes);
+      } catch (error) {
+        const source = new (require('node:url').URL)(entry.url || entry.pageUrl);
+        const message = `${entry.path} · ${source.hostname} · HTTP ${error.status || 'no disponible'}: ${error.message} Los archivos verificados se conservan; vuelve a intentar para reanudar.`;
+        sendStatus(message, 'error');
+        if (error.status === 412 && downloadRecovery().restrict(entry)) {
+          downloadInboxSession = null;
+          const missing = manualDownloads(manifest).pending();
+          const guidance = message + ' Descarga la versión exacta desde ' + missing.find(file => file.path === entry.path)?.pageUrl + ' e importa el JAR para continuar.';
+          sendStatus(guidance, 'info');
+          return {ok:false, needsManual:true, missing, message:guidance};
+        }
+        error.message = message;
+        throw error;
+      }
       entry.staged = path.join(stagingRoot, `${i}.jar`);
       fs.writeFileSync(entry.staged, bytes);
     }
@@ -1356,7 +1377,7 @@ app.whenReady().then(() => {
   handleLauncher('assisted-download-all',async()=>{
     if(minecraftProcess||manualDialogBusy||packUpdateBusy||automaticPreparation.busy||repairController?.busy||accountLaunchBusy)return{ok:false,message:'Espera a que termine la preparación o cierra Minecraft.'};
     manualDialogBusy=true;
-    try{const manifest=await assistedManifest({freshPermission:true});selectGame(manifest);const manual=manualDownloads(manifest),pending=new Set(manual.pending().map(e=>e.path)),entries=manifest.files.filter(e=>pending.has(e.path));const rejected=[],accepted=[];
+    try{const manifest=await assistedManifest({freshPermission:true});selectGame(manifest);const manual=manualDownloads(manifest),pending=new Set(manual.pending().map(e=>e.path)),entries=downloadRecovery().normalize(manifest).files.filter(e=>pending.has(e.path));const rejected=[],accepted=[];
       const {downloadOfficial}=require('./champagne-curseforge-batch');const downloadSession=session.fromPartition('villawolf-curseforge-batch-'+crypto.randomUUID());
       for(let i=0;i<entries.length;i++){const entry=entries[i];let file;try{let apiBytes=null;try{if(config.catalogEnabled&&selectedPack)apiBytes=await authClient.downloadCurseforge({packId:selectedPack.id,path:entry.path},state=>{for(const target of BrowserWindow.getAllWindows())if(!target.isDestroyed())target.webContents.send('assisted-batch-state',{name:entry.path,index:i+1,count:entries.length,...state});});}catch(error){if([401,403].includes(error.status))throw error;sendStatus('Este mod necesita su página oficial. Continuando con la descarga asistida…');}if(apiBytes){if(sha256(apiBytes)!==entry.sha256.toLowerCase())throw Error('El archivo de CurseForge no coincide con el modpack.');const directory=path.join(metadataDir,'official-downloads');fs.mkdirSync(directory,{recursive:true});file=path.join(directory,crypto.randomUUID()+'.jar');fs.writeFileSync(file,apiBytes,{flag:'wx'});}else file=await downloadOfficial({entry,BrowserWindow,session:downloadSession,directory:path.join(metadataDir,'official-downloads'),onState:state=>{for(const target of BrowserWindow.getAllWindows())if(!target.isDestroyed())target.webContents.send('assisted-batch-state',{...state,index:i+1,count:entries.length});}});const result=manual.importFiles([file]);if(result.rejected.length)throw Error(result.rejected[0].message);accepted.push(...result.accepted);for(const target of BrowserWindow.getAllWindows())if(!target.isDestroyed())target.webContents.send('assisted-batch-state',{index:i+1,count:entries.length,missing:manual.pending()});}catch(error){rejected.push({name:entry.path,message:error.message});break;}finally{if(file)try{fs.unlinkSync(file);}catch{}}}
       return{ok:true,accepted,rejected,missing:manual.pending(),version:manifest.version,expectedFiles:manifest.expectedFiles,remote:!!config.manifestUrl,message:accepted.length+' mods verificados.'};
@@ -1365,7 +1386,7 @@ app.whenReady().then(() => {
   handleLauncher("assisted-open-page", async (_event, relative) => {
     try {
       const manifest = await assistedManifest({freshPermission:true});
-      const entry = manifest.files.find(e => e.path === relative);
+      const entry = downloadRecovery().normalize(manifest).files.find(e => e.path === relative);
       if (!entry || validateAcquisition(entry) !== "manual") throw new Error("Descarga oficial desconocida.");
       await shell.openExternal(entry.pageUrl);
       return { ok: true, message: "Versión exacta abierta. Descarga el JAR en Descargas; el launcher lo detectará y verificará automáticamente." };

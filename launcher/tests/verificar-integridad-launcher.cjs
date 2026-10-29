@@ -44,7 +44,8 @@ test('bucle real mantiene staging y no vuelve a descargar aprobados del mismo in
   const writes=[],calls=new Map(),pending=['primero','segundo'].map(name=>({...entry,path:`mods/${name}.jar`,url:entry.url.replace('prueba.jar',name+'.jar'),hash:entry.sha256}));
   const context={pending,stagingRoot:'stage',path,fs:{writeFileSync:(target,bytes)=>writes.push({target,bytes})},sendStatus:()=>{},validateAcquisition:require('../src/champagne-manual-downloads').validateAcquisition,manual:{read:()=>{throw Error('No manual');}},sha256:digest,
     requestBuffer:async url=>{calls.set(url,(calls.get(url)||0)+1);return url.includes('segundo')?bad:good;},
-    require:()=>({downloadVerifiedMod:(e,d,o)=>downloadVerifiedMod(e,d,{...o,sleep:async()=>{}})})};
+    downloadRecovery:()=>({read:()=>null,save:()=>{},restrict:()=>false}),
+    require:name=>name==='node:url'?require('node:url'):{downloadVerifiedMod:(e,d,o)=>downloadVerifiedMod(e,d,{...o,sleep:async()=>{}})}};
   await assert.rejects(vm.runInNewContext('(async()=>{'+main.slice(start,end)+'})()',context),/Intentos realizados: 3/);
   assert.deepEqual([...calls.values()],[1,3]);assert.equal(writes.length,1);assert.equal(writes[0].target,path.join('stage','0.jar'));assert.deepEqual(writes[0].bytes,good);
   assert.equal(pending[1].staged,undefined);

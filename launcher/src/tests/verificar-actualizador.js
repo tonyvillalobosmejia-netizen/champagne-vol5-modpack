@@ -77,6 +77,65 @@ function sandbox(t, document, options = {}) {
 
 const manualEntry = (name, bytes = "manual") => ({ path: "mods/" + name, sha256: hash(bytes),
   acquisition: "user_official_download", pageUrl: "https://www.curseforge.com/minecraft/mc-mods/example/files/123" });
+
+test('412 de ModFixer abre el flujo manual persistente con página exacta sin instalar mods', async t => {
+  const source = require('../champagne-assisted-manifest.json').files.find(e => e.path === 'mods/modfixer-0.0.5.jar');
+  const {pageUrl, ...rest} = source;
+  const direct = {...rest, acquisition:'official_direct', url:'https://edge.forgecdn.net/files/7478/506/modfixer-0.0.5.jar'};
+  const env = sandbox(t, manifest([direct]));
+  vm.runInContext("requestBuffer=async()=>{throw Object.assign(Error('Este mod requiere descarga desde su página oficial.'),{status:412});}", env.context);
+  const result = await env.assisted();
+  assert.equal(result.needsManual, true);
+  assert.equal(result.missing[0].pageUrl, pageUrl);
+  assert.match(result.message, /modfixer-0.0.5.jar.*forgecdn.net.*412/);
+  assert.equal(fs.existsSync(path.join(env.instance, direct.path)), false);
+  const recovery = require('../champagne-download-recovery').createDownloadRecovery(vm.runInContext("path.join(metadataDir,'manual-downloads')", env.context));
+  assert.equal(recovery.normalize(manifest([direct])).files[0].acquisition, 'user_official_download');
+  assert.equal(recovery.normalize(manifest([{...direct,sha256:'a'.repeat(64)}])).files[0].acquisition, 'official_direct');
+});
+
+for (const status of [401,403]) test('no convierte denegación de acceso '+status+' en descarga manual', async t => {
+  const source = require('../champagne-assisted-manifest.json').files.find(e => e.path === 'mods/modfixer-0.0.5.jar');
+  const {pageUrl, ...rest} = source;
+  const direct = {...rest, acquisition:'official_direct', url:'https://edge.forgecdn.net/files/7478/506/modfixer-0.0.5.jar'};
+  const env = sandbox(t, manifest([direct]));
+  env.context.deniedStatus = status;
+  vm.runInContext("requestBuffer=async()=>{onRequest();throw Object.assign(Error('Acceso denegado'),{status:deniedStatus});}", env.context);
+  await assert.rejects(env.assisted(), /Acceso denegado/);
+  assert.equal(env.requests(),1);
+  assert.equal(vm.runInContext('manualDownloads(fixture).pending().length',env.context),0);
+});
+
+test('página manual exige identidad exacta y la caché bloquea junctions', t => {
+  const {officialPage,createDownloadRecovery} = require('../champagne-download-recovery');
+  const source = require('../champagne-assisted-manifest.json').files.find(e => e.path === 'mods/modfixer-0.0.5.jar');
+  const direct = {...source,url:'https://edge.forgecdn.net/files/7478/506/modfixer-0.0.5.jar'};
+  assert.equal(officialPage(direct),source.pageUrl);
+  assert.equal(officialPage({...direct,url:direct.url.replace('/506/','/507/')}),null);
+  assert.equal(officialPage({...direct,sha256:'a'.repeat(64)}),null);
+  assert.equal(officialPage({...direct,path:'mods/otro.jar'}),null);
+  const env = sandbox(t, manifest([entry('a.jar')]));
+  const outside = path.join(env.root,'outside'); fs.mkdirSync(outside);
+  const directory = path.join(env.root,'cache'); fs.mkdirSync(directory);
+  fs.symlinkSync(outside,path.join(directory,'mods'),'junction');
+  assert.throws(()=>createDownloadRecovery(directory).save(entry('a.jar'),Buffer.from('new')),/junction/);
+  assert.deepEqual(fs.readdirSync(outside),[]);
+});
+
+test('reanuda tras fallo de red sin descargar otra vez el primer mod; rechaza caché corrupta', async t => {
+  const env = sandbox(t, manifest([entry('primero.jar'), entry('segundo.jar','second')]));
+  vm.runInContext("requestBuffer=async url=>{onRequest();if(url.endsWith('segundo.jar'))throw Error('Sin conexión');return payload;}", env.context);
+  await assert.rejects(env.assisted(), /segundo.jar.*Sin conexión/);
+  assert.equal(fs.existsSync(path.join(env.instance, 'mods/primero.jar')), false);
+  const before = env.requests();
+  vm.runInContext("requestBuffer=async url=>{onRequest();return url.endsWith('segundo.jar')?Buffer.from('second'):payload;}", env.context);
+  assert.equal((await env.assisted()).ok,true);
+  assert.equal(env.requests()-before,1);
+  const recovery = require('../champagne-download-recovery').createDownloadRecovery(path.join(env.root,'cache-test'));
+  recovery.save(entry('primero.jar'), Buffer.from('new'));
+  fs.writeFileSync(path.join(env.root,'cache-test/mods',hash('new')+'.jar'),'corrupto');
+  assert.equal(recovery.read(entry('primero.jar')),null);
+});
 function importManual(env, relative = "download.jar", bytes = "manual") {
   const source = path.join(env.root, relative); fs.writeFileSync(source, bytes);
   env.context.selectedFixture = [source];
