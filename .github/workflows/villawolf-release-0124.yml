@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   release:
-    if: github.event.head_commit.message == 'fix: resume authorized mod downloads (Launcher 0.1.24)'
+    if: "${{ github.event.head_commit.message == 'fix: resume authorized mod downloads (Launcher 0.1.24)' }}"
     runs-on: windows-latest
     timeout-minutes: 20
     defaults:
