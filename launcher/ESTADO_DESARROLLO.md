@@ -993,3 +993,12 @@ Validación local: 185 pruebas npm test aprobadas y 9 pruebas adicionales de int
 
 Publicación autorizada por el usuario: flujo limitado a 0.1.24 y al commit con mensaje específico. Repite pruebas y compilación, sube un borrador nuevo sin reemplazar releases, descarga sus cuatro assets y compara SHA-256 antes de publicarlo como latest; vuelve a verificar descargas públicas. Estado de ejecución/publicación pendiente de evidencia posterior. No modifica canales de modpacks, Administrador, Bot ni despliega Worker.
 
+
+
+## 2026-10-29 — Launcher 0.1.24 publicado y verificado
+
+Publicación confirmada el 29 de octubre de 2026 a las 12:55 de Ciudad de México (18:55 UTC). Release pública no borrador: https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/releases/tag/v0.1.24; releases/latest devuelve v0.1.24. Código funcional en 0626e392e8363fb5a0f2211c70e2d8ea51a876c7; corrección YAML del flujo y commit de compilación/publicación 27367f4a8a5cb6bc9392ecfe1e38daa7b6870b47. El primer flujo falló por sintaxis YAML antes de compilar/publicar; se corrigió y validó el YAML localmente.
+
+Ejecución final exitosa: https://github.com/tonyvillalobosmejia-netizen/champagne-vol5-modpack/actions/runs/40935013738. Pruebas remotas: 185 generales y 9 de integridad; compilación NSIS exitosa. El flujo descargó y verificó por SHA-256 los cuatro assets del borrador y luego sus cuatro URLs públicas. Instalador público: VillaWolf.Launcher.Setup.0.1.24.exe, 115095756 bytes, SHA-256 e54c20497260ff385ee0e39c8bdaec1b6872e7bfd9369f0e0c043e9c3ef6751f. También publicados blockmap, latest.yml y SHA256SUMS.txt. El binario remoto se compiló de nuevo en CI; su hash difiere del instalador local y el hash público anterior es el aplicable a la distribución.
+
+No se instaló la nueva versión en esta PC ni se utilizó el escritorio; pendiente prueba manual con descarga oficial y arranque de Minecraft. No se alteraron permisos del proveedor, servicios, canales de modpacks ni versiones de Administrador/Bot. La firma Authenticode continúa pendiente conforme a la política existente.
