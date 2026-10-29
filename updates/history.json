@@ -1,5 +1,19 @@
 [
   {
+    "version": "0.1.16",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-29T21:16:41.823Z",
+    "notes": "Discord muestra Mundo Conejil y su imagen automáticamente. Se conservan los menús publicados y todas las demás configuraciones y mods.",
+    "mods": 115,
+    "content": 213,
+    "changes": {
+      "added": [],
+      "changed": [],
+      "removed": []
+    },
+    "restoredFrom": null
+  },
+  {
     "version": "0.1.15",
     "packName": "Mundo Conejil",
     "publishedAt": "2026-10-29T20:45:20.205Z",
