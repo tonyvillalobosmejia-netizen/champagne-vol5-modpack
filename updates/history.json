@@ -1,5 +1,19 @@
 [
   {
+    "version": "0.1.15",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-10-29T20:45:20.205Z",
+    "notes": "Menu corregido",
+    "mods": 115,
+    "content": 213,
+    "changes": {
+      "added": [],
+      "changed": [],
+      "removed": []
+    },
+    "restoredFrom": null
+  },
+  {
     "version": "0.1.14",
     "packName": "Mundo Conejil",
     "publishedAt": "2026-10-29T19:24:43.854Z",
