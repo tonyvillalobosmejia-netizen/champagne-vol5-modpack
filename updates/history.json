@@ -1,5 +1,44 @@
 [
   {
+    "version": "0.1.17",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-11-06T02:06:12.929Z",
+    "notes": "NUEVA ACTUALIZACIÓN!\n\n¡Llegan 24 nuevos mods a VillaWolf! 🔥\n\n🛡️ Seguridad: Nuevos sistemas para proteger tus bases.\n\n⚔️ Armaduras y magia: Equipamientos legendarios, hechizos y habilidades especiales.\n\n🐉 Exploración: Nuevas cuevas, jefes, mazmorras y estructuras por descubrir.\n\n🎨 Personalización: Coloca tus propias imágenes y fotografías dentro de Minecraft.\n\n🎶 Diversión: Instrumentos musicales y nuevas decoraciones.\n\n💀 Supervivencia: Sistema de cadáveres para recuperar tus pertenencias al morir.\n\n✨ ¡Más aventuras, desafíos y contenido para disfrutar en VillaWolf!\n\n🐺 VillaWolf Launcher | Minecraft 1.20.1 Forge",
+    "mods": 139,
+    "content": 248,
+    "changes": {
+      "added": [
+        "mods/[1.20.1] SecurityCraft v1.10.2.1.jar",
+        "mods/alexscaves-2.0.2.jar",
+        "mods/ApothicAttributes-1.20.1-1.3.7.jar",
+        "mods/armor_of_remnants-1.20.1-1.8.0.jar",
+        "mods/catalytic_library-1.2.0-1.20.1.jar",
+        "mods/citadel-2.6.3-1.20.1.jar",
+        "mods/cobweb-forge-1.20.1-1.0.1.jar",
+        "mods/corpse-forge-1.20.1-1.0.23.jar",
+        "mods/curios-forge-5.14.1+1.20.1.jar",
+        "mods/Dungeon Crawl-1.20.1-2.3.15.jar",
+        "mods/geckolib-forge-1.20.1-4.8.4.jar",
+        "mods/gtbcs_spell_lib-2.2.0-1.20.1.jar",
+        "mods/immersive_melodies-0.8.2-1.20.1-forge.jar",
+        "mods/immersive_paintings-0.6.13+1.20.1-forge.jar",
+        "mods/irons_lib-1.20.1-2.3.0.jar",
+        "mods/irons_spellbooks-1.20.1-3.16.3.jar",
+        "mods/L_Enders_Cataclysm-3.31.jar",
+        "mods/lionfishapi-3.0.jar",
+        "mods/mcw-holidays-1.1.2-mc1.20.1forge.jar",
+        "mods/Placebo-1.20.1-8.6.3.jar",
+        "mods/player-animation-lib-forge-1.0.2-rc1+1.20.jar",
+        "mods/soul-fire-d-forge-1.20.1-4.0.11.jar",
+        "mods/Structory_1.20.x_v1.3.5.jar",
+        "mods/traveloptics-7.1.0-1.20.1.jar"
+      ],
+      "changed": [],
+      "removed": []
+    },
+    "restoredFrom": null
+  },
+  {
     "version": "0.1.16",
     "packName": "Mundo Conejil",
     "publishedAt": "2026-10-29T21:16:41.823Z",
