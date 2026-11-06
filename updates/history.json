@@ -1,5 +1,22 @@
 [
   {
+    "version": "0.1.18",
+    "packName": "Mundo Conejil",
+    "publishedAt": "2026-11-06T05:28:05.126Z",
+    "notes": "Server 24/7 Activo",
+    "mods": 137,
+    "content": 248,
+    "changes": {
+      "added": [],
+      "changed": [],
+      "removed": [
+        "mods/armor_of_remnants-1.20.1-1.8.0.jar",
+        "mods/catalytic_library-1.2.0-1.20.1.jar"
+      ]
+    },
+    "restoredFrom": null
+  },
+  {
     "version": "0.1.17",
     "packName": "Mundo Conejil",
     "publishedAt": "2026-11-06T02:06:12.929Z",
