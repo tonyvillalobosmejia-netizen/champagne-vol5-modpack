@@ -1,0 +1,45 @@
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const crypto = require("node:crypto");
+const { buildPackage } = require("../tools/crear-paquete-curseforge");
+const { syncBundledConfigs } = require("../src/champagne-config-sync");
+const root = fs.mkdtempSync(path.join(os.tmpdir(), "champagne-cf-package-"));
+try {
+  const source = path.join(root, "curseforge-profile");
+  const output = path.join(root, "release");
+  fs.mkdirSync(path.join(source, "overrides", "config"), { recursive: true });
+  fs.mkdirSync(path.join(source, "overrides", "defaultconfigs"), { recursive: true });
+  fs.mkdirSync(path.join(source, "overrides", "resourcepacks"), { recursive: true });
+  fs.mkdirSync(path.join(source, "mods"), { recursive: true });
+  fs.mkdirSync(path.join(source, "saves", "world"), { recursive: true });
+  fs.writeFileSync(path.join(source, "overrides", "config", "pack.toml"), "difficulty = 'normal'\n");
+  fs.writeFileSync(path.join(source, "overrides", "defaultconfigs", "world.toml"), "keepInventory = true\n");
+  fs.writeFileSync(path.join(source, "overrides", "resourcepacks", "pack.zip"), "resource pack");
+  fs.writeFileSync(path.join(source, "mods", "third-party.jar"), "do not package");
+  fs.writeFileSync(path.join(source, "options.txt"), "personal settings");
+  fs.writeFileSync(path.join(source, "saves", "world", "level.dat"), "world data");
+  // Acepta la raíz del perfil y toma la subcarpeta overrides de la exportación.
+  const result = buildPackage({ source, output, version: "0.1.1" });
+  assert.equal(result.count, 3);
+  assert.equal(result.manifest.files.some(file => file.path.startsWith("mods/")), false);
+  const entry = result.manifest.files.find(file => file.path === "config/pack.toml");
+  const copied = fs.readFileSync(path.join(result.bundle, "files", "config", "pack.toml"));
+  assert.equal(entry.sha256, crypto.createHash("sha256").update(copied).digest("hex"));
+  assert.equal(fs.existsSync(path.join(result.bundle, "files", "options.txt")), false);
+  const client = path.join(root, "client"), metadata = path.join(root, "metadata");
+  fs.mkdirSync(path.join(client, "saves", "world"), { recursive: true });
+  fs.writeFileSync(path.join(client, "options.txt"), "client preferences");
+  fs.writeFileSync(path.join(client, "saves", "world", "level.dat"), "world");
+  const synced = syncBundledConfigs({ instanceDir: client, metadataDir: metadata, bundleDir: result.bundle, status: () => {} });
+  assert.equal(synced.installed, 3);
+  assert.equal(fs.readFileSync(path.join(client, "config", "pack.toml"), "utf8"), "difficulty = 'normal'\n");
+  assert.equal(fs.readFileSync(path.join(client, "defaultconfigs", "world.toml"), "utf8"), "keepInventory = true\n");
+  assert.equal(fs.readFileSync(path.join(client, "resourcepacks", "pack.zip"), "utf8"), "resource pack");
+  assert.equal(fs.readFileSync(path.join(client, "options.txt"), "utf8"), "client preferences");
+  assert.equal(fs.readFileSync(path.join(client, "saves", "world", "level.dat"), "utf8"), "world");
+  assert.throws(() => buildPackage({ source, output, version: "0.1.2" }), /Ya existe/);
+  console.log("OK: empaca config/defaultconfigs/resourcepacks con hashes; excluye mods y datos personales; evita mezclar versiones.");
+} finally { fs.rmSync(root, { recursive: true, force: true }); }

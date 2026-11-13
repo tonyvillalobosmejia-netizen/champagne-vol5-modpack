@@ -1,0 +1,2 @@
+
+CREATE TABLE IF NOT EXISTS deleted_packs (pack_id TEXT PRIMARY KEY, deleted_at INTEGER NOT NULL);

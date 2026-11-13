@@ -1,0 +1,2 @@
+# Preserve bundled configuration bytes: their manifest verifies SHA-256.
+launcher/src/champagne-defaults/** -text

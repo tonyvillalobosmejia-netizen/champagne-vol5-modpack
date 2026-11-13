@@ -1,0 +1,74 @@
+name: Publicar Launcher 0.1.24 verificado
+on:
+  push:
+    branches: [preparacion-paso97]
+    paths: ['launcher/package.json', '.github/workflows/villawolf-release-0124.yml']
+permissions:
+  contents: write
+concurrency:
+  group: villawolf-release-0124
+  cancel-in-progress: false
+jobs:
+  release:
+    if: "${{ github.event.head_commit.message == 'fix: resume authorized mod downloads (Launcher 0.1.24)' }}"
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: launcher
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: launcher/package-lock.json
+      - name: Comprobar versión exacta
+        run: |
+          if ((Get-Content package.json | ConvertFrom-Json).version -ne '0.1.24') { throw 'Versión inesperada' }
+      - run: npm ci
+      - run: npm test
+      - run: node --test tests/verificar-integridad-launcher.cjs
+      - run: npm run dist -- --publish never
+      - name: Publicar sólo después de verificar los assets del borrador
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = 'v0.1.24'
+          $names = @('VillaWolf.Launcher.Setup.0.1.24.exe', 'VillaWolf.Launcher.Setup.0.1.24.exe.blockmap', 'latest.yml')
+          $sums = @()
+          foreach ($name in $names) {
+            $file = Join-Path 'dist' $name
+            if (!(Test-Path -LiteralPath $file)) { throw "Falta $name" }
+            $sums += ((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLower() + '  ' + $name)
+          }
+          [IO.File]::WriteAllLines((Join-Path $PWD 'dist/SHA256SUMS.txt'), $sums)
+          $names += 'SHA256SUMS.txt'
+          $existing = gh release view $tag --json tagName 2>$null
+          if ($LASTEXITCODE -eq 0) { throw 'La release ya existe; no se sobrescribe.' }
+          gh release create $tag --target $env:GITHUB_SHA --draft --title 'VillaWolf Launcher 0.1.24' --notes 'Corrige el rechazo de ModFixer 0.0.5 (CurseForge 7478506): ofrece su página oficial sin eludir restricciones. Conserva descargas verificadas para reanudar, comprueba SHA-256 al reutilizarlas y muestra archivo, proveedor y estado HTTP. No modifica modpacks ni servicios. Instalador sin firma Authenticode, conforme a la política del proyecto.'
+          if ($LASTEXITCODE -ne 0) { throw 'No se pudo crear el borrador.' }
+          foreach ($name in $names) {
+            gh release upload $tag (Join-Path 'dist' $name)
+            if ($LASTEXITCODE -ne 0) { throw "No se pudo subir $name; queda borrador." }
+          }
+          $verify = Join-Path $env:RUNNER_TEMP 'verify-launcher-0124'
+          New-Item -ItemType Directory -Path $verify | Out-Null
+          gh release download $tag --dir $verify
+          if ($LASTEXITCODE -ne 0) { throw 'No se pudo verificar el borrador.' }
+          foreach ($name in $names) {
+            if ((Get-FileHash -LiteralPath (Join-Path 'dist' $name)).Hash -ne (Get-FileHash -LiteralPath (Join-Path $verify $name)).Hash) { throw "Integridad incorrecta: $name" }
+          }
+          gh release edit $tag --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw 'No se confirmó la publicación.' }
+          foreach ($name in $names) {
+            $public = Join-Path $verify ('public-' + $name)
+            Invoke-WebRequest -Uri ('https://github.com/' + $env:GITHUB_REPOSITORY + '/releases/download/' + $tag + '/' + $name) -OutFile $public
+            if ((Get-FileHash -LiteralPath (Join-Path 'dist' $name)).Hash -ne (Get-FileHash -LiteralPath $public).Hash) { throw "Descarga pública incorrecta: $name" }
+          }
+          'Release pública y cuatro assets verificados por SHA-256.' | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append

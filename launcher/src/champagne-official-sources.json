@@ -1,0 +1,20 @@
+[
+  {
+    "path": "mods/goblintraders-forge-1.20.1-1.11.5.jar",
+    "sha256": "05362605ea68a0b45a12b796a6787f30430bd55e462959f0a43ccd63ca14438a",
+    "bytes": 328727,
+    "url": "https://github.com/MrCrayfish/GoblinTraders/releases/download/v1.20.1-1.11.5/goblintraders-forge-1.20.1-1.11.5-signed.jar"
+  },
+  {
+    "path": "mods/framework-forge-1.20.1-0.8.0.jar",
+    "sha256": "37c267f46d8b8dfa81bae8c9fa9fa6467e456cadecae10722ee91b43437f25a0",
+    "bytes": 383868,
+    "url": "https://github.com/MrCrayfish/Framework/releases/download/v1.20.1-0.8.0/framework-forge-1.20.1-0.8.0-signed.jar"
+  },
+  {
+    "path": "mods/cosmeticarmorreworked-1.20.1-v1a.jar",
+    "sha256": "c790e8671625b05ec0aa19272e0ea74ea95619f953e3c6f39a6736af0d386804",
+    "bytes": 88752,
+    "url": "https://github.com/zlainsama/CosmeticArmorReworked/releases/download/1.20.1-v1a/cosmeticarmorreworked-1.20.1-v1a.jar"
+  }
+]
